@@ -192,7 +192,7 @@ def test_green_surface_is_smooth(holes, hn):
     with rasterio.open(C.BUILD / "dem.tif") as ds:
         win = rasterio.windows.from_bounds(*green.buffer(5).bounds, transform=ds.transform).round_offsets().round_lengths()
         raw = SimpleNamespace(z=ds.read(1, window=win), T=ds.window_transform(win))
-    _, _, _, slope, inside, _, _ = green_analysis(green, raw)
+    _, _, _, slope, inside, *_ = green_analysis(green, raw)
     raw_mean, raw_p95 = slope[inside].mean(), np.percentile(slope[inside], 95)
     assert s["mean"] <= raw_mean + 0.15 and s["p95"] <= raw_p95 + 0.3, f"hole {hn}: model {s} vs LiDAR {raw_mean:.2f}/{raw_p95:.2f}"
     assert s["mean"] < 7.0 and s["p95"] < 14.0, f"hole {hn} green slope {s}"
@@ -319,8 +319,9 @@ def test_glb_structure_and_opcd_names(glb):
     for hn in PLAYABLE:
         for s in ("Green", "Tee", "Flagstick"):
             assert f"Hole{hn:02d}_{s}" in names, f"Hole{hn:02d}_{s}"
-    for required in ("Hole98_Concrete", "Hole99_Rough", "Vegetation", "VegetationLOD1", "Backdrop_Terrain"):
+    for required in ("Hole98_Concrete", "Vegetation", "VegetationLOD1", "Backdrop_Terrain"):
         assert required in names, required
+    assert any(n.startswith("Hole99_Rough_t") for n in names), "course-wide rough is tiled (Hole99_Rough_tII_JJ)"
     mats = {m["name"] for m in g["materials"]}
     assert {"Green", "GreenFringe", "Fairway", "Tee", "Rough", "SemiRough", "Bunker", "Concrete"} <= mats
     assert "EXT_mesh_gpu_instancing" in g.get("extensionsUsed", [])
@@ -385,8 +386,9 @@ def test_turf_vertex_colours_are_near_neutral(glb, node):
     """Turf textures are recoloured to the photo's median colour, so COLOR_0 must only carry brightness variation;
     a strongly tinted COLOR_0 turns thatch/dry blades purple (regression)."""
     g, b, binoff = glb
-    mesh = next(m for m in g["meshes"] if m["name"] == node)
-    cols = np.concatenate([_glb_accessor(b, g, binoff, p["attributes"]["COLOR_0"])[:, :3] for p in mesh["primitives"]])
+    meshes = [m for m in g["meshes"] if m["name"] == node or m["name"].startswith(node + "_t")]
+    assert meshes, node
+    cols = np.concatenate([_glb_accessor(b, g, binoff, p["attributes"]["COLOR_0"])[:, :3] for m in meshes for p in m["primitives"]])
     m = cols.mean(0)
     assert m.max() / m.min() < 1.35, m
 
@@ -466,6 +468,31 @@ def test_greenkeeper_covers_all_holes():
         assert len(h["tees"]) == len(C.TEES) and len(h["pins"]) >= 4
 
 
+def test_greenkeeper_gkd_hints():
+    """greenkeeper.json speaks GreenKeeper's GKD vocabulary (research/GSPRO_COSMETICS.md 5): tee slots (Gold -> Yellow),
+    'rating/slope' strings, four day pins on the green, an OB ring (pOOB) on the ground around the property, 3D water
+    hazards, and the distance GreenKeeper will compute from the geometry (tee -> aim points -> green centre)."""
+    gk = json.load(open(GSPRO / "greenkeeper.json"))
+    g = gk["gkd"]
+    assert g["tee_slots"] == {"blue": "Blue", "white": "White", "red": "Red", "gold": "Yellow"}
+    assert g["ratings"]["BlueSR"] == "73.0/132" and g["ratings"]["YellowSR"] == "66.3/113"
+    ring = np.asarray(g["pOOB"]["coords"])
+    assert ring.shape[1] == 3 and len(ring) > 50 and np.linalg.norm(ring[0] - ring[-1]) < 8
+    te = C.TERRAIN
+    assert (ring[:, 0] > 0).all() and (ring[:, 0] < te["xmax"] - te["xmin"]).all() and (ring[:, 2] > 0).all()
+    meta = json.load(open(GSPRO / "terrain.json"))
+    assert (ring[:, 1] >= -0.5).all() and (ring[:, 1] <= meta["terrain_size_m"]["height_y"] + 0.5).all()
+    for h in gk["holes"]:
+        days = {p["day"] for p in h["gkd"]["pins"]}
+        assert days == {"Thursday", "Friday", "Saturday", "Sunday"}, h["hole"]
+        for t in h["gkd"]["tees"]:
+            assert abs(t["distance_m"] / 0.9144 - t["yards"]) < 1.0, (h["hole"], t)
+    hz = [z for h in gk["holes"] for z in h["gkd"]["hazards"]]
+    assert all(len(z["coords"][0]) == 3 for z in hz)
+    if FULL:
+        assert any(z["type"] == "water" for z in hz)
+
+
 def test_tree_prefabs_and_placements():
     """Unity tree prefabs: one object per archetype x variant with _LOD0/_LOD1/_LOD2 children (Unity builds the LOD
     Group from these names); trees.csv says which prefab, yaw and scale each LiDAR tree uses (same as the viewer)."""
@@ -496,8 +523,8 @@ def test_3dg_grass_masks(glb):
     """COLOR_1 = 3DG vertex density masks: grass surfaces mostly 1, nothing on fairway/green; spec file present."""
     g, b, binoff = glb
     def mask(name):
-        m = next(m for m in g["meshes"] if m["name"] == name)
-        return np.concatenate([_glb_accessor(b, g, binoff, p["attributes"]["COLOR_1"]) for p in m["primitives"]])
+        ms = [m for m in g["meshes"] if m["name"] == name or m["name"].startswith(name + "_t")]
+        return np.concatenate([_glb_accessor(b, g, binoff, p["attributes"]["COLOR_1"]) for m in ms for p in m["primitives"]])
     r = mask("Hole99_Rough")[:, 0]
     assert 0.6 < r.mean() <= 1.0 and r.min() == 0.0      # mostly grass, cleared at sand / path edges
     assert mask("Hole01_Fairway")[:, :3].max() == 0.0
@@ -525,6 +552,10 @@ def test_unity_editor_script_ships_and_parses():
     must at least be valid C# (tree-sitter parse) and use only Unity 2018.2 APIs we rely on."""
     src = (GSPRO / "unity/Editor" / C.UNITY_SCRIPT).read_bytes()
     assert b"SplatPrototype" in src and b"TerrainLayer" not in src.split(b"// Unity 2018.2")[0]  # 2018.2: no TerrainLayer
+    # TerrainLayer (2018.3+) only behind the version guard; SplatPrototype is obsolete from 2018.3
+    code = src.split(b"#if UNITY_2018_3_OR_NEWER")
+    assert len(code) == 2 and b"TerrainLayer" not in code[0].split(b"\n", 3)[-1] and b"#else" in code[1]
+    assert b"BatchingStatic" not in src, "static batching disables GPU instancing on the trees"
     ts = pytest.importorskip("tree_sitter"); tscs = pytest.importorskip("tree_sitter_c_sharp")
     tree = ts.Parser(ts.Language(tscs.language())).parse(src)
     bad = []
@@ -537,6 +568,43 @@ def test_unity_editor_script_ships_and_parses():
     assert not bad, f"C# syntax errors at {bad[:5]}"
 
 
+def test_opcd_object_names_carry_one_surface_token(glb):
+    """SetMeshMaterial.cs assigns materials / physics by substring of the object name (first match wins, case
+    sensitive): every course object must carry exactly one surface token, Water_Base objects need two material slots
+    (the script writes sharedMaterials[1]), no two materials may share a name (Blender renames them .001), and no
+    single course mesh should be a 900k-vertex course-wide object (3DG / culling work per mesh)."""
+    g, _, _ = glb
+    tokens = ["_Tee", "_Fairway", "_GreenFringe", "_Green", "_SemiRough", "_DeepRough", "_Rough", "_Concrete", "_Bunker_Lip",
+              "_WaterPlane", "_Pinestraw", "_Bunker", "_Water_Base", "Custom1", "Custom2"]
+    covered = {"_GreenFringe": ["_Green"], "_SemiRough": ["_Rough"], "_DeepRough": ["_Rough"], "_Bunker_Lip": ["_Bunker"]}
+    terrain = next(n for n in g["nodes"] if n.get("name") == "Terrain")
+    for i in terrain["children"]:
+        name = g["nodes"][i]["name"]
+        hit = [t for t in tokens if t in name]
+        hit = [t for t in hit if not any(t in covered.get(o, []) for o in hit)]
+        assert len(hit) == 1, (name, hit)
+    mats = [m["name"] for m in g["materials"]]
+    assert len(mats) == len(set(mats)), sorted(m for m in mats if mats.count(m) > 1)
+    for m in g["meshes"]:
+        if m["name"].endswith("_Water_Base"):
+            assert [mats[p["material"]] for p in m["primitives"]] == ["Water_Base", "Water_Edge"], m["name"]
+    big = [(m["name"], sum(g["accessors"][p["attributes"]["POSITION"]]["count"] for p in m["primitives"])) for m in g["meshes"]
+           if m["name"].startswith("Hole")]
+    assert max(v for _, v in big) < 400_000, sorted(big, key=lambda t: -t[1])[:3]
+
+
 def test_fbx_outputs_exist():
     for f in ("course_meshes.fbx", "structures.fbx", "backdrop.fbx", "trees.csv", "greenkeeper.json"):
         assert (GSPRO / f).exists() and (GSPRO / f).stat().st_size > 1000, f
+
+
+def test_view_presets_are_not_inside_buildings():
+    """Final renders: the clubhouse preset sat 70 m from the clubhouse centroid, i.e. on its roof (the Westmount
+    clubhouse is bigger than MountainGate's). No preset camera may be inside a building footprint."""
+    from surface_classify import osm_geoms
+    from shapely.geometry import Point
+    views = json.load(open(C.ROOT / "viewer/views.json"))
+    blds = [g for _, t, g in osm_geoms() if "building" in t and g.geom_type == "Polygon"]
+    for name, v in views.items():
+        e, n = v["pos"][0] + C.ORIGIN_E, -v["pos"][2] + C.ORIGIN_N
+        assert not any(g.buffer(2.0).contains(Point(e, n)) for g in blds), f"{name} camera inside a building"

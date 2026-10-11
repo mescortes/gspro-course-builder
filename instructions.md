@@ -44,7 +44,7 @@ Read `research/GSPRO_COSMETICS.md` for how GSPro courses are put together and wh
 | `tests/` | `test_course.py` (built course), `test_blend.py`, `test_edges.py` (unit) |
 | `viewer/` | three.js viewer (`index.html`, `grass.js`, `views.json`); `scripts/devserver.py` serves it |
 | `workflows/*.js` | Multi-agent workflow templates: course research, per-hole QA rounds 1 and 2, GSPro research |
-| `unity/Editor/MountainGateSetup.cs` | Unity editor helpers shipped in the package (terrains, trees, water probes, 3DG) |
+| `unity/Editor/<config.UNITY_SCRIPT>` | Unity editor helpers shipped in the package (terrains, trees, water probes, 3DG); here `WestmountSetup.cs` |
 | `research/` | Notes, OSM dumps, OPCD docs and toolset (conventions only, never redistribute) |
 | `output/` | glTF, `holes.json`, maps, `gspro/` hand-off package |
 
@@ -220,8 +220,8 @@ The pipeline already produces all of this; check it and tune per course. Details
   * OPCD now recommends **Arborist** for planting; our CSV is a faithful alternative or a reference.
 * **Terrains.** Inner: 4097² RAW over 2048 m, sunk 5 cm under the meshes. **Outer plot**: 4097² over 4096 m, sunk
   2 m inside the inner square. Both get feathered imagery overlays. `terrain.json` has the import settings.
-* **Unity helper.** `unity/Editor/MountainGateSetup.cs` (Unity 2018.2 APIs: `SplatPrototype`, not `TerrainLayer`),
-  menu MountainGate, does four things:
+* **Unity helper.** `unity/Editor/<config.UNITY_SCRIPT>` (Unity 2018.2 APIs: `SplatPrototype`, not `TerrainLayer`;
+  newer Unity behind `#if UNITY_2018_3_OR_NEWER`), menu named after the course, does four things:
   1. builds both terrains;
   2. places the trees;
   3. adds water reflection probes (realtime, on awake);
@@ -267,7 +267,7 @@ Still to verify per course:
     y = H − BASE_H, z = −(N − ORIGIN_N)).
 * Combine shots into a contact sheet with PIL and Read the image: many issues are only visible there, such as giant
   normal-map blobs on water, blades rendered as dark hairs, or a camera below ground.
-* The viewer loads `../output/mountain_gate_ns.glb`, `../output/holes.json` and `../output/gspro/grass_3dg.json`.
+* The viewer loads `../output/<config.MODEL_NAME>.glb`, `../output/holes.json` and `../output/gspro/grass_3dg.json`.
 
 ## 11. Technical lessons (why the code is the way it is)
 
@@ -282,10 +282,13 @@ Still to verify per course:
   * Then **trim clearly green pixels** (a* < −14) outside canopy, because the classifier bleeds onto grass faces.
   * Keep a bunker only if it overlaps OSM or is a LiDAR hollow.
 * **Tees.**
-  * Keep one if it overlaps an OSM tee, or is a flat raised deck **at the start of some hole's line of play** (else
-    it is a lawn, terrace or court apron).
-  * Markers slide along the pad axis to match the card. If no pad can deliver the card yardage, pin the marker in
+  * Keep one if it overlaps an OSM tee, or is a flat **built** deck (`vectorize.is_deck`: part of the ring around it
+    falls away *below* it) in the first ~45 % of some hole's line of play. Otherwise it is a lawn, terrace, court
+    apron, swale bottom or fairway edge.
+  * Markers slide along any line of play across the pad (`hole_data.pad_axes`; L-shaped complexes have their
+    centroid outside the pad), nearest the centre line. If no pad can deliver the card yardage, pin the marker in
     `holeNN_meta.json` and document the gap.
+  * Tees built after the LiDAR survey get a synthetic deck (`build_terrain_mesh.level_tees`); see §11b.
 * **Greens.** Trim banks steeper than 12 % within 2.5 m of the edge. 8 % split tiered greens. Hillside greens can
   average 6 % on the bare LiDAR; test against the raw LiDAR, not a fixed number.
 
@@ -346,6 +349,45 @@ Still to verify per course:
 * Two scenes: 0 = course + detailed trees, 1 = light tree LOD.
 * Per-256 m-cell LOD switching in the viewer.
 
+## 11b. Lessons from Westmount (Ontario open data, leaf-off LiDAR and leaf-off NIR photo)
+
+* **Open data instead of Esri.** Ontario publishes everything needed under the OGL:
+  * COPC LiDAR tiles (NRCan);
+  * SWOOP 16 cm RGB + NIR imagery (LIO ImageServer `exportImage`, chunks of at most 800 m on the ground or it 504s);
+  * the HRDEM 1 m backdrop.
+
+  Overpass was down for hours: `fetch_data.py` falls back to the OSM API `/map` in tiles.
+* **NIR changes everything in a leaf-off photo.** NDVI is a band ratio, so it barely moves in shadow:
+  * cart paths are NDVI ridges (`trace_paths.py`, Sato filter), where colour rules drowned in leaf litter and trunk
+    shadows;
+  * sand in branch shadow is NDVI ~0. Accept it only where it connects to sunlit sand (`vectorize.sand_hysteresis`).
+    Alone, the shadow rule also took bare soil, shaded roofs and pavement off the course.
+* **Leaf-off canopy.** Bare trees hide nothing:
+  * keep turf labels under canopy;
+  * turn `native` under canopy into wooded rough (leaf litter);
+  * close the CHM (grey closing, 1.25 m) before crown segmentation, or one oak becomes five trees;
+  * conifers vs bare hardwoods: LiDAR pulse penetration plus crown NDVI.
+* **Unmapped bunkers** must be LiDAR hollows *on the course*: garden beds next door are hollows too.
+* **Off-course paths.** OSM footways along the streets feed the path corridor. Cart path more than 5 m outside
+  `leisure=golf_course` is road (`vectorize.off_course_paths`).
+* **Tees newer than the LiDAR** (Westmount: holes 5, 8 and 11 rebuilt 2023-25) have no deck in the DEM:
+  * `level_tees` fits a plane of at most 1 % at the mean height and feathers it with banks of about 1:3 over the
+    ground slope;
+  * real decks (plane std < 6 cm, fall <= 3.5 %; drainage falls are 1.5-3 %) are left alone, and so are polygons over
+    500 m² (a bad outline would terrace the hillside);
+  * list the levelled tees for QA: large fill means the outline runs down a bank.
+* **Steep Thompson greens.** Relax the pin slope limit (3 → 5 %) until 12 % of the green is pinnable, or all pins land
+  in one spot (`hole_data.pin_candidates`).
+* **Structures OSM lacks** go in `features/structures.geojson` (`building`, `height`, `roof:shape=hipped` for a
+  synthetic roof when the shelter is newer than the LiDAR). `osm_geoms` reads them as buildings.
+* **Spring photo, summer course.** `config.TURF_TINT` grades turf to summer in the glTF only. GSPro uses its own turf
+  materials by object name.
+* **QA in parallel** writes duplicate cart paths on hole boundaries; two traces 1 m apart union into a 3.5 m path.
+  Prompts must tell verifiers to check every override file first. Dedupe before rebuilding.
+* **Blender exits 0 on Python errors** unless you pass `--python-exit-code 1`.
+* **GreenKeeper distance rule.** Aim points that are not nearer the green than the tee are skipped. Compute yardages
+  the same way, or forward tees past a dogleg read long.
+
 ## 12. Multi-agent workflows: what worked
 
 * **Research** (scorecard, GSPro practice): 4–6 angles, each a different method (local docs, official docs, forums,
@@ -368,7 +410,7 @@ Still to verify per course:
 - [ ] Viewer renders checked: every hole's tee and green, a bunker lip, water, rough grass.
 - [ ] GSPro package: `heightmap_4097.raw`, `outer_heightmap_4097.raw`, overlays, `course_opcd.svg`,
       `course_meshes.fbx` (+ `fbx_manifest.json`), `structures.fbx`, `backdrop.fbx`, `tree_prefabs.fbx/.json`,
-      `trees.csv`, `grass_3dg.json`, `greenkeeper.json`, `terrain.json`, `unity/Editor/MountainGateSetup.cs`.
+      `trees.csv`, `grass_3dg.json`, `greenkeeper.json`, `terrain.json`, `unity/Editor/<config.UNITY_SCRIPT>`.
 - [ ] README (with table and renders), TODO and known limitations updated. Nothing committed unless asked.
 
 Rough timings for an 18-hole course on a 32 GB Mac:

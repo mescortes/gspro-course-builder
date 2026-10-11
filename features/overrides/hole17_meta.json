@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "white": [
+   537317.3,
+   4810859.8
+  ]
+ },
+ "notes": "QA round 2: the 17 tee complex was rebuilt after the 2018 LiDAR. The 2025 photo and OSM (tees 918932874/875/876) show three rotated mown boxes (Blue, middle White/Red, Gold) with pale unmown banks between them; under the Gold box the 2018 ground is a 3 m slope and the middle box spans two 2018 levels (351.3 / 350.45 m). hole17.geojson burns the 836 m2 automatic tee polygon to rough and puts back the 2025 Gold and middle boxes, which then get synthetic decks (Gold ~349.4 m, middle ~351.0 m, Blue ~351.97 m). White is pinned 1.5 m inside the back-right (east) corner of the middle box: 132.2 m = 144.6 yd from the green centre (card 149, -4.4). No point on the 2025 boxes measures 149: the back of the middle box is 144.6 and the front of the Blue box 153.9. The round-1 pin [537310.0, 4810852.4] lay on the pale bank 2.3 m behind the 2025 middle box (12.6 % slope in the round-2 model) and was replaced. Blue 165, Red 132 and Gold 113 are placed automatically at the card."
+}

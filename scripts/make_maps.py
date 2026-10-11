@@ -135,7 +135,7 @@ def green_map(hole, feats, dem, T, out):
     gd = hole["green"]
     ax.set_title(f"Hole {hn} ({hole['nine']} {hole['nine_hole']}) green · {gd['depth_yd']:.0f} yd deep × {gd['width_yd']:.0f} yd wide · {gd['area_sqft']} sq ft\n"
                  f"5 cm contours, arrows = direction of fall · mean slope {gd['slope_pct']['mean']}% · "
-                 f"pinnable (≥3 m from edge, ≤3%): {gd['pinnable_fraction'] * 100:.0f}%", fontsize=9)
+                 f"pinnable (≥3 m from edge, ≤{gd.get('pin_slope_limit_pct', 3.0):g}%): {gd['pinnable_fraction'] * 100:.0f}%", fontsize=9)
     ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([])
     fig.tight_layout(); fig.savefig(out); plt.close(fig)
 

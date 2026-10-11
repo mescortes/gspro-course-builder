@@ -6,8 +6,8 @@ the tests, maps, viewer camera presets and tee-marker / flagstick placement.
 
 Line of play: the OSM `golf=hole` line (tee -> doglegs -> green). Its interior vertices are the aim points; for
 hole 1 the aim point was hand-checked against the fairway. Tee markers: each scorecard tee is assigned the tee pad
-whose playing distance is closest, then slid along the pad's axis so the measured yardage matches the card (that
-is how real markers are set), clamped to stay 1.5 m inside the pad.
+whose playing distance is closest, then slid along a line of play across the pad (the one nearest its centre line that reaches the yardage)
+so the measured yardage matches the card (that is how real markers are set), clamped to stay 1.5 m inside the pad.
 """
 import sys, json, math
 import numpy as np
@@ -72,24 +72,40 @@ def point_at_distance(d_m, aims, green_c, back_tee):
 
 
 def play_distance(p, aims, green_c):
-    pts = [tuple(p)] + [tuple(a) for a in aims] + [tuple(green_c)]
+    """Horizontal play distance tee -> aim points -> green centre, as GreenKeeper computes it: aim points that are not
+    nearer the green than the tee (a forward tee past the dogleg) are skipped (research/GSPRO_COSMETICS.md 5)."""
+    d0 = math.dist(tuple(p)[:2], tuple(green_c)[:2])
+    pts = [tuple(p)[:2]] + [tuple(a)[:2] for a in aims if math.dist(tuple(a)[:2], tuple(green_c)[:2]) < d0] + [tuple(green_c)[:2]]
     return sum(math.dist(a, b) for a, b in zip(pts[:-1], pts[1:]))
 
 
-def pad_axis(pad, toward):
-    """Segment through the pad centroid along the direction to `toward`, clipped to the pad inset by 1.5 m."""
-    c = np.asarray(pad.centroid.coords[0]); d = np.asarray(toward) - c; d /= np.linalg.norm(d)
+def pad_axes(pad, toward, step=1.5):
+    """Candidate marker lines across the pad: segments parallel to the direction from the pad to `toward`, every `step` m
+    across it, clipped to the pad inset by 1.5 m. Returns [(back, front, offset)], offset = metres from the centroid's
+    line. Every line is a candidate because a composite / L-shaped tee complex has its centroid outside the pad (QA
+    round 1), so the line through it alone can miss the arm that carries the card yardage."""
+    c = np.asarray(pad.centroid.coords[0]); d = np.asarray(toward, float) - c; d /= np.linalg.norm(d)
+    n = np.array([-d[1], d[0]])
     inner = pad.buffer(-1.5)
     if inner.is_empty:
         inner = pad.buffer(-0.5) if not pad.buffer(-0.5).is_empty else pad
-    seg = LineString([c - d * 80, c + d * 80]).intersection(inner)
-    if seg.is_empty:
-        return c, c, d
-    seg = max(getattr(seg, "geoms", [seg]), key=lambda s: s.length) if seg.geom_type != "LineString" else seg
-    a, b = np.asarray(seg.coords[0]), np.asarray(seg.coords[-1])
-    if np.dot(b - a, d) < 0:
-        a, b = b, a
-    return a, b, d  # a = back of pad, b = front
+    ext = np.asarray(inner.exterior.coords if inner.geom_type == "Polygon" else
+                     [q for g in inner.geoms for q in g.exterior.coords]) - c
+    across = ext @ n
+    out = []
+    for off in np.arange(np.floor(across.min() / step) * step, across.max() + 1e-9, step):
+        seg = LineString([c + n * off - d * 80, c + n * off + d * 80]).intersection(inner)
+        for piece in getattr(seg, "geoms", [seg]):
+            if piece.is_empty or piece.geom_type != "LineString":
+                continue
+            a, b = np.asarray(piece.coords[0]), np.asarray(piece.coords[-1])
+            if np.dot(b - a, d) < 0:
+                a, b = b, a
+            out.append((a, b, float(off)))
+    if not out:
+        p = np.asarray(inner.representative_point().coords[0])
+        out.append((p, p, 0.0))
+    return out  # back of pad, front, offset
 
 
 def place_tees(pads, aims, green_c, card):
@@ -97,28 +113,43 @@ def place_tees(pads, aims, green_c, card):
     first = aims[0] if aims else green_c
     info = []
     for pad in pads:
-        a, b, d = pad_axis(pad, first)
-        info.append(dict(pad=pad, back=a, front=b, dist_back=play_distance(a, aims, green_c) * YD,
-                         dist_front=play_distance(b, aims, green_c) * YD, dist_c=play_distance(pad.centroid.coords[0], aims, green_c) * YD))
+        axes = [dict(back=a, front=b, off=off, dist_back=play_distance(a, aims, green_c) * YD,
+                     dist_front=play_distance(b, aims, green_c) * YD) for a, b, off in pad_axes(pad, first)]
+        info.append(dict(pad=pad, axes=axes, dist_c=play_distance(pad.centroid.coords[0], aims, green_c) * YD))
+
+    def err(ax, yards):
+        lo, hi = sorted((ax["dist_front"], ax["dist_back"]))
+        return 0.0 if lo <= yards <= hi else min(abs(yards - lo), abs(yards - hi))
+
     tees = []
     for key, yards in zip(TEE_KEYS, card):
         if not info:
             break
-        # distance error if the marker is placed anywhere along this pad's axis
-        def err(i):
-            lo, hi = sorted((i["dist_front"], i["dist_back"]))
-            return 0.0 if lo <= yards <= hi else min(abs(yards - lo), abs(yards - hi))
-        best = min(info, key=lambda i: (err(i), abs(i["dist_c"] - yards)))
-        lo, hi = best["dist_front"], best["dist_back"]
+        # distance error if the marker is placed anywhere on this pad
+        best = min(info, key=lambda i: (min(err(ax, yards) for ax in i["axes"]), abs(i["dist_c"] - yards)))
+        ax = min(best["axes"], key=lambda ax: (round(err(ax, yards), 3), abs(ax["off"])))   # nearest the centre line
+        lo, hi = ax["dist_front"], ax["dist_back"]
         t = 0.5 if abs(hi - lo) < 1e-6 else float(np.clip((yards - lo) / (hi - lo), 0, 1))
-        pos = best["front"] + (best["back"] - best["front"]) * t
+        pos = ax["front"] + (ax["back"] - ax["front"]) * t
         measured = play_distance(pos, aims, green_c) * YD
-        tees.append(dict(key=key, pad=best["pad"], pos=pos, measured=measured, card=yards, pad_err=err(best)))
+        tees.append(dict(key=key, pad=best["pad"], pos=pos, measured=measured, card=yards, pad_err=err(ax, yards)))
     return tees
 
 
+def hole_green(greens, snap=0.3):
+    """The putting surface: the largest green polygon plus the pieces that touch it (within `snap` m). QA overrides that
+    fill a notch are separate polygons (QA round 2, holes 8, 14 and 18); a green elsewhere is not part of this one."""
+    main = max(greens, key=lambda g: g.area)
+    parts = [g for g in greens if g is main or g.distance(main) <= snap]
+    if len(parts) == 1:
+        return main
+    u = unary_union([g.buffer(snap / 2 + 0.01, join_style=2) for g in parts]).buffer(-(snap / 2 + 0.01), join_style=2)
+    return max(getattr(u, "geoms", [u]), key=lambda g: g.area)
+
+
 def green_analysis(green, terr, res=0.25):
-    """Slope map on the putting surface and candidate pin locations (>= 3 m from the edge, slope <= 3 %)."""
+    """Slope map on the putting surface and candidate pin locations (>= 3 m from the edge, slope <= 3 %, relaxed on
+    steep greens: pin_candidates)."""
     import shapely
     minx, miny, maxx, maxy = green.bounds
     xs = np.arange(minx, maxx, res) + res / 2; ys = np.arange(miny, maxy, res) + res / 2
@@ -129,8 +160,18 @@ def green_analysis(green, terr, res=0.25):
     gy, gx = np.gradient(Z, res)
     slope = np.hypot(gx, gy) * 100
     edge = ndimage.distance_transform_edt(inside) * res
-    ok = inside & (edge >= 3.0) & (slope <= 3.0)
-    return X, Y, Z, slope, inside, edge, ok
+    ok, limit = pin_candidates(inside, edge, slope)
+    return X, Y, Z, slope, inside, edge, ok, limit
+
+
+def pin_candidates(inside, edge, slope, limits=(3.0, 3.5, 4.0, 4.5, 5.0), min_frac=0.12):
+    """Cells >= 3 m from the edge with slope <= the first limit (in %) that leaves at least `min_frac` of the green
+    pinnable. Steep Thompson greens (Westmount 14: 3.7 % at <= 3 %) would otherwise put all five pins in one spot."""
+    for limit in limits:
+        ok = inside & (edge >= 3.0) & (slope <= limit)
+        if ok.sum() >= min_frac * max(inside.sum(), 1):
+            break
+    return ok, limit
 
 
 def hole_record(h, line, feats, terr, all_feats):
@@ -139,7 +180,7 @@ def hole_record(h, line, feats, terr, all_feats):
     greens = [g for g, p in hf if p["surface"] == "green"]
     if not greens:
         return {"hole": h, "error": "no green polygon assigned"}
-    green = max(greens, key=lambda g: g.area)
+    green = hole_green(greens)
     gc = np.asarray(green.centroid.coords[0])
     coords = np.asarray(line.coords)
     meta = hole_meta(h)
@@ -194,7 +235,7 @@ def hole_record(h, line, feats, terr, all_feats):
     if Point(approach_from).distance(front) > Point(approach_from).distance(back):
         front, back = back, front
     width = chord(perp).length if chord(perp) is not None else 0.0
-    X, Y, Z, slope, inside, edge, ok = green_analysis(green, terr)
+    X, Y, Z, slope, inside, edge, ok, pin_limit = green_analysis(green, terr)
     gh = terr.h(*gc)
     rec["green"] = {"centre_utm": [round(gc[0], 2), round(gc[1], 2), round(gh, 2)], "centre_model": model(gc[0], gc[1], gh),
                     "front_utm": [round(front.x, 2), round(front.y, 2)], "back_utm": [round(back.x, 2), round(back.y, 2)],
@@ -203,6 +244,7 @@ def hole_record(h, line, feats, terr, all_feats):
                     "slope_pct": {"mean": round(float(slope[inside].mean()), 2), "p95": round(float(np.percentile(slope[inside], 95)), 2),
                                   "max": round(float(slope[inside].max()), 2)},
                     "pinnable_fraction": round(float(ok.sum() / max(inside.sum(), 1)), 3),
+                    "pin_slope_limit_pct": pin_limit,
                     "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in green.exterior.coords]}
     along = (X - gc[0]) * v[0] + (Y - gc[1]) * v[1]; across = (X - gc[0]) * perp[0] + (Y - gc[1]) * perp[1]
     cand = np.flatnonzero(ok.ravel())

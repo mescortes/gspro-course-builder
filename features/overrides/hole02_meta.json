@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "blue": [
+   537533.2,
+   4811271.0
+  ]
+ },
+ "notes": "Blue marker moved to the narrow northern strip of the shared Blue/White tee complex (mown strip E 530.5-536, N 4811260-4811277, flat in the 2018 LiDAR). The automatic pad axis through the L-shaped pad's centroid cannot reach the strip, so Blue measured 365 vs card 373; at this point it measures 373."
+}

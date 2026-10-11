@@ -43,7 +43,13 @@ def main():
     bunkers = [np.asarray(z["utm_centroid"]) for z in h["hazards"] if z["type"] == "bunker"]
     gb = min(bunkers, key=lambda b: np.linalg.norm(b - green)) if bunkers else green - da * 15 + side * 10
     blds = [g for _, t, g in osm_geoms() if "building" in t and g.geom_type == "Polygon" and g.distance(Point(tee)) < 400]
-    club = np.asarray(max(blds, key=lambda g: g.area).centroid.coords[0]) if blds else tee + np.array([40.0, -40.0])
+    house = max(blds, key=lambda g: g.area) if blds else None
+    club = np.asarray(house.centroid.coords[0]) if house is not None else tee + np.array([40.0, -40.0])
+    # clubhouse camera: 40 m outside the footprint toward the 1st tee, stepped out until it is clear of every building
+    reach = max(Point(club).distance(Point(c)) for c in house.exterior.coords) if house is not None else 30.0
+    club_cam = club + unit(tee - club) * (reach + 40.0)
+    while any(g.buffer(3.0).contains(Point(club_cam)) for g in blds):
+        club_cam = club_cam + unit(tee - club) * 10.0
     mid = 0.5 * (tee + green)
     views = {
         "tee":          {"pos": m(tee, 1.75), "target": m(tee + d1 * 150), "fov": 50},
@@ -53,7 +59,7 @@ def main():
         "green":        {"pos": m(green - da * 18, 1.7), "target": m(pin), "fov": 50},
         "behind_green": {"pos": m(green + da * 30, 6.0), "target": m(tee), "fov": 55},
         "flag":         {"pos": m(pin - da * 7, 1.6), "target": m(pin, 1.0), "fov": 45},
-        "clubhouse":    {"pos": m(club + unit(tee - club) * 70, 4.0), "target": m(club, 4.0), "fov": 55},
+        "clubhouse":    {"pos": m(club_cam, 4.0), "target": m(club, 4.0), "fov": 55},
         "putt":         {"pos": m(pin - da * 3, 1.2), "target": m(pin), "fov": 55},
         "rough_lie":    {"pos": m(mid + side * 30, 1.5), "target": m(green), "fov": 60},
         "bunker_lie":   {"pos": m(gb, 1.5), "target": m(pin, 0.5), "fov": 60},

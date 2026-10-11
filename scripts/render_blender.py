@@ -47,14 +47,15 @@ scene.cycles.samples = int(opts["--samples"])
 scene.cycles.use_denoising = True
 scene.render.resolution_x, scene.render.resolution_y = W, H
 scene.view_settings.view_transform = "AgX"
+scene.view_settings.look = "AgX - Base Contrast"
 scene.render.film_transparent = False
 # sky + sun (late-morning summer sun from the south-east)
 world = bpy.data.worlds.new("World"); scene.world = world; world.use_nodes = True
 nt = world.node_tree; bg = nt.nodes["Background"]
 sky = nt.nodes.new("ShaderNodeTexSky"); sky.sky_type = "NISHITA"; sky.sun_elevation = math.radians(48); sky.sun_rotation = math.radians(150)
-nt.links.new(sky.outputs["Color"], bg.inputs["Color"]); bg.inputs["Strength"].default_value = 0.35
+nt.links.new(sky.outputs["Color"], bg.inputs["Color"]); bg.inputs["Strength"].default_value = 0.25
 sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", "SUN")); scene.collection.objects.link(sun)
-sun.data.energy = 3.5; sun.data.angle = math.radians(0.6)
+sun.data.energy = 2.6; sun.data.angle = math.radians(0.6)
 sun.rotation_euler = (math.radians(90 - 48), 0, math.radians(150 + 180))
 cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam")); scene.collection.objects.link(cam); scene.camera = cam
 cam.data.clip_start = 0.05; cam.data.clip_end = 6000

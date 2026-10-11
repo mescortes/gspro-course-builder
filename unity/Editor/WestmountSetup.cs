@@ -1,5 +1,6 @@
 // Westmount G&CC: Unity editor helpers for the GSPro / OPCD hand-off (output/gspro/).
-// Unity 2018.2.8f1 (the OPCD base project version); built-in render pipeline. Put this file in Assets/Editor/.
+// Unity 2018.2.8f1 per the OPCD documentation (check the V4 BaseProject's ProjectVersion.txt); built-in render pipeline.
+// Put this file in Assets/Editor/. On Unity 2018.3+ the terrain overlay uses a TerrainLayer (SplatPrototype is obsolete there).
 //
 // Menu "Westmount/...":
 //   1. Build Terrains       inner + outer (OPCD 'Plot (Outer)') Unity terrains from the 16-bit RAW heightmaps and overlays
@@ -75,18 +76,32 @@ public class WestmountSetup : EditorWindow
         td.heightmapResolution = n;
         td.size = new Vector3(size.width_x, size.height_y, size.length_z);
         td.SetHeights(0, 0, ReadRaw16(rawPath, n));
+        // OPCD terrain settings: detail 2048 / 8 per patch, control (alphamap) 2048, base map 2048
+        td.SetDetailResolution(2048, 8);
+        td.alphamapResolution = 2048;
+        td.baseMapResolution = 2048;
+        string assetBase = dir + "/" + name.Replace(" ", "").Replace("(", "_").Replace(")", "");
         Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(overlayAsset);
         if (tex != null)
         {
-            // Unity 2018.2: splat prototypes (TerrainLayer arrives in 2018.3); one layer stretched over the whole terrain
+            // one layer stretched over the whole terrain
+#if UNITY_2018_3_OR_NEWER
+            TerrainLayer tl = new TerrainLayer();
+            tl.diffuseTexture = tex;
+            tl.tileSize = new Vector2(size.width_x, size.length_z);
+            tl.tileOffset = Vector2.zero;
+            AssetDatabase.CreateAsset(tl, assetBase + "_Overlay.terrainlayer");
+            td.terrainLayers = new TerrainLayer[] { tl };
+#else
             SplatPrototype sp = new SplatPrototype();
             sp.texture = tex;
             sp.tileSize = new Vector2(size.width_x, size.length_z);
             sp.tileOffset = Vector2.zero;
             td.splatPrototypes = new SplatPrototype[] { sp };
+#endif
         }
         else Debug.LogWarning("Overlay not found: " + overlayAsset + " (set its import Max Size to 8192)");
-        string dataPath = dir + "/" + name.Replace(" ", "").Replace("(", "_").Replace(")", "") + "_TerrainData.asset";
+        string dataPath = assetBase + "_TerrainData.asset";
         AssetDatabase.CreateAsset(td, dataPath);
         GameObject go = Terrain.CreateTerrainGameObject(td);
         go.name = name;
@@ -160,14 +175,21 @@ public class WestmountSetup : EditorWindow
             Prefab p;
             if (colliders && info.TryGetValue(proto.name, out p) && p.archetype != "shrub")
             {
-                // ball physics: a trunk capsule up to the crown base (canopy left open, as most designers do)
+                // ball physics: a trunk capsule up to the crown base (canopy left open, as most designers do). Values are in
+                // the prefab's reference units: the instance scale (scale_xz, scale_y) applies to the collider as well.
+                // No PhysicMaterial is assigned (GSPro's expectation for tree colliders is undocumented).
                 CapsuleCollider cc = t.AddComponent<CapsuleCollider>();
                 cc.direction = 1;
                 cc.radius = p.trunk_radius_m;
                 cc.height = Mathf.Max(p.crown_base_m, 2f * p.trunk_radius_m);
                 cc.center = new Vector3(0f, cc.height / 2f, 0f);
             }
-            GameObjectUtility.SetStaticEditorFlags(t, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+            // GPU instancing, not static batching (Unity turns instancing off on statically batched objects); trees are
+            // poor occluders on an open course, so they are only occludees
+            GameObjectUtility.SetStaticEditorFlags(t, StaticEditorFlags.OccludeeStatic);
+            foreach (Renderer rr in t.GetComponentsInChildren<Renderer>())
+                foreach (Material mm in rr.sharedMaterials)
+                    if (mm != null && !mm.enableInstancing) mm.enableInstancing = true;
             placed++;
         }
         Debug.Log("Westmount: placed " + placed + " trees in " + cells.Count + " cells");
@@ -260,6 +282,7 @@ public class WestmountSetup : EditorWindow
             {
                 it.objectReferenceValue = m;
                 so.ApplyModifiedProperties();
+                Debug.Log(c.name + ": 3DG material set on property '" + it.propertyPath + "' of " + c.GetType().Name + " (check it in the Inspector)");
                 return;
             }
         }

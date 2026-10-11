@@ -65,6 +65,42 @@ def segment_crowns(chm, r, leaf_off=None):
     return (cy, cx, hv), lab
 
 
+NO_TREE = ("tee", "green", "bunker")
+
+
+def off_surfaces(feats, polys, max_shift=4.0, clearance=0.75):
+    """Trees on tees, greens or bunkers: LiDAR positions are crown tops, so a leaning tree beside a tee lands on it, and
+    the 2018 trees stand where later tees were built (hole 8's 2025 back tee). A tree within `max_shift` m of the edge
+    moves to `clearance` m outside it; one deeper inside was cleared for the surface and is dropped."""
+    from shapely.strtree import STRtree
+    from shapely.ops import nearest_points
+    if not polys:
+        return feats
+    tree = STRtree(polys)
+    out = []
+    for f in feats:
+        p = Point(f["geometry"]["coordinates"])
+        hit = [polys[i] for i in tree.query(p) if polys[i].contains(p)]
+        if not hit:
+            out.append(f); continue
+        g = hit[0]
+        if g.exterior.distance(p) > max_shift:
+            continue
+        for _ in range(3):   # step outward along the edge normal, then re-check (a neighbouring surface may be hit)
+            q = nearest_points(g.exterior, p)[0]
+            v = np.array([q.x - p.x, q.y - p.y]); L = np.linalg.norm(v)
+            p = Point(q.x + v[0] / max(L, 1e-9) * clearance, q.y + v[1] / max(L, 1e-9) * clearance)
+            hit = [polys[i] for i in tree.query(p) if polys[i].contains(p)]
+            if not hit:
+                break
+            g = hit[0]
+        if hit:
+            continue
+        f = dict(f, geometry={"type": "Point", "coordinates": (round(p.x, 2), round(p.y, 2))})
+        out.append(f)
+    return out
+
+
 def main(out=None):
     with rasterio.open(C.BUILD / "chm.tif") as ds:
         chm = ds.read(1); T = ds.transform
@@ -101,6 +137,13 @@ def main(out=None):
                                      "sharpness": round(float(sharp), 3), "penetration": round(float(pen[i]), 3), "L": round(float(L), 1), "A": round(float(A), 1),
                                      "B": round(float(B), 1), "ndvi": round(float(ndvi[i]), 3), "solidity": round(float(solid[i]), 3)}})
     assign_archetypes(feats)
+    surf_path = C.FEATURES / "course_surfaces.geojson"
+    if surf_path.exists():
+        from shapely.geometry import shape
+        polys = [g for f in json.load(open(surf_path))["features"] if f["properties"]["surface"] in NO_TREE
+                 for g in getattr(shape(f["geometry"]), "geoms", [shape(f["geometry"])])]
+        n0 = len(feats); feats = off_surfaces(feats, polys)
+        print(f"trees on tees / greens / bunkers: {n0 - len(feats)} dropped (cleared), the rest moved off the edge", flush=True)
     json.dump({"type": "FeatureCollection", "features": feats}, open(out or (C.FEATURES / "trees.geojson"), "w"))
     from collections import Counter
     print("trees", len(feats), Counter(f["properties"]["archetype"] for f in feats))

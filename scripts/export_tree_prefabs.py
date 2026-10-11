@@ -69,8 +69,9 @@ def main():
                          "crown_base_m": round(crown_base, 3), "triangles": tris})
     glb.save(OUT / "tree_prefabs.glb")
     json.dump({"note": "Prefab = object in tree_prefabs.fbx; scale per tree from trees.csv (scale_xz, scale_y, yaw_deg). "
-                       "Suggested ball collider: CapsuleCollider on the trunk, radius trunk_radius_m * scale_xz, "
-                       "height crown_base_m * scale_y.",
+                       "Suggested ball collider: CapsuleCollider on the trunk of the scaled instance, radius trunk_radius_m "
+                       "and height crown_base_m in the prefab's own units - the instance scale already applies to it "
+                       "(do not multiply by scale_xz / scale_y again).",
                "prefabs": meta}, open(OUT / "tree_prefabs.json", "w"), indent=1)
     print("tree prefabs", len(meta))
 

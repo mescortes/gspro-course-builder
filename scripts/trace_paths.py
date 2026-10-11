@@ -30,7 +30,8 @@ RIDGE_MIN, NDVI_MAX, L_MIN = 0.05, 0.25, 35.0
 SIGMAS_M = (0.5, 0.75, 1.0, 1.25)   # Sato scales (m): ridges ~1-2.5 m wide
 WIDTH = (0.6, 4.5)      # m, full strip width at the skeleton
 MIN_LEN = 25.0          # m, shortest kept line (after bridging)
-MAX_GAP, MAX_ANGLE = 6.0, 35.0
+MAX_GAP, MAX_ANGLE = 6.0, 35.0          # short gaps (a trunk, a cart): loose alignment
+LONG_GAP, LONG_ANGLE = 35.0, 25.0       # under a spruce / a long shadow (QA round 1): ends must face each other closely
 
 
 def candidates(ridge, L, ndvi, exclude):
@@ -128,8 +129,9 @@ def _end_dir(g, at_start):
     return p, d / max(np.linalg.norm(d), 1e-9)  # outward direction at that end
 
 
-def bridge(lines, max_gap=MAX_GAP, max_angle=MAX_ANGLE):
-    """Join line ends that face each other across a short gap (shadow / trunk interruptions)."""
+def bridge(lines, max_gap=MAX_GAP, max_angle=MAX_ANGLE, ok=None):
+    """Join line ends that face each other across a gap (shadow / trunk / conifer interruptions). `ok(segment)` may
+    veto a connector (e.g. one crossing a green, a bunker or a fairway)."""
     ends = []
     for i, g in enumerate(lines):
         for s in (True, False):
@@ -147,7 +149,7 @@ def bridge(lines, max_gap=MAX_GAP, max_angle=MAX_ANGLE):
             if L > max_gap or L < 1e-6:
                 continue
             u = v / L
-            if u @ da >= cos and (-u) @ db >= cos:
+            if u @ da >= cos and (-u) @ db >= cos and (ok is None or ok(LineString([pa, pb]))):
                 pairs.append((L, a, b))
     for L, a, b in sorted(pairs):
         if a in used or b in used:
@@ -191,7 +193,15 @@ def main():
         c = candidates(ridge, L, ndimage.gaussian_filter(ndvi, 1.0), excl[p0:p1]) & course[p0:p1]
         cand[r0:r1] = c[r0 - p0:r0 - p0 + (r1 - r0)]
     lines = centrelines(cand, T, min_len=6.0)
-    lines = [g for g in bridge(lines) if g.length >= MIN_LEN]
+    def clear(seg, frac=0.1):
+        """A long connector may not cross excluded ground (greens, bunkers, water, buildings, fairway interiors)."""
+        P = np.asarray(seg.segmentize(0.5).coords)
+        c = ((P[:, 0] - T.c) / T.a).astype(int); r = ((P[:, 1] - T.f) / T.e).astype(int)
+        inb = (c >= 0) & (c < W) & (r >= 0) & (r < H)
+        return inb.all() and excl[r, c].mean() <= frac and course[r, c].all()
+    lines = bridge(lines)
+    lines = bridge([g for g in lines if g.length >= 6.0], LONG_GAP, LONG_ANGLE, ok=clear)
+    lines = [g for g in lines if g.length >= MIN_LEN]
     feats = [{"type": "Feature", "geometry": mapping(g), "properties": {"golf": "cartpath", "source": "trace_paths",
                                                                         "length_m": round(g.length, 1)}} for g in lines]
     OUT.parent.mkdir(exist_ok=True)

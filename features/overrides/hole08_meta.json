@@ -1,0 +1,16 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "blue": [
+   537123.04,
+   4811068.53
+  ]
+ },
+ "aim_points_utm": [
+  [
+   537316.16,
+   4811142.42
+  ]
+ ],
+ "notes": "Blue moved to the new 2025 back tee (added in features/overrides/hole08.geojson): a rectangular teeing ground ~10.5 x 6.5 m with divot marks and fresh sod around it at 537118-537130, 4811064-4811074, SW of the old tees across the cart path. It is absent from the 2018 LiDAR (the DEM there is the old slope, about 1-1.5 m of fall), so the deck needs flattening. Marker gives 305.0 yd via the existing aim point (kept unchanged; pinned so the card distance holds). White/Red/Gold stay on the old pads (275/260/245 measured = card). Verified: 305.0 yd recomputed (tee -> aim -> green centre 537375.55,4811183.34); the marker is inside the new pad, 3.6 m from its edge. The 2018 DEM under the pad spans 342.6-344.7 m, so level_tees has to build its synthetic deck."
+}

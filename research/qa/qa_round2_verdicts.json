@@ -1,0 +1,516 @@
+[
+ {
+  "hole": 1,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "fairway",
+    "reason": "I confirmed this on the photo and NDVI. The pocket at E 599.5-607.5, N 4811135-147 is sunlit, and both the mown stripes and the NDVI striping run through it at the same brightness as the fairway. The rough band (first cut) north of N 148 lies in the tree shadow at E 594-598, so the filled edge now runs continuously along the shadow line. The 1 m ring around the fill is only fairway hole 1 and semirough, so it takes nothing from a bunker or the trees."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "I confirmed this on the photo. The 26 m2 'native' patch at E 714-721.5, N 4810920-927 is the same brown leaf litter with trunk shadows as the bare grove around it. There is no bed edge or mulch colour, and the 1 m ring around it is entirely rough 99."
+   },
+   {
+    "index": 2,
+    "surface": "cartpath",
+    "reason": "I confirmed the false bunker. The median colour inside is RGB 146/137/116, much darker than the hole 1 bunker sand (196-220/184-210/152-174). NDVI is -0.003. The photo shows a smooth grey slab linking the upper lot (road) to the lower lot (road). On dem_raw the slab runs from 352.1 to 353.0 m along its length, a ramp and not a hollow. Pavement fits cartpath better than rough. No override in any file lies within 3 m. Hole 10's proposal_r2 feature 2 (rough 99, same footprint) is a duplicate and should be rejected; hole10.geojson does not contain it yet."
+   },
+   {
+    "index": 3,
+    "surface": "rough",
+    "reason": "I confirmed this against the current surfaces. It covers a 4.15 m2 cart-path sliver of the refuted spruce-dripline 'path', which sits on brown rough at the spruce edge in the photo. It does not touch the real path (the 733 m2 automatic polygon or the round-1 walk at E 749+), and it does not touch any tee. The ring around it is all rough."
+   },
+   {
+    "index": 4,
+    "surface": "rough",
+    "reason": "Same check as feature 3: it covers a 0.09 m2 cart-path sliver along the spruce edge, with rough all around and no overlap with any tee or the real path."
+   },
+   {
+    "index": 5,
+    "surface": "rough",
+    "reason": "Same check: it covers a 0.46 m2 cart-path sliver. It sits next to the Red pad (E 720-730.5) but does not overlap it (0 m2)."
+   },
+   {
+    "index": 6,
+    "surface": "rough",
+    "reason": "Same check: it covers a 1.31 m2 cart-path sliver under the spruce dripline. The photo shows no asphalt there."
+   },
+   {
+    "index": 7,
+    "surface": "rough",
+    "reason": "Same check: it covers a 0.2 m2 cart-path sliver, with rough all around."
+   },
+   {
+    "index": 8,
+    "surface": "rough",
+    "reason": "Same check: it covers a 1.53 m2 cart-path sliver at the spruce edge. The photo shows no path there."
+   },
+   {
+    "index": 9,
+    "surface": "rough",
+    "reason": "Same check: it covers a 2.97 m2 cart-path sliver at E 742-745, N 845-848. That is more than 4 m west of the real paved walk (E 749-753), so it does not touch it."
+   },
+   {
+    "index": 10,
+    "surface": "rough",
+    "reason": "I confirmed it covers the 0.98 m2 remnant of the old automatic Blue tee, at the grass/asphalt edge west of the round-1 Blue pad override. It does not overlap that pad (0 m2), and the ring around it is rough. It is not part of the deck."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none (no meta proposed; existing hole 1 overrides 0-3 kept unchanged)",
+  "remaining_issues": [
+   "Duplicate: build/qa/hole10/proposal_r2.geojson feature 2 burns rough 99 over the same paved walk (E 716-724, N 4810756-766) that hole01.geojson now burns as cartpath 98. Overrides burn in sorted file order, so hole10.geojson would win if its verifier applies that feature. Reject it there. When I checked, hole10.geojson did not contain it.",
+   "The OSM tee (48.9 m2) at E 701, N 4810845 matches no card tee (about 487 yd) and carries no marker. It is flat and harmless, so I left it.",
+   "The mulch beds around the clubhouse and parking islands (e.g. E 718-735, N 4810760-772) now read as rough because of the under-canopy rule. This is cosmetic only, off the line of play.",
+   "The 217.8 m2 automatic cart path along the north edge of the lower lot (E 724-788, N 4810755-773) nearly touches the new walk polygon. I did not re-verify it this round."
+  ],
+  "quality_score": 9
+ },
+ {
+  "hole": 2,
+  "approved": [],
+  "rejected": [],
+  "meta_applied": "none (no proposal; the existing round-1 Blue meta in hole02_meta.json is still valid: Blue 372.9/373, White 357/357, Red 335/335, Gold 286/286)",
+  "remaining_issues": [
+   "A 30 m2 fairway finger hooks east into the right rough at E 577-587, N 4811037-047. NDVI is ambiguous (0.44-0.46 against 0.50 in the fairway), so I left it.",
+   "Two small fairway lobes poke into the spruce shadow on the left at E 529-537, N 4811100-107 and N 4811134-141. The edge cannot be read in deep shade, so I left them."
+  ],
+  "quality_score": 9
+ },
+ {
+  "hole": 3,
+  "approved": [],
+  "rejected": [],
+  "meta_applied": "none (no proposal; existing round-1 cart-path bridge in hole03.geojson re-checked and still on the asphalt at E 506-520, N 4810874-886)",
+  "remaining_issues": [
+   "Red measures 162.9 against a card of 165. I confirmed it is pad-limited: the farthest point of the Red/Gold pad from the green centre is 164.5 yd, and the White pad's nearest point is 170.4 yd. Within tolerance, so no change.",
+   "The cart-path polygon runs up to about 1 m wider than the asphalt band at E 528-540, N 4810862-870, with small bulges on the south edge under the tree shadow (NDVI band about 2.3 m). Minor and off the line of play, so I left it.",
+   "The reddish mulch bed at E 512-519, N 4810879-887 (north of the hole-4-tee path) is now rough because of the under-canopy rule. It is a real bed, but cosmetic and off the line of play.",
+   "A small pale disc, about 2-3 m, at about E 537438, N 4810925 behind the green (bare soil or a pad) is not modelled. It is off the line of play."
+  ],
+  "quality_score": 9
+ },
+ {
+  "hole": 4,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Confirmed. Traced cartpath 215 (29 m2) is a mottled strip of pale dormant grass on the NE back bank of the White deck. The bank is the bright slope in the dem_raw hillshade. The strip joins no other path, and the real asphalt 10 m SW is a crisp, uniformly dark NDVI band. Paving along a deck's back-bank crest is not plausible. On the current partition the polygon overlaps only cartpath 215 and rough 1904, with no overlap of the tee pads or the real path. The simulated assemble keeps all 4 pads and the yardages (B 414.7, W 385.5, R 366.7, G 323.0). It is more than 2 m from every other override and round-2 proposal."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Confirmed. Traced cartpath 217 (18 m2) has the same signature on the NE back bank of the Red deck: a pale, textured straw strip on the dem_raw bank, isolated, with no asphalt band. It overlaps only cartpath 217 and rough. After the simulated assemble, only the real 223 m2 path is left in the tee area."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none (no meta proposed). Round-1 regression hole04.geojson #0 (Oasis path) is confirmed minor and left as is. Its west end sits about 1-1.5 m south of the asphalt centre, on the grass strip by the patio, and the automatic trace covers the north side. Only about 8.6 of its 112 m2 have NDVI above 0.15 (mean NDVI 0.044, so it is almost all on hard surface). Deleting it would drop the correctly placed east half. Appended proposal_r2 #0 and #1 as hole04.geojson features #1 and #2 (frame lidar); feature #0 is intact.",
+  "remaining_issues": [
+   "Leaf-litter native 1148 (39 m2, about 537200, 4811013) SE of the green: hole 13 proposal_r2 #2 and hole 17 proposal_r2 #3 both burn it to rough. Apply only one of them.",
+   "Shelter patio stone and the SSW walkway at the #4/#13 shelter are not modelled (hole 13 proposal_r2 #3).",
+   "Oasis path (hole04 #0) west end about 1-1.5 m south of the asphalt by the patio (E 537152-537160). It was kept because the visual effect is negligible."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 5,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Confirmed. The dem_raw grid shows a sharp 2018 deck at 341.65-341.78 m over E 537062-537070, N 4811002-4811018, 0.5-0.9 m above the ground to the S and W. The contrast-stretched 2025 photo shows that area as unmown, mottled rough with no stripes or border (brightness std 12 vs 5 on the mown decks). The striped 2025 Red deck has its pale stone border at N 4811003.3 and E 537060-537061. Cutting the 242 m2 union there leaves a 139 m2 pad (E 537061-537069, N 4810982.8-4811003.3). Red still places at 527.0/527 at 537064.44, 4810999.24. The polygon is 0.86 m from hole07 #8 cartpath with no overlap."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Confirmed. In the photo the east lobe (E 537079.5-537085.5) is an unmown, darker green patch outside the stone border, and the current White marker (537080.2, 4811037.3) sits in it. The whole union is now levelled, so round 1's reason for keeping it no longer applies."
+   },
+   {
+    "index": 2,
+    "surface": "tee",
+    "reason": "Confirmed by a photo zoom at 0.05 m: the pale stone border runs from E 537070.0 to 537079.5 and from N 4811018.75 to 4811039.75. The rectangle E 537070.0-537079.4, N 4811018.8-4811039.4 matches within about 0.3 m. Simulated White is 568.0/568 at 537074.5, 4811037.27, on the deck."
+   },
+   {
+    "index": 3,
+    "surface": "rough",
+    "reason": "Confirmed. On the dem_raw grid the west lobe (E 537037-537041) is 339.64-339.72 m and the north strip (N 4810928-931) is 339.65-339.80 m, both below the 339.86-339.94 m plateau. In the photo both are shaded or unmown grass, not the lighter mown deck."
+   },
+   {
+    "index": 4,
+    "surface": "tee",
+    "reason": "Confirmed. The polygon matches the lighter mown square in the photo (E 537043.5-537050, N 4810920.5-4810927, std 4.2) and the dem_raw plateau. It is a real 2018 deck, so it will not be levelled. Gold becomes 450.3/455 (4.7 short, inside the 6 yd tolerance; the marker was previously on the back slope off the deck). The tee order is still 599.7 > 568 > 527 > 450.3."
+   },
+   {
+    "index": 5,
+    "surface": "rough",
+    "reason": "Added by the verifier on the inspector's own 'tee' finding: the unassigned 52 m2 pad (OSM 918946256, feature 106, E 537051-537057.5, N 4810978-4810989). dem_raw shows a low old deck, but the 2025 photo shows unmown, mottled rough (std 10.9 vs 4-6 on the mown decks, no stripes or border), and no card set uses it. It is treated like the retired White and Red decks: pad buffered 0.3 m and clipped off cart path 180. No markers change, and the terrain is untouched."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "Merged proposal_r2_meta.json into hole05_meta.json. The notes are replaced: the old note's reason for keeping the 2018 White lobe is superseded, and the new note documents the White, Red and Gold redraws and the Blue card residual. I added one sentence saying the retired 52 m2 pad is burned to rough. frame stays lidar (the file already had it and holds no coordinates other than notes). Appended proposal_r2 #0-#4 plus the verifier's retired-pad rough as hole05.geojson features #6-#11, all frame lidar. Features #0-#5 are intact. A simulated assemble and place_tees gives 4 pads and Blue 599.7/605, White 568.0, Red 527.0, Gold 450.3/455.",
+  "remaining_issues": [
+   "Blue measures 599.7 against a card of 605 (5.3 short, which passes the default 6 yd tolerance but only just). A grid search confirms that only an aim point within about 4 m of the fairway's west edge reaches 605, so the residual comes from the card. Consider KNOWN_TEE_GAPS[(5, 'blue')] of about 6-7 in tests/test_course.py (not edited here).",
+   "Missing service/pump building by the SW pond: gable roof about 9 x 11 m, with a LiDAR building block in chm.tif at E 537114-537123, N 4810622-4810633.5. It needs a features/structures.geojson entry; overrides cannot add buildings.",
+   "Cartpath strips 166 and 167 in the woods about 40 m W of the fairway (E 537054-537061, N 4810709-4810758): the southern one follows a pale dirt or woodchip trail, and the northern one runs beside a drainage ditch in dem_raw. Neither is asphalt. They are out of play and were left.",
+   "After the rebuild, check the dem_final hillshade at the Red deck's north end (an expected cut of about 0.7 m into the old deck's south bank) and at the new White rectangle (synthetic levelling over the 2018 diagonal bank).",
+   "The 2025 Red pad's east edge (E 537068.1-537069.0) is up to about 1 m inside the photo border (E 537069.3-537069.5). Minor; left.",
+   "Bunker specks 37-39 (0.05 m2 each) on the hole-13 bunker override edge. Harmless."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 6,
+  "approved": [],
+  "rejected": [],
+  "meta_applied": "none (no proposal, no meta, no round-1 regressions). Checked surfaces, green, tees and hillshade. The green outline sits on the pale putting surface. All five sand areas, including the round-1 NW bunker and SW lobe, lie on sand. The three tee pads match the mown boxes and the raised decks. Every card yardage matches (202/180/163/133), and the cart paths follow the asphalt.",
+  "remaining_issues": [
+   "'court' polygon 1110 (a covered residential pool about 45 m south of the tees) is out of bounds and out of play.",
+   "Deep rough 1245 (77 m2) south of the green is ordinary leaf-litter woods floor near the OB line. It is out of play and was left."
+  ],
+  "quality_score": 9
+ },
+ {
+  "hole": 7,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Confirmed. The 85.5 m2 cartpath sliver and the 100.8 m2 road sliver run along the back-yard fence line in the woods, outside the course. The photo shows woods floor and lawn with no path, and NDVI inside matches the 0.5-3 m ring around them (0.107/0.107, brightness 93/89); a real path reads about 0. The polygon covers both slivers completely (85.5 + 100.8 m2) plus 42 m2 of existing rough. It does not touch any house or other override. Appended as features/overrides/hole07.geojson #9."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Confirmed. The 43.5 m2 cartpath sliver on the woods floor has NDVI 0.089 against 0.085 in the ring, so there is no path band. Fully covered. Appended as #10."
+   },
+   {
+    "index": -1,
+    "surface": "rough",
+    "reason": "Verifier extension, not in the proposal. The same false trace continues west as a 2.3-2.6 m 'road' spur (114 m2) that is part of the large University Ave road polygon. It runs from E 536896 N 4810546-552 ESE through the woods to the tip of sliver #1 at 536937, 4810537. The photo shows no trail, and the dem_raw hillshade shows no bench where it crosses the wooded berm at E 536910-920. NDVI is 0.080 inside against 0.083 in the ring (brightness 90/90). Burned to rough with a 0.25 m buffer, clipped at E 536897.5 so the road stays road. The sidewalk strip under the clip becomes rough, matching the sidewalk north and south of it, which is already rough in the model. Appended as #11 (137.5 m2)."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none (no meta proposed; hole07_meta.json does not exist and was not created)",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "Red measures 479.7 yd against a card of 483 (3.3 yd short, within the default tolerance), as in round 1.",
+   "Small out-of-play deep-rough patches off the course: 77 m2 on a back-yard lawn at 536946, 4810498, and 73 m2 in the woods at 537022, 4810771. Harmless, left as they are.",
+   "The Gold tee polygon has a small tail at about 536993-536997, 4810564-567. It is the OSM/LiDAR outline, has no effect on the marker (449/449), and was left."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 8,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Confirmed false bunker. It is a pale tan strip of bare soil in a linear swale on the verge north of the cart path. The strip continues along the path past both ends of the polygon (E 537125-537170), with no bunker lip or flashed face. RGB is 155/137/110 (brightness 134) with NDVI about 0, against about 205/196/165 for the real sand nearby. The swale is clear in the dem_raw hillshade, but it is a ditch beside the path berm, not a bunker. No OSM bunker here. It covers the 58.5 m2 bunker and only 0.02 m2 of the cart path. Appended as features/overrides/hole08.geojson #3."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Confirmed. A 39 m2 leaf-litter 'native' blob in a small opening in the woods beside the green storage bins. The CHM is about 0 there, which is why the under-canopy rule missed it. It is the same woods floor as its surroundings (NDVI 0.071 against 0.093) and is not a mulch bed. Out of play. Appended as #4."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none (no meta proposed; hole08_meta.json unchanged)",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "Pipeline (level_tees): the feather around the synthetic 2025 Blue deck cuts into the south edge of the cart path just north of it. dem_final minus dem_raw is -0.37 to -1.01 m at E 537123-537129, N 4811075-4811077, falling to about 0 by N 4811079. That gives the path a cross-tilt toward the tee, while the 2025 photo shows the path intact. Keep cart-path cells out of the feather, or cap the cut there. An override cannot fix this.",
+   "Pipeline (level_tees): the White/Red pad is the union of two OSM tees. In 2018 these were separate decks at 345.68 and 345.40 m with a 0.3 m step. The merged polygon fails the deck test and is levelled to one plane (cut 0.20 / fill 0.16 m). The 2025 photo shows one mown box, so the pad was not split. The pipeline could test each OSM tee on its own.",
+   "The round-1 front-notch green (25 m2) is a separate feature, so hole_data's largest-polygon analysis leaves it out of the slope and pin analysis. Two bunker specks (0.07 and 0.16 m2) sit beside the right-rear bunker override. Both are harmless.",
+   "The mixed asphalt and dirt trail south of the fairway (dead-ends at E 537223) is out of play and was not added, consistent with the round-1 rejection."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 9,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "semirough",
+    "reason": "Confirmed. A high-pass texture render of the photo shows edge-parallel mowing stripes in E 537449-537458, N 4811034-4811070, with the fairway's diagonal and cross-hatched pattern starting at E 537459-537460, on the OSM edge. The same edge-parallel band continues north of N 4811070 (E 537437-537447), where the model already has it outside the fairway, so this is the intermediate-cut band the model wrongly kept as fairway. The polygon covers only model fairway (231.1 m2) outside the OSM edge. It does not touch the round-1 hole-9 overrides, which lie 70 m south. Appended as features/overrides/hole09.geojson #5."
+   },
+   {
+    "index": 1,
+    "surface": "cartpath",
+    "reason": "Confirmed. The NDVI render shows a continuous dark band from the traced spur end at about N 4810868, SSW past the building corner to about 537585, 4810844, then west into the traced paved junction at E 537574. The photo shows a matching grey strip. NDVI is 0.034 inside against 0.128 in the ring. The 2.2 m polygon sits on the band centre, stays 1.0 m off the building and overlaps the traced path by 25.7 m2 at its ends. No override or other round-2 proposal lies within 2 m. Appended as #6."
+   },
+   {
+    "index": 2,
+    "surface": "cartpath",
+    "reason": "Confirmed. A dark NDVI band (0.041 inside against 0.153 around it) and a grey strip under the trees run SE from the junction at 537592.6, 4810884 to the parking-lot edge. The polygon touches the road polygon without overlapping it, overlaps the traced junction by 13.3 m2, and has no duplicate within 2 m. Appended as #7."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none (no meta proposed; hole09_meta.json does not exist and was not created)",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "An unused 52 m2 tee pad at 537412.4, 4811211.2, west of Blue, is not in OSM. It is a flat 2018 deck, but its 2025 turf is ambiguous and no marker uses it. Left as it is.",
+   "The round-1 notch fill (#3) is still a separate fairway feature, so the overview draws internal straight edges at E 537526 and N 4810965. The fairway union is continuous, so this is cosmetic only."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 10,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Confirmed. At 5 cm/px the photo shows a dark turf oval about 3.8 x 2.8 m inside the 197 m2 greenside bunker, and dem_raw shows a matching mound. The OSM polygon sits on both within about 0.2 m, and the only thing it covers is 7.28 m2 of the auto bunker. Appended to hole10.geojson."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Confirmed false bunker. A transect shows the strip on a bank that rises 0.4 m east of the path, not in a hollow: zr goes from 352.1 to 352.5 m. Its NDVI of 0.0 is the same as the leaf-littered woods around it, and the photo shows no sand. The polygon is 0.03 m clear of the hole16 #0 cart path and does not overlap it. Appended."
+   }
+  ],
+  "rejected": [
+   {
+    "index": 2,
+    "reason": "It is not a bunker, but this spot is already fixed. The parallel hole-1 verifier added features/overrides/hole01.geojson #6, a cart path (paved walk between the two car-park lots) on the same footprint, overlapping by 21.4 m2. hole10.geojson burns after hole01, so this rough would wipe out that better-classified paved walk. My 4 cm photo crop also shows a smooth grey paved strip, not a gravel verge."
+   }
+  ],
+  "meta_applied": "none: no proposal_r2_meta, and no hole10_meta.json exists",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "The fairway stops about 35 m short of the green (E537873-908). The photo shows rough-toned turf there with no distinct approach cut, so it was left as rough.",
+   "Two hole-99 native mulch/garden beds in the residential lots behind and right of the green (537942.7, 4810631.3 and 537895.9, 4810689.0) are off-course and plausible. Left as is.",
+   "The car-park walk at 537720, 4810761 is now handled by hole01 #6 (cart path). It is not a hole-10 override."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 11,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "A 1.2 m2 sliver of the 2018 White pad on the east edge of the 2025 White box. Rough in the photo, 0.03 m clear of the box override. Appended."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "The 12.5 m2 lobe of the 2018 White deck west of the mown 19 x 8.5 m box. Rough-coloured in the photo, levelled as a separate tee in dem_final, and 0.03 m clear of the box. Afterwards only about 0.35 m2 of 3 cm tee strip is left. Appended."
+   },
+   {
+    "index": 2,
+    "surface": "rough",
+    "reason": "A 0.1 m2 tee sliver of the old Gold pad above the top edge of the mown Gold box. Harmless cleanup, clear of the box. Appended."
+   },
+   {
+    "index": 3,
+    "surface": "rough",
+    "reason": "A 0.4 m2 tee sliver of the old Gold pad at the SW corner of the Gold box. Rough in the photo, clear of the box. Appended."
+   },
+   {
+    "index": 5,
+    "surface": "rough",
+    "reason": "Confirmed. The 29 m2 'native' patch is the same leaf-littered woods floor with trunk shadows as everything around it, with no bed rim and no NDVI contrast. Appended."
+   },
+   {
+    "index": 6,
+    "surface": "native",
+    "reason": "Confirmed. The photo shows a clear pink-brown mulch ellipse with a rim, and it is a matching low-NDVI ellipse with a mound in dem_raw. The 197 m2 polygon follows the bed. It covers only native and rough, does not touch the cart path or the small structure, and has no override within 2 m. Appended."
+   },
+   {
+    "index": 4,
+    "surface": "rough",
+    "reason": "REPLACED, not applied as drawn; see rejected. The confirmed double path was fixed instead in two parts. (a) hole11.geojson #0 was rewritten along the measured asphalt centreline: 2.3 m wide, 112.4 m2, E537793-837. (b) Six rough polygons (#12-#17, 50.2 m2) burn every bit of the auto path outside it at E537792-834, clipped 0.1 m clear of the corrected path. Simulated merge: the stub is a single path 2.5-2.9 m wide measured north-south (about 2.3 m across), from E537795 to 537831."
+   }
+  ],
+  "rejected": [
+   {
+    "index": 4,
+    "reason": "Refuted for the east half. I took NDVI profiles every metre along the path. At E537794-810 the low-NDVI asphalt (NDVI under 0.06, RGB about 125/117/99, 2.3-2.8 m wide north-south) sits exactly under the round-1 override, and the auto strip SE of it is tan verge (NDVI 0.07-0.11), so far the inspector is right. But at E537818-834 the asphalt lies under the AUTO strip: a 2.0-2.5 m band with NDVI 0.01-0.05, neutral grey, parallel-edged, and continuous into the Red-tee path, along N4810516.4 (E537818), 519.9 (E537826) and 522.4 (E537830). The round-1 box is 1.5-3.6 m north of it, on tan dormant grass (NDVI 0.13-0.18). As drawn, the proposal would have deleted the real asphalt there and left the path on turf."
+   }
+  ],
+  "meta_applied": "none: no proposal_r2_meta, and no hole11_meta.json exists",
+  "overrides_removed": [
+   "Corrected, not deleted: hole11.geojson #0 (Gold-tee path stub, round-1 regression confirmed). Its geometry was replaced by the measured asphalt trace: it was a straight box that leaves the asphalt east of E537815. Properties are kept and the reason is updated."
+  ],
+  "remaining_issues": [
+   "At the junction with the Red-tee path (E537830-836) the auto path still bulges about 2 m into dormant grass on the inside of the bend: 4-4.8 m north-south against about 3 m of asphalt as the path turns north. It was left alone as before, because part of it is the real turn.",
+   "After the clipped removals, 3 cm tee strips (0.1-0.6 m2) remain along the White and Gold box edges. They are harmless.",
+   "The synthetic Blue deck (fill 1.01 m) shows radial streaks in the dem_final hillshade where its banks feather into the 14 % slope. This is a pipeline matter; check it in the GSPro mesh.",
+   "The E537811-817 part of the stub is in deep tree shadow, so the centreline there is interpolated (about +/-0.5 m)."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 12,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Confirmed. On dem_raw the cut-off lobe is a 19 % riser (353.0-353.6 m) between the Red and Gold decks. The rest of the Red polygon (81.6 m2) fits a 2.3 % plane with 4.2 cm std, so it counts as a real 2018 deck and will not be levelled; the 0.64 m fill bank against the Gold pad goes away. The Red marker (537388.26, 4810500.32) stays 3.6 m inside the pad, so 108 yd is kept. Appended."
+   },
+   {
+    "index": 3,
+    "surface": "rough",
+    "reason": "Confirmed. The strip at E537376-401 N4810508-526 is pale, patchy dormant grass with irregular 2-3.5 m edges. It has no continuous low-NDVI band (compare the clear black band of the real path along the hedge), no bench in dem_raw, and it is not connected to the main path about 7 m to the west. At most it is a worn walking line from the neighbouring green, not a cart path. Appended."
+   },
+   {
+    "index": 2,
+    "surface": "rough",
+    "reason": "Confirmed. It continues the same false strip just north of the round-1 removal hole12 #2; it overlaps that override only as rough on rough. Appended."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "A 0.2 m2 auto-path fragment next to the round-1 removal, with the same signature. Harmless cleanup. Appended."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none: no proposal_r2_meta, and no hole12_meta.json exists",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "The path west of the tees is about 4-4.5 m wide in the model: round-1 override hole12 #0 on the sunlit 2 m asphalt, plus a round-2 auto strip in the hedge and retaining-wall shadow. NDVI is low across the whole width but the west half is in deep shadow, so I could not tell. It was left as is, and it is off the line of play.",
+   "Cosmetic: the tee pads are LiDAR blobs, not the straight-edged terraced boxes in the photo. The yardages are exact (141/127/108/93)."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 13,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Confirmed. Traced path 165 (90 m2) is a mottled, straw-coloured patch of dormant tufts and bare soil. It has no smooth grey surface like the real asphalt 30 m west, it is blobby rather than an even width, and it connects to nothing. dem_raw hillshade and local relief show no bench. A 2018 linear rise runs about 5 m NE of it and does not follow it. Burning it overwrites the path, plus 26.5 m2 of rough and 0.4 m2 of semirough. Appended with frame lidar."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Confirmed. Sliver 164 (15 m2) is a pale strip of dormant grass, isolated, with no asphalt and no bench in dem_raw. Its 1.5 m ring is rough/99. Appended."
+   },
+   {
+    "index": 2,
+    "surface": "rough",
+    "reason": "Confirmed. Native blob 1148 (39 m2) cannot be told apart from the brown leaf litter under the bare trees around it, in either RGB or NDVI. It is not an open mulch bed. It overwrites native plus rough/99 only. Appended."
+   },
+   {
+    "index": 3,
+    "surface": "cartpath",
+    "reason": "Confirmed. At 4 cm/px the photo shows a grey textured stone strip leaving the SE side of the #4/#13 shelter and running SSW to the main path, and NDVI shows a matching dark band inside the polygon. It joins hole13 override #1 at a junction (0.65 m2 overlap), not as a parallel trace. No other override in any features/overrides/*.geojson lies within 2 m. It sits 0.1 m from the shelter footprint and does not overlap it. Appended."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "A small hexagonal roofed structure at 537302,4810673 (about 3.5 m across, about 3.8 m tall in the 2018 LiDAR, crisp in the photo) is modelled as a 3.8 m shrub (trees.geojson id 9694). Overrides cannot add buildings, so it needs a features/structures.geojson entry and the tree entry removed.",
+   "hole05.geojson #5 and hole13.geojson #0 are the same bunker (identical geometry, both hole 13). This is a harmless duplicate and can be cleaned up.",
+   "The 2018 dem_raw shows a straight linear rise of about 0.1-0.2 m from about 537262,4810730 to 537293,4810667 across the tee-shot rough. The 2025 photo shows no path on it, so it is probably an old drain or irrigation line. It is not modelled, and that is probably correct.",
+   "The shelter patio west of the #4/#13 shelter is not modelled as paving. NDVI there is 0.10-0.30 (grass or soil), so this is correct."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 14,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "green",
+    "reason": "Confirmed regression and fix. A filled surface map shows the 1.03 m2 and 0.13 m2 fringe islands (features 1520/1521) inside the putting surface between round-1 fill #0 and the main green. With the proposal burned, both are gone and the collar (#1) stays continuous. The proposed polygon was INVALID: it self-intersected at 537343.12,4810658.03 because of a back-and-forth spike. I removed the vertex at 537342.72,4810658.04, which gives a valid 20.89 m2 polygon that does not touch the collar. Rather than appending a duplicate green, I corrected round-1 override #0 in place with this geometry. The only part of the old fill not covered is 0.09 m2 under the collar, where #1 wins anyway. It overwrites green (#0 and 4.5 m2 of the main green) plus the two fringe slivers only."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [
+   "hole14.geojson #0 (round-1 green slot fill): geometry replaced in place by the enlarged, de-spiked fill. The feature is kept at index 0 and was not deleted."
+  ],
+  "remaining_issues": [
+   "Pipeline: scripts/hole_data.py line 172 (green = max(greens, key=area)) uses only the largest green polygon. holes.json green (533.8 m2), output/maps/hole14_green.png and the pin candidates therefore leave out the 20.9 m2 override fill, which is a separate polygon. The map still shows the slot. Fix: union each hole's green polygons in hole_data.",
+   "A sharp-edged 9 x 12 m rectangle of new turf at 537202-537212, 4810902-4810914 has no deck in the 2018 LiDAR. It could be a sod nursery or a new forward tee. All four card tees already measure exactly, so it was left alone and is worth a site check.",
+   "Minor jagged fairway edges under the spruce shadows at 537285-537300, 4810730-4810765 (cosmetic)."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 15,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "tee",
+    "reason": "Confirmed. On a 1 m dem_raw grid the deck is flat at 345.0-345.07 m over E 537513.5-537523.5, N 4810566.5-4810572.7. There is a 1 m drop to the north (343.8 m at N 4810579), 0.3-0.9 m banks east and west, and the slope rises from N 4810566 southward. The polygon traces those edges to within about 0.5 m. Inside it, dem_raw has a plane std of 2.5 cm and a slope of 0.8 %, so it counts as a real 2018 deck and will not be levelled. In NDVI, the brighter mown patch covers the deck, not only the current 22 m2 pad (median 0.29 on the added area against 0.20 in the 2 m ring). It overwrites rough/99 (31.3 m2) and the existing hole-15 tee only. The Gold marker (537517.8,4810569.8, 315 yd = card) is inside it. Appended."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "Traced cart path 202 (150 m2, 537574-537632, 4810581-4810596) has not been changed. It is a crisp, straight, 2.5 m tan strip with a 90-degree leg to the fairway edge, very dark in NDVI, with no bench in the 2018 dem_raw, and it dead-ends at both ends. It may be a path under construction in 2025, or a drainage or sod strip. It is in the long hitters' landing zone, so it is worth a site check.",
+   "hole15.geojson #2 (rough over the false 50 m2 tee) is now redundant, because the tee rule drops that pad, but it is harmless."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 16,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "I confirmed the 44 m2 native/99 patch at E 537528-539, N 4810707-713 is leaf litter or dormant grass, not a bed. In the contrast-stretched 2025 photo it is just one piece of a much larger pale area (about E 527-560, N 705-730) that the model already has as rough/99. It has no bed edge. CHM is 0 to 0.13 m, so there is no canopy. The 8 m ring around it is 100 % rough/99. The polygon covers the whole native piece and only overwrites native/99 (44.0 m2). No override in features/overrides and no other round-2 proposal lies within 2 m. Appended to hole16.geojson as feature 2 with frame lidar."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "Cross-hole conflict for the coordinator: the false bunker at the clubhouse car park (feature 76, 17.6 m2, about 537719.8, 4810760.6) is covered by both hole01 proposal_r2 feature 2 (cartpath) and hole10 proposal_r2 feature 2 (rough). hole10 sorts after hole01, so rough wins if both are applied. Only one should be kept.",
+   "The false hole-10 bunker (21.6 m2) on the verge beside the hole16:0 clubhouse path at about 537616.5, 4810727.9 depends on hole10 proposal_r2 feature 1. Nothing was added here.",
+   "Cosmetic: the Gold pad has a hook of about 10 m2 (E 537627-635, N 4810638-645) that runs onto the sloping edge of the cart path. The pad is a real 2018 deck and is not levelled, and the marker is well inside it. Left alone."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 17,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Burns the 836 m2 automatic tee polygon to rough/99. Raw DEM grid (2 m): under the 2025 Gold box the ground falls from 350.6 to 347.5 m (19-23 %). The 2018 upper deck (351.3) and lower deck (350.4) have a 0.7-0.8 m bank between them, running diagonally from (296, 876) to (302, 864) across the 2025 middle box. The stretched photo shows rotated mown boxes that ignore the 2018 grading: the pale strip between Gold and middle lies on the 2018 lower deck, and the Gold box lies on the slope. So the complex was rebuilt after 2018. Because the polygon is over 500 m2 it is never levelled. dem_final has the Gold marker on a 25.4 % slope and White on 13.1 %. The burn only overwrites tee/17 (835.8 m2) and 0.2 m2 of rough/99. Leftover slivers are all under 0.05 m2 and join the override. No override or proposal lies within 2 m."
+   },
+   {
+    "index": 1,
+    "surface": "tee",
+    "reason": "The 2025 Gold box is OSM 918932876 exactly (IoU 1.00). An excess-green edge test against the registered photo puts the box edge within 0.25 m of the mown rectangle. At 257.5 m2 it gets a synthetic deck. My re-run of the levelling simulation gave a flat deck at 349.4 m (std 4 cm). It keeps Gold at 113.0 yd (card 113) and is 6.4 m from the middle box, so the two do not merge into one polygon over 500 m2. Overwrites tee/17 and 18 m2 of rough/99."
+   },
+   {
+    "index": 2,
+    "surface": "tee",
+    "reason": "The 2025 middle (White/Red) box is OSM 918932875 exactly (IoU 1.00) and matches the mown rectangle within 0.5 m on the excess-green edge test. The photo shows no trace of the 2018 bank inside it. At 473.5 m2 it gets a synthetic deck: the simulation gave 351.0 m, std 6 cm, max change 0.56 m. Red stays at 132.0 yd. Overwrites tee/17 and 14 m2 of rough/99. The simulated hillshade shows three clean decks (Gold 349.4, middle 351.0, Blue 351.97) with banks between them, where the photo shows the pale strips."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "I replaced hole17_meta.json tees_utm.white [537310.0, 4810852.4] with [537317.3, 4810859.8] and rewrote the notes. frame stays lidar. The new pin is inside the 2025 middle box: 1.45 m from its edge, on green mown turf in a 4 cm zoom of the photo. It measures 144.7 yd against a card of 149 (-4.4, within the 6 yd tolerance). It is the same point the automatic placement gives, and it lands on the simulated deck at 351.03 m. The 2025 boxes cannot give 149: the back of the middle box is about 145 yd and the front of the Blue box 153.9. The back of the White/Red box is the closer fit that is on a pad. Blue 165, Red 132 and Gold 113 come out exactly at the card.",
+  "overrides_removed": [
+   "Round-1 regression, confirmed: features/overrides/hole17_meta.json tees_utm.white [537310.0, 4810852.4] is replaced, not deleted. In the zoomed 2025 photo it sits in the shadow and pale bank 2.3 m outside OSM 918932875. In dem_final it is on a 13.1 % slope, the Blue deck's feather bank. Once features 3-5 are applied it is off every pad. It is replaced by [537317.3, 4810859.8] in the same commit as those features. No override features were deleted."
+  ],
+  "remaining_issues": [
+   "The heights of the synthetic Gold and middle decks are estimates: the pipeline sets each at the polygon's mean 2018 height. The real 2025 deck heights are unknown, so the Gold fill bank of up to 1.9 m at its north edge is approximate.",
+   "The Blue box is still levelled at 351.97 m, about 0.34 m below the 2018 deck top (352.3), because the 2025 box is larger than the 2018 top. This was accepted and not changed.",
+   "White is 4.4 yd short of the card. 149 yd falls on the bank between the 2025 middle and Blue boxes, so it may come from the pre-rebuild layout.",
+   "Six sand slivers of 0.2-0.6 m2 remain on the rim of the back-left bunker override. They are negligible."
+  ],
+  "quality_score": 8
+ },
+ {
+  "hole": 18,
+  "approved": [],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "Missed by the inspector, low severity: the round-1 White pin [537304.0, 4810961.0] is on the deck (inside the 43.1 m2 notch-fill override, 1.26 m from the edge, 366.6 yd), but it sits at the foot of a 0.25-0.3 m rise toward the Blue deck. That gives a 6.1 % slope in dem_final (2 m stencil) and 5.4 % on a 3x3 m plane fit. A flatter spot at the same yardage is at about [537301.5, 4810959.0]: 367.1 yd, 1.3 % plane slope, 2.1 m inside the merged deck. I did not change it, because the pin is not clearly wrong and the photo is transitional there. Consider it if tee-lie flatness matters.",
+   "Pipeline item: hole_data uses only the largest green polygon, so the 5.6 m2 round-1 notch fill (E 537578-580, N 4810749-756) is missing from holes.json and the pin-mask edge distance. The playable surface is correct.",
+   "The levelled Blue deck has 0.74 m of fill. Its outline runs about 1 m down the SW bank, but the photo's mown oval reaches that edge. Accepted.",
+   "The east branch of the tee-side path loop south of E 537337, N 4810901 is still not traced. NIR cannot separate it from the trunk shadows.",
+   "The 516 m2 main tee polygon is left unlevelled because it is over 500 m2. It is a real 2018 multi-tee deck (347.09-347.33 m), so that is correct."
+  ],
+  "quality_score": 8
+ }
+]

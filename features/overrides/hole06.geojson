@@ -1,0 +1,158 @@
+{
+ "type": "FeatureCollection",
+ "frame": "lidar",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "surface": "bunker",
+    "hole": 6,
+    "frame": "lidar",
+    "reason": "Back-left (NW) greenside bunker is under-traced: tree-branch shadows hide the north half of the sand; RGB/NIR show pale sand and the LiDAR hollow rim to N 4810531 (23 m2 traced vs ~50 m2 real)."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       537049.9,
+       4810530.3
+      ],
+      [
+       537052.0,
+       4810531.3
+      ],
+      [
+       537054.1,
+       4810531.2
+      ],
+      [
+       537055.45,
+       4810530.45
+      ],
+      [
+       537055.75,
+       4810528.8
+      ],
+      [
+       537055.3,
+       4810527.0
+      ],
+      [
+       537054.4,
+       4810524.9
+      ],
+      [
+       537053.65,
+       4810523.1
+      ],
+      [
+       537053.2,
+       4810521.9
+      ],
+      [
+       537052.0,
+       4810521.4
+      ],
+      [
+       537049.9,
+       4810521.4
+      ],
+      [
+       537048.4,
+       4810522.2
+      ],
+      [
+       537047.95,
+       4810523.7
+      ],
+      [
+       537048.25,
+       4810525.5
+      ],
+      [
+       537048.7,
+       4810527.6
+      ],
+      [
+       537049.15,
+       4810529.25
+      ],
+      [
+       537049.9,
+       4810530.3
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "surface": "bunker",
+    "hole": 6,
+    "frame": "lidar",
+    "reason": "Back-left (SW) greenside bunker is missing its NW lobe (sand under tree shadows, E 537047.6-537054.7, N 4810505-4810513); RGB shows pale sand, LiDAR shows the hollow lip along its north edge."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       537049.0,
+       4810511.4
+      ],
+      [
+       537051.4,
+       4810511.9
+      ],
+      [
+       537054.1,
+       4810511.9
+      ],
+      [
+       537054.1,
+       4810510.5
+      ],
+      [
+       537054.4,
+       4810509.0
+      ],
+      [
+       537054.7,
+       4810506.0
+      ],
+      [
+       537054.1,
+       4810505.1
+      ],
+      [
+       537052.0,
+       4810505.25
+      ],
+      [
+       537049.6,
+       4810505.7
+      ],
+      [
+       537048.1,
+       4810506.9
+      ],
+      [
+       537047.65,
+       4810509.0
+      ],
+      [
+       537047.95,
+       4810510.8
+      ],
+      [
+       537049.0,
+       4810511.4
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

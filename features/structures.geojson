@@ -1,0 +1,203 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::2958"
+  }
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       537168.94,
+       4811017.75
+      ],
+      [
+       537167.25,
+       4811024.54
+      ],
+      [
+       537160.46,
+       4811022.85
+      ],
+      [
+       537162.15,
+       4811016.06
+      ],
+      [
+       537168.94,
+       4811017.75
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "building": "shelter",
+    "height": "4.5",
+    "roof:shape": "hipped",
+    "roof:height": "2.0",
+    "name": "#4 / #13 shelter",
+    "note": "Not in OSM and newer than the 2018 LiDAR (only tree returns there). Footprint approximate (about 7 x 7 m, +/- 1 m) from the dark hip roof in the SWOOP 2025 photo; QA round 1, hole 13."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       537384.66,
+       4810610.93
+      ],
+      [
+       537388.62,
+       4810606.66
+      ],
+      [
+       537384.47,
+       4810602.82
+      ],
+      [
+       537380.51,
+       4810607.09
+      ],
+      [
+       537384.66,
+       4810610.93
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "building": "shelter",
+    "height": "3.2",
+    "name": "#15 tee shelter",
+    "note": "Not in OSM. Footprint = minimum rectangle of the LiDAR building-class (6) returns; roof from the DSM. QA round 1, hole 14."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       537291.33,
+       4810637.26
+      ],
+      [
+       537282.73,
+       4810632.2
+      ],
+      [
+       537279.16,
+       4810638.26
+      ],
+      [
+       537287.77,
+       4810643.32
+      ],
+      [
+       537291.33,
+       4810637.26
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "building": "shelter",
+    "height": "3.8",
+    "name": "#13 / #14 shelter",
+    "note": "Not in OSM. Footprint = minimum rectangle of the LiDAR building-class (6) returns; roof from the DSM. QA round 1, hole 14."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       537304.27,
+       4810672.4
+      ],
+      [
+       537302.71,
+       4810673.3
+      ],
+      [
+       537301.15,
+       4810672.4
+      ],
+      [
+       537301.15,
+       4810670.6
+      ],
+      [
+       537302.71,
+       4810669.7
+      ],
+      [
+       537304.27,
+       4810670.6
+      ],
+      [
+       537304.27,
+       4810672.4
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "building": "gazebo",
+    "height": "4.0",
+    "roof:shape": "hipped",
+    "roof:height": "1.5",
+    "name": "#13 tee gazebo",
+    "note": "Not in OSM. Hexagonal roof about 3.6 m across, 4.0 m tall: single-return LiDAR points (classified 1, so the tree detector took it for a shrub) and the SWOOP 2025 photo. QA round 2, hole 13."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       537123.23,
+       4810632.6
+      ],
+      [
+       537122.06,
+       4810621.06
+      ],
+      [
+       537113.7,
+       4810621.91
+      ],
+      [
+       537114.87,
+       4810633.44
+      ],
+      [
+       537123.23,
+       4810632.6
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "building": "service",
+    "height": "4.9",
+    "name": "Pump house by the #5 pond",
+    "note": "Not in OSM. Footprint = minimum rectangle of the LiDAR building-class (6) returns, gable roof from the DSM. QA round 2, hole 5."
+   }
+  }
+ ]
+}

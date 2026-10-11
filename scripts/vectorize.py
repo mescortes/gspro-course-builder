@@ -30,6 +30,81 @@ ROAD_HALF_WIDTH = {"motorway": 7.0, "secondary": 6.0, "secondary_link": 4.0, "te
                    "unclassified": 3.5, "service": 3.0}
 
 
+def under_canopy_labels(lab, canopy, leaf_off_photo):
+    """Labels under tree canopy. Leaf-on photo: the ground is hidden, so canopy pixels inherit the nearest open
+    'soft' surface (fairway) or become rough. Leaf-off photo: the ground shows through the bare crowns, so the
+    classifier's labels stand - except 'native', which under trees is leaf litter / bare woodland floor (QA round 1:
+    orange patches in the woods on every hole), i.e. wooded rough."""
+    if leaf_off_photo:
+        out = lab.copy()
+        out[canopy & (lab == CID["native"])] = CID["rough"]
+        return out
+    open_lab = np.where(canopy, 0, lab)
+    idx = ndimage.distance_transform_edt(open_lab == 0, return_distances=False, return_indices=True).astype(np.int32)
+    near = open_lab[idx[0], idx[1]]
+    soft = np.isin(near, [CID["fairway"], CID["native"]])
+    return np.where(canopy, np.where(soft, near, CID["rough"]), lab).astype(np.uint8)
+
+
+def is_deck(P, R, tol=0.06, max_slope=0.05, step=0.12, fill=0.2):
+    """LiDAR signature of a built tee deck. P: ground points (N x 3) on the pad, R: a ring 1-4 m outside it. The pad fits
+    a plane (std < `tol`, slope < `max_slope`), the ground around it leaves that plane by more than `step` m, and at
+    least a fraction `fill` of the ring falls away *below* it (a fill bank or the downhill side of a cut-in deck).
+    Without that last test flat natural ground at the bottom of a swale, or a flat strip beside a bank, read as decks
+    (QA round 1, holes 7 and 18)."""
+    m = P[:, :2].mean(0)
+    A = np.c_[P[:, :2] - m, np.ones(len(P))]
+    coef, *_ = np.linalg.lstsq(A, P[:, 2], rcond=None)
+    resid = P[:, 2] - A @ coef
+    ring_res = R[:, 2] - np.c_[R[:, :2] - m, np.ones(len(R))] @ coef
+    return bool(resid.std() < tol and np.hypot(coef[0], coef[1]) < max_slope
+                and np.percentile(np.abs(ring_res), 75) > step and np.mean(ring_res < -step) >= fill)
+
+
+def off_course_paths(cartpath, road, course, margin=5.0):
+    """Cart path more than `margin` m outside the golf_course boundary is a municipal sidewalk (OSM footways along the
+    streets feed the path corridor): it becomes road, OPCD Concrete_Road (QA round 1, holes 7 and 11)."""
+    if course.is_empty:
+        return cartpath, road
+    off = cartpath.difference(course.buffer(margin))
+    if off.is_empty:
+        return cartpath, road
+    return cartpath.difference(off), unary_union([road, off])
+
+
+def bunker_ok(p, osm_bunk, course, is_hollow):
+    """Keep a bunker polygon: it overlaps a mapped (OSM) bunker, or it is a LiDAR hollow on the course (garden beds and
+    sandpits in the neighbouring lots are hollows too). An empty `course` means no boundary is mapped."""
+    if p.intersection(osm_bunk).area >= 0.3 * p.area:
+        return True
+    return (course.is_empty or course.intersection(p).area >= 0.5 * p.area) and is_hollow(p)
+
+
+def sand_mask(L, a, b, ndvi=None, green=None, parts=False):
+    """Bunker sand in the photo: bright, slightly yellow, low chroma - or, with a NIR band, bare (NDVI ~0) and not black,
+    which also catches sand in the branch shadows of a leaf-off photo (NDVI is a band ratio, shadows barely move it).
+    Shadow sand is only kept where it connects to sunlit sand (hysteresis): alone, the shadow rule also takes bare soil,
+    shaded roofs and pavement (build 4: 61 off-course 'bunkers'). Dormant greens are pale too, but NDVI ~0.05-0.14: kept
+    out by the NDVI cut and the mapped-green mask. parts=True returns (sunlit, shadow) for a hysteresis over a mosaic."""
+    strong = (L > 66) & (a > -12) & (b > 8.5) & (b < 26)
+    weak = np.zeros_like(strong)
+    if ndvi is not None:
+        strong &= ndvi < 0.12
+        weak = (ndvi < 0.02) & (L > 25) & (a > -8) & (b > 2)
+    if green is not None:
+        strong &= ~green; weak &= ~green
+    return (strong, weak) if parts else sand_hysteresis(strong, weak)
+
+
+def sand_hysteresis(strong, weak):
+    """strong, plus every connected (8-neighbour) component of strong | weak that contains strong pixels."""
+    lab, n = ndimage.label(strong | weak, structure=np.ones((3,) * strong.ndim))
+    if not n:
+        return strong.copy()
+    keep = np.zeros(n + 1, bool); keep[np.unique(lab[strong])] = True; keep[0] = False
+    return keep[lab]
+
+
 def chaikin(coords, n=2):
     pts = np.asarray(coords)[:-1]
     for _ in range(n):
@@ -98,13 +173,15 @@ def main():
     tall_cov = ndimage.gaussian_filter((chm_s >= 5.0).astype(np.float32), 3.0 / RES)
     brush = (shrub_cov > 0.55) & (tall_cov < 0.5)
     del chm, p_tree, chm_s, shrub_cov, tall_cov
-    open_lab = np.where(canopy, 0, lab)
-    idx = ndimage.distance_transform_edt(open_lab == 0, return_distances=False, return_indices=True).astype(np.int32)
-    near = open_lab[idx[0], idx[1]]
-    del idx
-    soft = np.isin(near, [CID["fairway"], CID["native"]])
-    lab = np.where(canopy, np.where(soft, near, CID["rough"]), lab).astype(np.uint8)
-    del near, soft, open_lab
+    if C.IMAGERY_LEAF_OFF:
+        # litter test on the closed canopy (the leaf-off CHM is full of holes between bare branches)
+        from detect_trees import smooth_chm
+        c05 = rasterio.open(C.BUILD / "chm.tif").read(1)
+        wide = np.kron(smooth_chm(c05, 0.5) > 2.0, np.ones((2, 2), bool))[:H, :W]
+        lab = under_canopy_labels(lab, ndimage.binary_dilation(wide, iterations=int(2.0 / RES)), True)
+        del c05, wide
+    else:
+        lab = under_canopy_labels(lab, canopy, False)
 
     surf = {n: np.zeros((H, W), bool) for n in PRIORITY}
     for n in ("green", "bunker", "tee", "fairway", "native"):
@@ -116,20 +193,22 @@ def main():
     from rasterio.enums import Resampling
     from skimage.color import rgb2lab
     from surface_classify import read_imagery_window, read_nir_window
-    sand = np.zeros((H, W), bool)
+    sand = np.zeros((H, W), bool); shade_sand = np.zeros((H, W), bool)
     grass = np.zeros((H, W), bool)
+    osm_green = burn_mask([g.buffer(0.5) for g in osm(lambda t: t.get("golf") == "green") if g.geom_type == "Polygon"])
     for r0 in range(0, H, 1024):
         r1 = min(H, r0 + 1024)
         rgb = read_imagery_window(T, r0, r1, 0, W)
         Lab = rgb2lab(np.moveaxis(rgb, 0, -1))
-        sand[r0:r1] = (Lab[..., 0] > 66) & (Lab[..., 1] > -12) & (Lab[..., 2] > 8.5) & (Lab[..., 2] < 26)
-        grass[r0:r1] = Lab[..., 1] < -14  # clearly green: turf (bunker grass faces) or tree crowns; sand sits near a* -3
         nir = read_nir_window(T, r0, r1, 0, W)
-        if nir is not None:  # spring photo: turf is rarely that green, but live turf is NDVI > 0.25 and sand ~0
-            ndvi = (nir - rgb[0]) / (nir + rgb[0] + 1e-3)
+        ndvi = (nir - rgb[0]) / (nir + rgb[0] + 1e-3) if nir is not None else None
+        sand[r0:r1], shade_sand[r0:r1] = sand_mask(Lab[..., 0], Lab[..., 1], Lab[..., 2], ndvi,
+                                                   osm_green[r0:r1] if ndvi is not None else None, parts=True)
+        grass[r0:r1] = Lab[..., 1] < -14  # clearly green: turf (bunker grass faces) or tree crowns; sand sits near a* -3
+        if ndvi is not None:  # spring photo: turf is rarely that green, but live turf is NDVI > 0.25 and sand ~0
             grass[r0:r1] |= ndvi > 0.25
-            sand[r0:r1] &= ndvi < 0.12
-    del Lab
+    del Lab, osm_green
+    sand = sand_hysteresis(sand, shade_sand); del shade_sand
     osm_bunk = burn_mask(osm(lambda t: t.get("golf") == "bunker"))
     near = ndimage.binary_dilation(surf["bunker"] | osm_bunk, iterations=int(6 / RES))
     path_lines0 = [g for _, t, g in G if g.geom_type == "LineString" and
@@ -140,11 +219,13 @@ def main():
     p_bunk = ndimage.gaussian_filter(load_proba(CID["bunker"]), 1.2)
     mapped = (p_bunk > 0.85) & ndimage.binary_dilation(osm_bunk, iterations=int(1.5 / RES))
     del p_bunk
-    surf["bunker"] = ndimage.binary_opening(ndimage.binary_closing(((sand & near) | mapped) & ~canopy & ~on_path, iterations=2),
+    # (leaf-off photo: the sand under bare branches is visible - keep it, the shadow-sand rule found it)
+    hidden = np.zeros_like(canopy) if C.IMAGERY_LEAF_OFF else canopy
+    surf["bunker"] = ndimage.binary_opening(ndimage.binary_closing(((sand & near) | mapped) & ~hidden & ~on_path, iterations=2),
                                             iterations=1)
     # ...but never onto clearly green turf: the classifier route and the closing spilled 1-2 m onto the grass faces of
     # greenside bunkers (QA round 2). Under canopy the photo shows crowns, so the trim only applies in the open.
-    grass = (ndimage.gaussian_filter(grass.astype(np.float32), 0.25 / RES) > 0.5) & ~canopy
+    grass = (ndimage.gaussian_filter(grass.astype(np.float32), 0.25 / RES) > 0.5) & ~hidden
     surf["bunker"] = ndimage.binary_opening(surf["bunker"] & ~grass, iterations=1)
 
     # 3) cart paths: classifier evidence near mapped OSM paths, plus the OSM centre-line under canopy
@@ -250,7 +331,7 @@ def main():
                 ext = LineString([a - 35 * u] + list(line.coords))
                 d = c.distance(ext)
                 frac = ext.project(c) / ext.length
-                d += max(0.0, frac - 0.55) * 400  # a pad more than halfway down a hole is not its tee
+                d += max(0.0, frac - 0.45) * 400  # a pad past ~45 % of the hole is not its tee (Westmount forward tees: <= 35 %)
             else:
                 d = c.distance(line)
             if d < bd:
@@ -285,12 +366,7 @@ def main():
         R = dem_points(p.buffer(4.0).difference(p.buffer(1.0)))
         if len(P) < 30 or len(R) < 30:
             return False
-        A = np.c_[P[:, 0] - P[:, 0].mean(), P[:, 1] - P[:, 1].mean(), np.ones(len(P))]
-        coef, *_ = np.linalg.lstsq(A, P[:, 2], rcond=None)
-        resid = P[:, 2] - A @ coef
-        slope = np.hypot(coef[0], coef[1])
-        ring_res = R[:, 2] - (np.c_[R[:, 0] - P[:, 0].mean(), R[:, 1] - P[:, 1].mean(), np.ones(len(R))] @ coef)
-        return resid.std() < 0.06 and slope < 0.05 and np.percentile(np.abs(ring_res), 75) > 0.12
+        return is_deck(P, R)
     def is_hollow(p, depth=0.08):
         inner = p.buffer(-0.3)
         P = dem_points(inner if not inner.is_empty else p)
@@ -309,8 +385,7 @@ def main():
             return Polygon()
         gs = [shape(s_) for s_, v in shapes(m.astype(np.uint8), mask=m, transform=tw, connectivity=8) if v == 1]
         return make_valid(smooth_poly(unary_union(gs), close=0.2)).intersection(g)
-    def bunker_ok(p):
-        return p.intersection(osm_bunk).area >= 0.3 * p.area or is_hollow(p)
+    course_buf = course_area.buffer(5.0) if not course_area.is_empty else course_area
     fair = final["fairway"]
     path_corr = unary_union([g.buffer(2.5) for g in path_lines0]) if path_lines0 else Polygon()
     keep_t, to_fair, keep_b, to_path, dropped = [], [], [], [], 0
@@ -321,7 +396,7 @@ def main():
         ring = p.buffer(1.5).difference(p)
         (to_fair if ring.intersection(fair).area > 0.5 * ring.area else []).append(p); dropped += 1
     for p in polys_of(final["bunker"]):
-        if bunker_ok(p):
+        if bunker_ok(p, osm_bunk, course_buf, is_hollow):
             keep_b.append(p); continue
         (to_path if p.intersection(path_corr).area > 0.5 * p.area else []).append(p); dropped += 1
     print(f"validation: tees kept {len(keep_t)}, bunkers kept {len(keep_b)}, rejected {dropped} "
@@ -348,6 +423,7 @@ def main():
         final["fairway"] = unary_union([final["fairway"]] + to_fair)
     if to_path:
         final["cartpath"] = unary_union([final["cartpath"]] + to_path)
+    final["cartpath"], final["road"] = off_course_paths(final["cartpath"], final["road"], course_area)
 
     # greens: clear banks (LiDAR slope > 12 %) in the outer 2.5 m of a green outline are not putting surface
     # (photo outlines can include a mown bank); tilted greens and interior tier slopes are left alone
