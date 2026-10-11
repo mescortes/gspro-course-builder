@@ -122,8 +122,13 @@ The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the Mountain
 
 ## Rebuilding
 
-Requires Python 3.12, [uv](https://github.com/astral-sh/uv) and headless Blender 4.2 LTS (for the FBX step), about
-40 GB of RAM at peak and about 6 GB of disk.
+Requires Python 3.12, [uv](https://github.com/astral-sh/uv) and headless Blender 4.2 LTS (for the FBX step).
+
+Measured on this build:
+* **RAM:** 11.5 GB at peak (the classifier). No other step exceeds 5 GB.
+* **Disk:** about 4 GB, including the 1.2 GB output package.
+* **Time:** about 25 min for all steps on 96 cores. The longest steps are vectorize, rasters, classify and export,
+  at about 4-5 min each.
 
 ```bash
 uv venv --python 3.12 .venv
