@@ -38,8 +38,8 @@ if PROFILE == "test":  # small regression build around holes 1-2 (MG_PROFILE=tes
     BUILD = ROOT / "build_test"
     FEATURES = BUILD / "features"
     OUTPUT = BUILD / "output"
-    for _d in (BUILD, FEATURES, OUTPUT):
-        _d.mkdir(parents=True, exist_ok=True)
+for _d in (BUILD, FEATURES, OUTPUT):  # git-ignored (FEATURES only in the test profile): absent on a fresh clone
+    _d.mkdir(parents=True, exist_ok=True)
 DEM_RES = 0.25  # metres
 
 LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))
