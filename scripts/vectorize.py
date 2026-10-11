@@ -72,11 +72,17 @@ def off_course_paths(cartpath, road, course, margin=5.0):
     return cartpath.difference(off), unary_union([road, off])
 
 
-def bunker_ok(p, osm_bunk, course, is_hollow):
+def bunker_ok(p, osm_bunk, course, is_hollow, paved=None, buildings=None, kerb=1.0, wall=10.0):
     """Keep a bunker polygon: it overlaps a mapped (OSM) bunker, or it is a LiDAR hollow on the course (garden beds and
-    sandpits in the neighbouring lots are hollows too). An empty `course` means no boundary is mapped."""
+    sandpits in the neighbouring lots are hollows too). An empty `course` means no boundary is mapped. An unmapped
+    bunker must also be `kerb` m clear of paved ground (OSM roads, parking) and `wall` m from buildings: bright bare
+    concrete below a kerb or a bed along a wall is a hollow too (clubhouse drive and parking island, hole 12)."""
     if p.intersection(osm_bunk).area >= 0.3 * p.area:
         return True
+    if paved is not None and not paved.is_empty and p.distance(paved) < kerb:
+        return False
+    if buildings is not None and not buildings.is_empty and p.distance(buildings) < wall:
+        return False
     return (course.is_empty or course.intersection(p).area >= 0.5 * p.area) and is_hollow(p)
 
 
@@ -395,8 +401,10 @@ def main():
             keep_t.append(p); continue
         ring = p.buffer(1.5).difference(p)
         (to_fair if ring.intersection(fair).area > 0.5 * ring.area else []).append(p); dropped += 1
+    paved = unary_union([make_valid(x) for x in vector["road"]]) if vector["road"] else Polygon()
+    bldgs = unary_union([make_valid(x) for x in vector["building"]]) if vector["building"] else Polygon()
     for p in polys_of(final["bunker"]):
-        if bunker_ok(p, osm_bunk, course_buf, is_hollow):
+        if bunker_ok(p, osm_bunk, course_buf, is_hollow, paved, bldgs):
             keep_b.append(p); continue
         (to_path if p.intersection(path_corr).area > 0.5 * p.area else []).append(p); dropped += 1
     print(f"validation: tees kept {len(keep_t)}, bunkers kept {len(keep_b)}, rejected {dropped} "
