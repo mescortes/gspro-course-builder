@@ -109,3 +109,19 @@ def test_unmapped_bunker_must_be_a_hollow_on_the_course():
     assert not V.bunker_ok(box(50, 50, 56, 56), osm_bunk, course, no)
     assert not V.bunker_ok(box(120, 50, 126, 56), osm_bunk, course, yes)
     assert V.bunker_ok(box(50, 50, 56, 56), osm_bunk, box(0, 0, 0, 0).buffer(0), yes), "no boundary mapped"
+
+
+def test_unmapped_bunker_is_not_pavement_or_a_bed_by_a_building():
+    """Bright, bare hollows next to roads, parking or buildings are a kerbed drive, an asphalt island or a bed by the
+    wall (clubhouse and hole 12, this build): an unmapped bunker must clear paved ground and stand off buildings. Mapped
+    bunkers are kept wherever they are."""
+    from shapely.geometry import box
+    course = box(0, 0, 200, 100); osm_bunk = box(10, 10, 20, 20)
+    yes = lambda p: True
+    paved = box(60, 0, 70, 100); building = box(100, 40, 110, 60)
+    kw = dict(paved=paved, buildings=building)
+    assert not V.bunker_ok(box(66, 50, 74, 56), osm_bunk, course, yes, **kw)      # on the drive
+    assert not V.bunker_ok(box(70.5, 50, 76, 56), osm_bunk, course, yes, **kw)    # 0.5 m off the kerb
+    assert not V.bunker_ok(box(85, 45, 95, 55), osm_bunk, course, yes, **kw)      # 5 m from the wall
+    assert V.bunker_ok(box(140, 45, 150, 55), osm_bunk, course, yes, **kw)        # open ground
+    assert V.bunker_ok(box(11, 11, 19, 19), osm_bunk, course, yes, paved=box(0, 0, 50, 50), buildings=building)
