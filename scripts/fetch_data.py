@@ -155,6 +155,12 @@ def osm_api_map(bb, step=0.012):
 
 
 def fetch_osm():
+    """research/osm_all.json + osm_golf.json. An existing snapshot is kept (the model and its QA overrides were built
+    from it); delete both files to refresh."""
+    snap = [C.ROOT / "research/osm_all.json", C.ROOT / "research/osm_golf.json"]
+    if all(p.exists() for p in snap):
+        print("osm: keeping the snapshot in research/ (delete osm_all.json and osm_golf.json to refresh)")
+        return
     w, s, e, n = lonlat_bbox(C.CORE, 400)
     bb = f"{s},{w},{n},{e}"
     (C.ROOT / "research").mkdir(exist_ok=True)
