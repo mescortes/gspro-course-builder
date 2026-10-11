@@ -1,0 +1,43 @@
+"""Run the whole pipeline (or a sub-range of steps). Usage: build_all.py [first_step] [last_step]"""
+import subprocess, sys, time
+from pathlib import Path
+S = Path(__file__).parent
+sys.path.insert(0, str(S)); import config as C
+STEPS = [
+    ("register",   "register_imagery.py"),   # imagery translated onto the LiDAR (config.IMAGERY_SHIFT)
+    ("rasters",    "build_rasters.py"),      # LiDAR -> DEM / DSM / CHM / intensity
+    ("classify",   "surface_classify.py"),   # imagery + LiDAR per-pixel surfaces
+    ("vectorize",  "vectorize.py"),          # clean surface partition (features/auto_core.geojson)
+    ("assemble",   "assemble_features.py"),  # auto + manual overrides -> features/course_surfaces.geojson
+    ("trees",      "detect_trees.py"),       # LiDAR tree detection + archetypes
+    ("textures",   "make_textures.py"),      # procedural turf textures
+    ("foliage",    "make_foliage.py"),       # foliage card atlases
+    ("treemodels", "make_trees.py"),         # tree archetype meshes
+    ("mesh",       "build_terrain_mesh.py"), # conforming terrain triangulation
+    ("backdrop",   "build_backdrop.py"),     # 5 km surrounding terrain (watertight seam to the core mesh)
+    ("hole",       "hole_data.py"),          # tees, pins, yardages
+    ("facade",     "make_facade.py"),        # building facade texture
+    ("export",     "export_course.py"),      # glTF (terrain + trees + backdrop + structures)
+    ("gspro",      "export_gspro.py"),       # heightmap RAW, OPCD SVG, trees CSV, GreenKeeper data
+    ("prefabs",    "export_tree_prefabs.py"),  # Unity tree prefabs (LOD0-2) + reference sizes
+    ("fbx",        None),                    # Blender: FBX meshes in the Unity terrain frame
+    ("maps",       "make_maps.py"),          # yardage-book hole maps, green maps, course map
+]
+names = [n for n, _ in STEPS]
+a = names.index(sys.argv[1]) if len(sys.argv) > 1 else 0
+b = names.index(sys.argv[2]) if len(sys.argv) > 2 else len(STEPS) - 1
+for n, script in STEPS[a:b + 1]:
+    if script is None:
+        t = time.time(); print(f"== {n}", flush=True)
+        subprocess.run(["blender", "-b", "--python", str(S / "export_fbx_blender.py"), "--", str(C.OUTPUT / "mountain_gate_ns_noveg.glb"),
+                        str(C.OUTPUT / "gspro"), str(C.OUTPUT / "gspro/terrain.json")], check=True, stdout=subprocess.DEVNULL)
+        if (C.OUTPUT / "gspro/tree_prefabs.glb").exists():
+            subprocess.run(["blender", "-b", "--python", str(S / "glb_to_fbx_blender.py"), "--", str(C.OUTPUT / "gspro/tree_prefabs.glb"),
+                            str(C.OUTPUT / "gspro/tree_prefabs.fbx")], check=True, stdout=subprocess.DEVNULL)
+        print(f"   {n} done in {time.time() - t:.0f}s", flush=True)
+        continue
+    if not (S / script).exists():
+        print(f"-- skip {n} (missing {script})"); continue
+    t = time.time(); print(f"== {n}", flush=True)
+    subprocess.run([sys.executable, str(S / script)], check=True)
+    print(f"   {n} done in {time.time() - t:.0f}s", flush=True)

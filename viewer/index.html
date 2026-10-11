@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MountainGate North/South</title>
+<style>
+  :root { --bg: #0e1410; --fg: #e8efe6; --panel: rgba(14, 20, 16, 0.78); --accent: #8fd18a; --line: #5a7a58; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --panel: rgba(255,255,255,0.86); --fg: #142014; --bg: #dfe8dc; --line: #7d9a7b; } }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
+  #c { display: block; width: 100vw; height: 100vh; }
+  #ui { position: fixed; top: 12px; left: 12px; background: var(--panel); padding: 10px 12px; border-radius: 10px;
+        max-width: min(380px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: auto; }
+  #ui h1 { font-size: 14px; margin: 0 0 4px; }
+  #ui h2 { font-size: 12px; margin: 8px 0 2px; opacity: 0.75; font-weight: 600; }
+  #ui button { margin: 2px 2px; padding: 3px 7px; border-radius: 6px; border: 1px solid var(--line); background: transparent;
+               color: var(--fg); cursor: pointer; font: inherit; min-width: 28px; }
+  #ui button.on { background: var(--accent); color: #102010; }
+  #info { margin-top: 6px; font-variant-numeric: tabular-nums; }
+  #status { margin-top: 6px; opacity: 0.8; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <h1>MountainGate CC — North/South</h1>
+  <h2>Hole</h2><div id="holes"></div>
+  <h2>Camera</h2><div id="shots"></div>
+  <h2>Views</h2><div id="views"></div>
+  <div id="info"></div>
+  <div><label><input type="checkbox" id="shadows" checked> shadows</label>
+       <label><input type="checkbox" id="trees" checked> trees</label>
+       <label><input type="checkbox" id="grass" checked> 3D grass</label>
+       <label><input type="checkbox" id="labels"> surface colours</label></div>
+  <div id="status">loading…</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Grass } from './grass.js';
+
+const params = new URLSearchParams(location.search);
+const MODEL = params.get('model') || '../output/mountain_gate_ns.glb';
+const HOLES = params.get('holes') || '../output/holes.json';
+const GRASS_SPEC = params.get('grass') || '../output/gspro/grass_3dg.json';
+const LOD_DIST = parseFloat(params.get('lod') || '240');     // detailed trees within this distance (m)
+const LOD2_DIST = parseFloat(params.get('lod2') || '650');   // light trees within this, billboards beyond
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, logarithmicDepthBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = parseFloat(params.get('exposure') || '1.0');
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 12000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+
+// sky: equirectangular gradient (deep blue zenith -> hazy LA horizon), also used as the environment light
+const az = THREE.MathUtils.degToRad(135), el = THREE.MathUtils.degToRad(50);
+const sunDir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
+function skyTexture() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+  const g = c.getContext('2d');
+  const grd = g.createLinearGradient(0, 0, 0, 512);
+  grd.addColorStop(0.00, '#2f6db8'); grd.addColorStop(0.30, '#5f97d3'); grd.addColorStop(0.45, '#a9c7e3');
+  grd.addColorStop(0.50, '#d6e2ea'); grd.addColorStop(0.53, '#c2cdb8'); grd.addColorStop(1.00, '#7d8a64');
+  g.fillStyle = grd; g.fillRect(0, 0, 1024, 512);
+  const sx = ((Math.atan2(sunDir.x, -sunDir.z) / (2 * Math.PI)) + 0.5) * 1024, sy = (0.5 - Math.asin(sunDir.y) / Math.PI) * 512;
+  const rg = g.createRadialGradient(sx, sy, 2, sx, sy, 140); rg.addColorStop(0, 'rgba(255,250,235,0.9)'); rg.addColorStop(1, 'rgba(255,250,235,0)');
+  g.fillStyle = rg; g.fillRect(0, 0, 1024, 512);
+  const t = new THREE.CanvasTexture(c); t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const skyTex = skyTexture();
+scene.background = skyTex;
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromEquirectangular(skyTex).texture;
+scene.environmentIntensity = parseFloat(params.get('env') || '0.6');
+scene.fog = new THREE.FogExp2(0xc8d7e4, parseFloat(params.get('fog') || '0.00030'));
+
+const hemi = new THREE.HemisphereLight(0xcfe3ff, 0x4a5a32, 0.35); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff1dc, 2.6);
+sun.position.copy(sunDir).multiplyScalar(600);
+sun.castShadow = true;
+sun.shadow.mapSize.set(8192, 8192);
+const sc = sun.shadow.camera; sc.left = -260; sc.right = 260; sc.top = 260; sc.bottom = -260; sc.near = 10; sc.far = 1600;
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.6;
+scene.add(sun); scene.add(sun.target);
+
+const status = document.getElementById('status');
+const info = document.getElementById('info');
+
+// ---------------------------------------------------------------- views: static (views.json) + per hole (holes.json)
+let views = {};
+try { views = await (await fetch('views.json?' + Date.now())).json(); } catch (e) {}
+let holes = [], frame = null;
+try { const hj = await (await fetch(HOLES + '?' + Date.now())).json(); holes = hj.holes.filter(h => h.tees && h.tees.length); frame = hj.model_frame; } catch (e) {}
+let terrainMeshes = [];
+const ray = new THREE.Raycaster();
+function groundAt(x, z) {          // model-frame ground height by ray cast onto the terrain
+  ray.set(new THREE.Vector3(x, 2000, z), new THREE.Vector3(0, -1, 0));
+  const hit = ray.intersectObjects(terrainMeshes, false)[0];
+  return hit ? hit.point.y : null;
+}
+function utm2model(e, n) { return [e - frame.origin_utm[0], -(n - frame.origin_utm[1])]; }
+function holeShots(h) {
+  const tee = h.tees[0], g = h.green, pin = (h.pins.find(p => p.name === 'middle') || h.pins[0]).model;
+  const line = h.centerline_utm.map(p => utm2model(p[0], p[1]));
+  const first = h.aim_points.length ? h.aim_points[0].model : g.centre_model;
+  const eye = (x, z, up) => { const y = groundAt(x, z); return [x, (y ?? 0) + up, z]; };
+  // point at distance d (m) back from the green along the line of play
+  const total = line.slice(1).reduce((s, p, i) => s + Math.hypot(p[0] - line[i][0], p[1] - line[i][1]), 0);
+  const along = (d) => { let rem = d; for (let i = 0; i < line.length - 1; i++) { const a = line[i], b = line[i + 1];
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (rem <= L) return [a[0] + (b[0] - a[0]) * rem / L, a[1] + (b[1] - a[1]) * rem / L]; rem -= L; }
+    return line[line.length - 1]; };
+  const out = {};
+  out.tee = { pos: [tee.model[0], tee.model[1] + 1.7, tee.model[2]], target: [first[0], first[1], first[2]], fov: 50 };
+  const tv = new THREE.Vector3(first[0] - tee.model[0], 0, first[2] - tee.model[2]).normalize();
+  out.flyover = { pos: [tee.model[0] - tv.x * 45, tee.model[1] + 38, tee.model[2] - tv.z * 45], target: g.centre_model, fov: 55 };
+  if (h.par > 3) {
+    const p = along(Math.max(0, total - 137));  // 150 yd out
+    out.fairway = { pos: eye(p[0], p[1], 1.7), target: g.centre_model, fov: 45 };
+  }
+  const q = along(Math.max(0, total - 30));
+  out.approach = { pos: eye(q[0], q[1], 1.7), target: pin, fov: 45 };
+  const gv = new THREE.Vector3(pin[0] - q[0], 0, pin[2] - q[1]).normalize();
+  const fx = pin[0] - gv.x * 9, fz = pin[2] - gv.z * 9;
+  out.green = { pos: eye(fx, fz, 1.3), target: pin, fov: 50 };
+  return out;
+}
+const vdiv = document.getElementById('views'), hdiv = document.getElementById('holes'), sdiv = document.getElementById('shots');
+let curHole = null;
+function setCam(v) {
+  camera.position.fromArray(v.pos); controls.target.fromArray(v.target);
+  camera.fov = v.fov || 50; camera.updateProjectionMatrix(); controls.update();
+}
+function go(name) {
+  const m = /^h(\d+)(?:-(\w+))?$/.exec(name);
+  if (m && holes.length) {
+    const h = holes.find(x => x.hole === +m[1]); if (!h) return;
+    const shot = m[2] || 'tee';
+    curHole = h;
+    const shots = holeShots(h);
+    sdiv.innerHTML = '';
+    for (const k of Object.keys(shots)) { const b = document.createElement('button'); b.textContent = k; b.classList.toggle('on', k === shot);
+      b.onclick = () => go(`h${h.hole}-${k}`); sdiv.appendChild(b); }
+    [...hdiv.children].forEach(b => b.classList.toggle('on', +b.dataset.hole === h.hole));
+    [...vdiv.children].forEach(b => b.classList.remove('on'));
+    setCam(shots[shot] || shots.tee);
+    const ys = h.tees.map(t => `${t.yards.toFixed(0)}`).join(' / ');
+    info.textContent = `${h.nine} ${h.nine_hole} · par ${h.par}${h.handicap ? ' · hcp ' + h.handicap : ''} · ${ys} yd · green ${h.green.area_sqft} sq ft`;
+  } else {
+    const v = views[name]; if (!v) return;
+    setCam(v); curHole = null; info.textContent = '';
+    [...vdiv.children].forEach(b => b.classList.toggle('on', b.textContent === name));
+    [...hdiv.children].forEach(b => b.classList.remove('on')); sdiv.innerHTML = '';
+  }
+  history.replaceState(null, '', location.pathname + location.search + '#' + name);
+}
+for (const k of Object.keys(views)) { const b = document.createElement('button'); b.textContent = k; b.onclick = () => go(k); vdiv.appendChild(b); }
+for (const h of holes) { const b = document.createElement('button'); b.textContent = h.hole; b.dataset.hole = h.hole; b.title = `${h.nine} ${h.nine_hole}`;
+  b.onclick = () => go(`h${h.hole}`); hdiv.appendChild(b); }
+
+// ---------------------------------------------------------------- model + per-cell tree LOD
+const lodCells = new Map();  // cell key -> { centre: [x, z], levels: [[lod0 objects], [lod1], [lod2]] }
+function registerLod(o) {
+  const ex = o.userData || {};
+  if (!ex.cell || ex.lod === undefined) return;
+  const k = ex.cell.join('_');
+  if (!lodCells.has(k)) lodCells.set(k, { centre: ex.cell_centre_xz, levels: [[], [], []] });
+  lodCells.get(k).levels[ex.lod].push(o);
+}
+let treesOn = true;
+function updateLod() {
+  const cx = camera.position.x, cz = camera.position.z;
+  for (const c of lodCells.values()) {
+    const dx = Math.max(0, Math.abs(cx - c.centre[0]) - 128), dz = Math.max(0, Math.abs(cz - c.centre[1]) - 128);
+    const d = Math.hypot(dx, dz);
+    let want = d < LOD_DIST ? 0 : d < LOD2_DIST ? 1 : 2;
+    while (want > 0 && !c.levels[want].length) want--;        // fall back to a finer level if one is missing
+    while (want < 2 && !c.levels[want].length) want++;
+    c.levels.forEach((objs, i) => objs.forEach(o => o.visible = treesOn && i === want));
+  }
+}
+// OPCD WaterPlane: in GSPro the base project's water shader goes on these; here a glossy, rippled, sky-reflecting
+// surface over the Water_Base bed (two scrolling copies of a tileable normal map)
+const waterNormal = new THREE.TextureLoader().load('assets/water_normal.png');
+waterNormal.wrapS = waterNormal.wrapT = THREE.RepeatWrapping; waterNormal.repeat.set(1.6, 1.6);   // ~5 m ripple tile
+const waterMat = new THREE.MeshPhysicalMaterial({ color: 0x0c2224, roughness: 0.07, metalness: 0.0, transparent: true,
+  opacity: 0.9, normalMap: waterNormal, normalScale: new THREE.Vector2(0.035, 0.035), envMapIntensity: 1.2,
+  specularIntensity: 1.0, ior: 1.33, depthWrite: false, name: 'WaterPlane' });
+waterMat.onBeforeCompile = (sh) => {   // second, slower ripple layer at another scale and direction
+  sh.uniforms.uTime = waterUniforms.uTime;
+  sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', `
+    vec3 mapN = texture2D( normalMap, vNormalMapUv + vec2(uTime * 0.011, uTime * 0.006) ).xyz * 2.0 - 1.0;
+    vec3 mapN2 = texture2D( normalMap, vNormalMapUv * 2.7 + vec2(-uTime * 0.02, uTime * 0.03) ).xyz * 2.0 - 1.0;
+    mapN = normalize(vec3((mapN.xy + mapN2.xy) * normalScale, mapN.z * mapN2.z));
+    normal = normalize( tbn * mapN );`).replace('void main() {', 'uniform float uTime;\nvoid main() {');
+};
+const waterUniforms = { uTime: { value: 0 } };
+let grassSpec = {};
+try { const r = await fetch(GRASS_SPEC + '?' + Date.now()); if (r.ok) grassSpec = (await r.json()).viewer || {}; } catch (e) {}
+const grass = new Grass(scene, grassSpec);
+if (params.get('grass') === 'off') grass.setVisible(false);
+const loader = new GLTFLoader();
+const t0 = performance.now();
+loader.load(MODEL, (gltf) => {
+  const root = gltf.scene;
+  scene.add(root);
+  if (gltf.scenes.length > 1) for (const s of gltf.scenes.slice(1)) scene.add(s);
+  scene.traverse(o => {
+    registerLod(o);
+    if (o.isMesh) {
+      o.receiveShadow = true;
+      let p = o, isTree = false; while (p) { if (/^(Tree|Building|Bridge|Hole\d+_Flag)/.test(p.name)) isTree = true; p = p.parent; }
+      o.castShadow = isTree;
+      const m = o.material;
+      if (m && m.map) { m.map.anisotropy = renderer.capabilities.getMaxAnisotropy(); }
+      if (m && m.normalMap) { m.normalMap.anisotropy = 8; }
+      const isWater = /_WaterPlane/.test(o.name) || /_WaterPlane/.test(o.parent?.name || '');
+      if (isWater) { o.material = waterMat; o.castShadow = false; o.renderOrder = 2; }
+      let q = o; while (q && !isWater) { if (q.name === 'Terrain' || q.name === 'Backdrop_Terrain') { terrainMeshes.push(o); break; } q = q.parent; }
+    }
+  });
+  updateLod();
+  grass.index(terrainMeshes);
+  status.textContent = `loaded in ${((performance.now() - t0) / 1000).toFixed(1)} s · ${lodCells.size} tree cells · ${grass.tiles.size} grass tiles`;
+  go((location.hash || (holes.length ? '#h1' : '#tee')).slice(1));
+  window.__ready = true;
+}, (p) => { status.textContent = `loading ${(p.loaded / 1e6).toFixed(0)} MB`; },
+   (e) => { status.textContent = 'error: ' + e; console.error(e); });
+
+document.getElementById('shadows').onchange = (e) => { sun.castShadow = e.target.checked; };
+document.getElementById('trees').onchange = (e) => { treesOn = e.target.checked; updateLod(); };
+document.getElementById('grass').onchange = (e) => { grass.setVisible(e.target.checked); grass.update(camera, clock.getElapsedTime(), true); };
+const debugCols = { Green: 0xbce5a4, GreenFringe: 0xa4c88f, Fairway: 0x43e561, Tee: 0xa0e5b8, SemiRough: 0x36b74d, Rough: 0x278438, DeepRough: 0x164b20,
+  Bunker: 0xe5e5aa, Bunker_Lip: 0x8a6d3b, Concrete: 0xbebebb, Curb: 0x8e8e8a, Pinestraw: 0xbe751d, Road: 0x555555,
+  Court: 0x3355aa, Water_Base: 0x0000c0, Water_Edge: 0x3a3aff };
+const saved = new Map();
+document.getElementById('labels').onchange = (e) => {
+  scene.traverse(o => {
+    if (!o.isMesh || !o.material || !(o.material.name in debugCols)) return;
+    if (e.target.checked) { saved.set(o, o.material); o.material = new THREE.MeshLambertMaterial({ color: debugCols[o.material.name] }); }
+    else if (saved.has(o)) o.material = saved.get(o);
+  });
+};
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+addEventListener('hashchange', () => go(location.hash.slice(1)));
+// GSPro's shortcut: Z hides / shows the 3D grass
+addEventListener('keydown', (e) => { if (e.key === 'z' || e.key === 'Z') { const cb = document.getElementById('grass'); cb.checked = !cb.checked; cb.onchange({ target: cb }); } });
+let frameNo = 0;
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  controls.update();
+  waterUniforms.uTime.value = clock.getElapsedTime();
+  grass.update(camera, clock.getElapsedTime());
+  if (frameNo++ % 10 === 0) updateLod();
+  const t = controls.target; sun.target.position.copy(t); sun.position.copy(t).addScaledVector(sunDir, 600);
+  renderer.render(scene, camera);
+});
+window.__go = go;
+window.__grass = grass;
+window.__view = { camera, controls, scene, THREE };
+// capture helper for automated verification: render one frame at a given size and POST it to the dev server
+window.__shot = async (name, w = 1600, h = 900) => {
+  const ow = innerWidth, oh = innerHeight;
+  renderer.setPixelRatio(1); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  controls.update(); updateLod(); grass.update(camera, clock.getElapsedTime(), true);
+  const t = controls.target; sun.target.position.copy(t); sun.position.copy(t).addScaledVector(sunDir, 600);
+  renderer.render(scene, camera);
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+  const res = await fetch('/shot?name=' + encodeURIComponent(name), { method: 'POST', body: blob });
+  renderer.setSize(ow, oh); camera.aspect = ow / oh; camera.updateProjectionMatrix();
+  return res.status;
+};
+Object.assign(window, { __scene: scene, __renderer: renderer, __sun: sun, __hemi: hemi, __camera: camera, __controls: controls,
+                        __holes: holes, __holeShots: holeShots, THREE });
+</script>
+</body>
+</html>
