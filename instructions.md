@@ -276,6 +276,10 @@ Still to verify per course:
 * Stream the LAZ files once into per-tile ground buckets with 12 m overlap, then a per-tile TIN, to get a 0.25 m DEM.
   This scales past one hole.
 * The classifier over-predicts "cart path" course-wide. Trust it only next to mapped paths.
+* **The classifier is deterministic** (checked at Westmount: two runs, bit-identical `classes.tif` and `proba_u8.npy`).
+  The forest's threaded `predict_proba` sums trees in thread order, so probabilities jitter in the last float bits,
+  but that never survives the uint8 rounding or the argmax. If a rebuild's surfaces move, look at its inputs (OSM,
+  overrides, `features/structures.geojson`, package versions) before suspecting noise.
 * **Bunkers.**
   * Sand colour gates them: L* > 66, low chroma.
   * A confident classifier inside a mapped OSM bunker covers shaded sand.
@@ -295,7 +299,9 @@ Still to verify per course:
 ### Overrides
 
 * Later overrides win and cut everything earlier.
-* Slivers ≤ 0.05 m² left by a cut must be merged into the cutting override. Dropping them leaves gaps.
+* Remnants a cut leaves below vectorize's minimum part for their surface (0.25 × `MIN_AREA`, at least 0.05 m²; 2.5 m²
+  for a bunker) must be merged into the cutting override. Dropping them leaves gaps; keeping them left 0.1-1.3 m²
+  bunkers with 10 cm lips and 0 m² GreenKeeper hazards (`assemble_features.min_part`).
 
 ### Mesh
 
@@ -367,7 +373,9 @@ Still to verify per course:
   * turn `native` under canopy into wooded rough (leaf litter);
   * close the CHM (grey closing, 1.25 m) before crown segmentation, or one oak becomes five trees;
   * conifers vs bare hardwoods: LiDAR pulse penetration plus crown NDVI.
-* **Unmapped bunkers** must be LiDAR hollows *on the course*: garden beds next door are hollows too.
+* **Unmapped bunkers** must be LiDAR hollows *on the course*: garden beds next door are hollows too. They must also
+  be 1 m clear of roads and parking and 10 m from buildings (`vectorize.bunker_ok`): a kerbed concrete drive, a
+  parking island and a bed by a wall are bright, bare and lower than their surroundings.
 * **Off-course paths.** OSM footways along the streets feed the path corridor. Cart path more than 5 m outside
   `leisure=golf_course` is road (`vectorize.off_course_paths`).
 * **Tees newer than the LiDAR** (Westmount: holes 5, 8 and 11 rebuilt 2023-25) have no deck in the DEM:
