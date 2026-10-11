@@ -19,6 +19,16 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
 
 ![Course map](docs/images/course_map.jpg)
 
+| | |
+|---|---|
+| ![Hole 14 green](docs/images/render_h14_green.jpg) | ![Hole 16 green](docs/images/render_h16_green.jpg) |
+| Hole 14: approach to the green, between the greenside bunkers | Hole 16: the green on its plateau |
+| ![Hole 11 tee](docs/images/render_h11_tee.jpg) | |
+| Hole 11 Blue tee: the deck was rebuilt about 2023 and is synthetic over the 2018 terrain | |
+
+*Headless Blender (Cycles) renders of `output/westmount.glb`. The turf is graded to summer; trees use the
+LiDAR-derived archetypes. GSPro renders with its own materials.*
+
 ## The course
 
 | Tee | Yards | Men rating / slope | Women rating / slope |
