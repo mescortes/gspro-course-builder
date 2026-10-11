@@ -14,8 +14,8 @@ from mathutils import Vector
 argv = sys.argv[sys.argv.index("--") + 1:]
 glb, out_dir, terrain_json = argv[0], argv[1], argv[2]
 meta = json.load(open(terrain_json))
-e = meta["utm_extent"]; hmin = meta["height_range_navd88_m"][0]
-model_origin = (362650.0, 3775300.0, 350.0)  # config.ORIGIN_E / ORIGIN_N / BASE_H
+e = meta["utm_extent"]; hmin = meta["height_range_m"][0]
+model_origin = tuple(meta["model_origin"])  # config.ORIGIN_E / ORIGIN_N / BASE_H (written by export_gspro.py)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=glb)
@@ -59,6 +59,26 @@ def mask_colours():
     return n
 
 
+def save_images(out_dir):
+    """glTF-embedded images have no file on disk, and the FBX exporter cannot copy them (IsADirectoryError '.').
+    Write each to <out_dir>/textures/ (JPEG; PNG when it has alpha) and point the image at it, so the FBX files
+    reference real texture files next to them (path_mode RELATIVE)."""
+    import os
+    tdir = os.path.join(out_dir, "textures"); os.makedirs(tdir, exist_ok=True)
+    n = 0
+    for img in bpy.data.images:
+        if img.source != "FILE" or (img.filepath and os.path.isfile(bpy.path.abspath(img.filepath))):
+            continue
+        alpha = img.alpha_mode != "NONE" and img.depth in (32, 64, 128) and "Foliage" in img.name
+        ext = "png" if alpha else "jpg"
+        dst = os.path.join(tdir, f"{bpy.path.clean_name(img.name)}.{ext}")
+        img.filepath_raw = dst
+        img.file_format = "PNG" if alpha else "JPEG"
+        img.save()
+        n += 1
+    return n
+
+
 MANIFEST = {}
 
 
@@ -75,13 +95,14 @@ def export(objs, path):
     bpy.context.view_layer.objects.active = meshes[0]
     bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={"MESH", "EMPTY"}, apply_unit_scale=True,
                              apply_scale_options="FBX_SCALE_UNITS", axis_forward="-Z", axis_up="Y", bake_space_transform=True,
-                             mesh_smooth_type="OFF", use_mesh_modifiers=True, path_mode="COPY", embed_textures=False,
+                             mesh_smooth_type="OFF", use_mesh_modifiers=True, path_mode="RELATIVE", embed_textures=False,
                              colors_type="LINEAR",  # vertex colours are 3DG density masks: write the values as they are
                              add_leaf_bones=False)
     return len(meshes)
 
 
 print("3DG mask layers", mask_colours())
+print("textures written", save_images(out_dir))
 n1 = export(descendants({"Terrain"}), f"{out_dir}/course_meshes.fbx")
 # flagsticks / cups and tee markers (Hole##_Furniture) stay out: GSPro draws the pin at runtime and places tee markers
 # from the GreenKeeper data (research/GSPRO_COSMETICS.md); they are only for our own viewer

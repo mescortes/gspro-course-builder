@@ -1,29 +1,68 @@
-"""Camera presets for the viewer (model frame) derived from hole 1 geometry + DEM."""
-import sys, json, numpy as np, rasterio
-sys.path.insert(0, 'scripts'); import config as C
+"""Camera presets for the viewer (model frame), derived from hole 1 in output/holes.json + the DEM -> viewer/views.json.
+
+The viewer also builds per-hole cameras from holes.json at runtime; these are the named presets (#tee, #green, ...)."""
+import sys, json
+from pathlib import Path
+import numpy as np, rasterio
+from shapely.geometry import Point
+
+sys.path.insert(0, str(Path(__file__).parent)); import config as C
+from surface_classify import osm_geoms
+
+with rasterio.open(C.BUILD / 'dem_final.tif') as _ds:
+    _Z = _ds.read(1); _T = _ds.transform
+
 
 def h_at(e, n):
-    with rasterio.open(C.BUILD / 'dem.tif') as ds:
-        r, c = ds.index(e, n); return float(ds.read(1)[r, c])
+    r, c = rasterio.transform.rowcol(_T, e, n)
+    r = min(max(r, 0), _Z.shape[0] - 1); c = min(max(c, 0), _Z.shape[1] - 1)
+    return float(_Z[r, c])
 
-def m(e, n, dz=0.0):
-    return [e - C.ORIGIN_E, h_at(e, n) - C.BASE_H + dz, -(n - C.ORIGIN_N)]
 
-tee = (362731.6, 3775187.4); bend = (362574.0, 3775298.8); green = (362581.8, 3775414.4)
-views = {
-  "tee":      {"pos": m(*tee, 1.75), "target": m(362600, 3775290, 0.0), "fov": 50},
-  "tee_wide": {"pos": m(362745, 3775178, 6.0), "target": m(362600, 3775320, 0.0), "fov": 60},
-  "fairway":  {"pos": m(362592, 3775285, 1.75), "target": m(*green, 0.5), "fov": 45},
-  "approach": {"pos": m(362582, 3775360, 1.75), "target": m(*green, 0.0), "fov": 45},
-  "green":    {"pos": m(362596, 3775392, 1.7), "target": m(362582.9, 3775412.9, 0.0), "fov": 50},
-  "behind_green": {"pos": m(362590, 3775445, 6.0), "target": m(362660, 3775230, 0.0), "fov": 55},
-  "flag":     {"pos": m(362588, 3775398, 1.6), "target": m(362582.5, 3775411.5, 1.0), "fov": 45},
-  "clubhouse":{"pos": m(362700, 3775215, 3.0), "target": m(362770, 3775165, 4.0), "fov": 55},
-  "putt":     {"pos": m(362580.5, 3775406.0, 1.2), "target": m(362583.2, 3775414.5, 0.0), "fov": 55},
-  "rough_lie":{"pos": m(362618, 3775300, 1.5), "target": m(362590, 3775330, 0.0), "fov": 60},
-  "bunker_lie":{"pos": m(362569.0, 3775404.5, 1.5), "target": m(362582.9, 3775412.9, 0.5), "fov": 60},
-  "overview": {"pos": m(362800, 3775100, 160.0), "target": m(362640, 3775310, 0.0), "fov": 45},
-  "top":      {"pos": m(362650, 3775300, 420.0), "target": m(362650, 3775301, 0.0), "fov": 45},
-}
-json.dump(views, open('viewer/views.json', 'w'), indent=1)
-print(json.dumps(views, indent=1))
+def m(p, dz=0.0):
+    e, n = float(p[0]), float(p[1])
+    return [round(e - C.ORIGIN_E, 2), round(h_at(e, n) - C.BASE_H + dz, 2), round(-(n - C.ORIGIN_N), 2)]
+
+
+def unit(v):
+    v = np.asarray(v, float); return v / max(np.linalg.norm(v), 1e-9)
+
+
+def main():
+    holes = {h["hole"]: h for h in json.load(open(C.OUTPUT / "holes.json"))["holes"]}
+    h = holes[min(holes)]
+    tee = np.asarray(h["tees"][0]["utm"][:2])
+    cl = np.asarray(h["centerline_utm"], float)
+    green = np.asarray(h["green"]["centre_utm"][:2])
+    pin = np.asarray(next(p for p in h["pins"] if p["name"] == "middle")["utm"][:2])
+    d1 = unit(cl[1] - cl[0])                      # first leg
+    da = unit(green - cl[-2])                     # approach direction
+    side = np.array([-da[1], da[0]])              # player's left on the approach
+    first_leg = np.linalg.norm(cl[1] - cl[0])
+    fairway_pt = cl[0] + d1 * min(230.0, 0.8 * first_leg) if len(cl) > 2 else cl[0] + d1 * 0.6 * first_leg
+    bunkers = [np.asarray(z["utm_centroid"]) for z in h["hazards"] if z["type"] == "bunker"]
+    gb = min(bunkers, key=lambda b: np.linalg.norm(b - green)) if bunkers else green - da * 15 + side * 10
+    blds = [g for _, t, g in osm_geoms() if "building" in t and g.geom_type == "Polygon" and g.distance(Point(tee)) < 400]
+    club = np.asarray(max(blds, key=lambda g: g.area).centroid.coords[0]) if blds else tee + np.array([40.0, -40.0])
+    mid = 0.5 * (tee + green)
+    views = {
+        "tee":          {"pos": m(tee, 1.75), "target": m(tee + d1 * 150), "fov": 50},
+        "tee_wide":     {"pos": m(tee - d1 * 12, 6.0), "target": m(tee + d1 * 200), "fov": 60},
+        "fairway":      {"pos": m(fairway_pt, 1.75), "target": m(green, 0.5), "fov": 45},
+        "approach":     {"pos": m(green - da * 50, 1.75), "target": m(green), "fov": 45},
+        "green":        {"pos": m(green - da * 18, 1.7), "target": m(pin), "fov": 50},
+        "behind_green": {"pos": m(green + da * 30, 6.0), "target": m(tee), "fov": 55},
+        "flag":         {"pos": m(pin - da * 7, 1.6), "target": m(pin, 1.0), "fov": 45},
+        "clubhouse":    {"pos": m(club + unit(tee - club) * 70, 4.0), "target": m(club, 4.0), "fov": 55},
+        "putt":         {"pos": m(pin - da * 3, 1.2), "target": m(pin), "fov": 55},
+        "rough_lie":    {"pos": m(mid + side * 30, 1.5), "target": m(green), "fov": 60},
+        "bunker_lie":   {"pos": m(gb, 1.5), "target": m(pin, 0.5), "fov": 60},
+        "overview":     {"pos": m(tee - d1 * 150, 160.0), "target": m(mid), "fov": 45},
+        "top":          {"pos": m([C.ORIGIN_E, C.ORIGIN_N], 420.0), "target": m([C.ORIGIN_E, C.ORIGIN_N + 1]), "fov": 45},
+    }
+    json.dump(views, open(C.ROOT / 'viewer/views.json', 'w'), indent=1)
+    print(json.dumps(views, indent=1))
+
+
+if __name__ == "__main__":
+    main()

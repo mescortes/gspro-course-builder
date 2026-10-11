@@ -1,8 +1,8 @@
-"""Turn the per-pixel classification into a clean planar partition of course surfaces (GeoJSON, UTM 11N).
+"""Turn the per-pixel classification into a clean planar partition of course surfaces (GeoJSON, config.CRS).
 
 Output: features/auto_core.geojson — one feature per polygon with properties
   surface: green | fringe | fairway | semirough | rough | tee | bunker | cartpath | native | road | building | court | water
-  hole:    1..27 (OSM ref), 98 (cart paths), 99 (course-wide background)
+  hole:    course hole (config.course_hole of the OSM ref), 98 (cart paths), 99 (course-wide background)
 The partition has no overlaps and covers the whole CORE extent (rough fills the remainder).
 """
 import sys, json
@@ -115,14 +115,20 @@ def main():
     from surface_classify import read_on_grid
     from rasterio.enums import Resampling
     from skimage.color import rgb2lab
-    from surface_classify import read_imagery_window
+    from surface_classify import read_imagery_window, read_nir_window
     sand = np.zeros((H, W), bool)
     grass = np.zeros((H, W), bool)
     for r0 in range(0, H, 1024):
         r1 = min(H, r0 + 1024)
-        Lab = rgb2lab(np.moveaxis(read_imagery_window(T, r0, r1, 0, W), 0, -1))
+        rgb = read_imagery_window(T, r0, r1, 0, W)
+        Lab = rgb2lab(np.moveaxis(rgb, 0, -1))
         sand[r0:r1] = (Lab[..., 0] > 66) & (Lab[..., 1] > -12) & (Lab[..., 2] > 8.5) & (Lab[..., 2] < 26)
         grass[r0:r1] = Lab[..., 1] < -14  # clearly green: turf (bunker grass faces) or tree crowns; sand sits near a* -3
+        nir = read_nir_window(T, r0, r1, 0, W)
+        if nir is not None:  # spring photo: turf is rarely that green, but live turf is NDVI > 0.25 and sand ~0
+            ndvi = (nir - rgb[0]) / (nir + rgb[0] + 1e-3)
+            grass[r0:r1] |= ndvi > 0.25
+            sand[r0:r1] &= ndvi < 0.12
     del Lab
     osm_bunk = burn_mask(osm(lambda t: t.get("golf") == "bunker"))
     near = ndimage.binary_dilation(surf["bunker"] | osm_bunk, iterations=int(6 / RES))
@@ -231,7 +237,7 @@ def main():
         final[n] = g
         taken = unary_union([taken, g])
     # lines of play (course hole numbers) for tee validation and hole assignment
-    holes = {}  # course hole number (North 1-9, South 10-18, Lake 19-27) -> line of play
+    holes = {}  # course hole number (config.course_hole) -> line of play
     for _, t, g in G:
         if t.get("golf") == "hole" and t.get("ref") and g.geom_type == "LineString":
             holes[C.course_hole(t["ref"])] = g
@@ -453,7 +459,7 @@ def main():
             feats.append({"type": "Feature", "geometry": mapping(p),
                           "properties": {"surface": n, "hole": h, "area": round(p.area, 2), "stroke": STROKE.get(n, "#ff00ff")}})
     # fringe/semirough adopt the hole of the green/fairway they surround
-    out = {"type": "FeatureCollection", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::32611"}}, "features": feats}
+    out = {"type": "FeatureCollection", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::" + C.CRS.split(":")[1]}}, "features": feats}
     C.FEATURES.mkdir(exist_ok=True)
     json.dump(out, open(C.FEATURES / "auto_core.geojson", "w"))
     from collections import Counter

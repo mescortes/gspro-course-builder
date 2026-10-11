@@ -14,7 +14,7 @@ from gltf_builder import GLB
 from add_vegetation import TREES, BARK, PH, GEN
 
 OUT = C.OUTPUT / "gspro"
-ARCHES = ("oak", "pine", "sycamore", "eucalyptus", "shrub")
+ARCHES = C.TREE_ARCHETYPES
 LODS = (("hi", 0), ("lo", 1), ("bb", 2))
 
 

@@ -63,9 +63,9 @@ def add_flag_and_markers(glb, root, hole):
         _FURN_MATS["white"] = glb.material("Flagstick", base_factor=(0.92, 0.92, 0.88, 1), rough=0.4)
         _FURN_MATS["flag"] = glb.material("Flag", base_factor=(0.05, 0.18, 0.75, 1), rough=0.8, double_sided=True)
         _FURN_MATS["cup"] = glb.material("Cup", base_factor=(0.02, 0.02, 0.02, 1), rough=0.9)
-        colours = {"championship": (0.85, 0.65, 0.1, 1), "middle": (0.1, 0.25, 0.8, 1), "forward": (0.95, 0.95, 0.95, 1)}
-        for k, c in colours.items():
-            _FURN_MATS[k] = glb.material(f"TeeMarker_{k}", base_factor=c, rough=0.35)
+        for k, c in C.TEE_COLOURS.items():
+            rgb = tuple(int(c[i:i + 2], 16) / 255 for i in (1, 3, 5))
+            _FURN_MATS[k] = glb.material(f"TeeMarker_{k}", base_factor=rgb + (1,), rough=0.35)
     white, flagm, cupm = _FURN_MATS["white"], _FURN_MATS["flag"], _FURN_MATS["cup"]
     pin = next(p for p in hole["pins"] if p["name"] == "middle")
     e, n = pin["utm"][:2]; h = float(dem(e, n)[0])

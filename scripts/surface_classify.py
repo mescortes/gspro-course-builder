@@ -43,9 +43,11 @@ _OSM_CACHE = {}
 
 def osm_geoms():
     """All tagged OSM ways/relations/nodes in research/osm_all.json as (id, tags, shapely geometry in UTM).
-    Golf features come from research/osm_golf.json as well (wider query). Cached per process and on disk."""
+    Golf features come from research/osm_golf.json as well (wider query); cart-path centre lines traced from the photo
+    (research/paths_detected.geojson, trace_paths.py) are appended as golf=cartpath lines (tag source=trace_paths).
+    Cached per process and on disk."""
     import pickle, os
-    src = [C.ROOT / "research/osm_all.json", C.ROOT / "research/osm_golf.json"]
+    src = [C.ROOT / "research/osm_all.json", C.ROOT / "research/osm_golf.json", C.ROOT / "research/paths_detected.geojson"]
     stamp = tuple(int(os.path.getmtime(p)) for p in src if p.exists())
     cache = C.BUILD / "osm_geoms.pkl"
     if stamp in _OSM_CACHE:
@@ -64,7 +66,7 @@ def osm_geoms():
         x, y = tr.transform(lon, lat)
         return list(zip(x, y))
     elements = {}
-    for p in src:
+    for p in src[:2]:
         if p.exists():
             for e in json.load(open(p))["elements"]:
                 elements[(e["type"], e["id"])] = e
@@ -106,6 +108,9 @@ def osm_geoms():
         if not g.is_valid:
             g = g.buffer(0)
         out.append((oid, t, g))
+    if src[2].exists():
+        for i, f in enumerate(json.load(open(src[2]))["features"]):
+            out.append((9_000_000_000 + i, dict(f["properties"]), shape(f["geometry"])))
     pickle.dump((stamp, out), open(cache, "wb"))
     _OSM_CACHE[stamp] = out
     return out
@@ -157,13 +162,30 @@ def add_native_seeds(lab, X, names):
     f = {n: X[..., i] for i, n in enumerate(names)}
     seed = (f["A4"] > 3.0) & (f["B4"] > 11.0) & (f["L4"] < 55) & (f["chmmax"] < 1.2) & \
            np.isin(lab, [CID["unknown"], CID["rough"]])
+    if "NDVI4" in f:  # spring photo: dormant turf is brown too, but still far greener in NIR than mulch or bare soil
+        seed &= f["NDVI4"] < 0.18
     seed = ndimage.binary_opening(seed, iterations=2)
     lab[seed] = CID["native"]
     return lab
 
 
-NAMES = ["L", "A", "B", "L4", "A4", "B4", "L12", "A12", "B12", "Lstd2", "Lstd6", "Astd3", "I1", "I2", "Id",
-         "slope", "slope4", "demrough", "micro", "chm", "chmmax", "gcount"]
+NAMES_BASE = ["L", "A", "B", "L4", "A4", "B4", "L12", "A12", "B12", "Lstd2", "Lstd6", "Astd3", "I1", "I2", "Id",
+              "slope", "slope4", "demrough", "micro", "chm", "chmmax", "gcount"]
+# with a 4-band (R, G, B, NIR) photo such as SWOOP: NIR, NDVI and their context (live turf vs dormant / covered greens,
+# sand, paths, water and roofs separate far better in NIR than in Lab)
+NAMES_NIR = ["N", "NDVI", "NDVI4", "NDVI12", "Nstd3"]
+
+
+def has_nir():
+    with rasterio.open(C.IMAGERY) as ds:
+        return ds.count >= 4
+
+
+def feature_names():
+    return NAMES_BASE + (NAMES_NIR if has_nir() else [])
+
+
+NAMES = NAMES_BASE  # (kept for importers; main() uses feature_names())
 TILE_PX = 1024
 PAD = 64  # px of context around each tile (largest filter: gaussian sigma 12 px)
 
@@ -197,6 +219,17 @@ def read_imagery_window(T, pr0, pr1, pc0, pc1):
     return a.astype(np.float32) / 255.0
 
 
+def read_nir_window(T, pr0, pr1, pc0, pc1):
+    """NIR band (0..1) on the DEM grid, or None for a 3-band photo."""
+    x0 = T.c + pc0 * T.a; x1 = T.c + pc1 * T.a; y1 = T.f + pr0 * T.e; y0 = T.f + pr1 * T.e
+    with rasterio.open(C.IMAGERY) as ds:
+        if ds.count < 4:
+            return None
+        a = ds.read(4, window=from_bounds(x0, y0, x1, y1, transform=ds.transform), out_shape=(pr1 - pr0, pc1 - pc0),
+                    resampling=Resampling.average, boundless=True, fill_value=0)
+    return a.astype(np.float32) / 255.0
+
+
 def features_window(T, pr0, pr1, pc0, pc1):
     rgb = read_imagery_window(T, pr0, pr1, pc0, pc1)
     lab = rgb2lab(np.moveaxis(rgb, 0, -1)).astype(np.float32)
@@ -227,6 +260,10 @@ def features_window(T, pr0, pr1, pc0, pc1):
          i1, i2, i1 - i2,
          slope, ndimage.gaussian_filter(slope, 4), rough_dem, micro,
          chm, ndimage.maximum_filter(chm, 5), cnt_s]
+    nir = read_nir_window(T, pr0, pr1, pc0, pc1)
+    if nir is not None:
+        ndvi = (nir - rgb[0]) / (nir + rgb[0] + 1e-3)
+        F += [nir, ndvi, ndimage.gaussian_filter(ndvi, 4), ndimage.gaussian_filter(ndvi, 12), loc_std(nir, 3)]
     return np.stack(F, -1).astype(np.float32)
 
 
@@ -239,6 +276,7 @@ def main():
     lab, _ = osm_label_raster(W, H, T, chm)
     del chm
     rng = np.random.default_rng(0)
+    names = feature_names()
     PER_TILE = 6000
     samples_X, samples_y = [], []
     windows = list(tile_windows(W, H))
@@ -247,7 +285,7 @@ def main():
         X = features_window(T, pr0, pr1, pc0, pc1)
         Xi = X[PAD:PAD + (r1 - r0), PAD:PAD + (c1 - c0)]
         sub = lab[r0:r1, c0:c1]
-        sub[:] = add_native_seeds(sub.copy(), Xi, NAMES)
+        sub[:] = add_native_seeds(sub.copy(), Xi, names)
         yv = sub.ravel(); Xf = Xi.reshape(-1, Xi.shape[-1])
         for c in range(1, len(CLASSES)):
             p = np.flatnonzero(yv == c)
@@ -267,7 +305,7 @@ def main():
     clf = RandomForestClassifier(n_estimators=80, max_depth=22, min_samples_leaf=3, n_jobs=-1, random_state=0,
                                  class_weight="balanced_subsample")
     clf.fit(Xs[idx], ys[idx])
-    imp = sorted(zip(clf.feature_importances_, NAMES), reverse=True)
+    imp = sorted(zip(clf.feature_importances_, names), reverse=True)
     print("importances", [(n, round(float(v), 3)) for v, n in imp[:10]], f"{time.time() - t0:.0f}s", flush=True)
     # pass 2: predict, store per-class probability as uint8 (0..255) in a (classes, H, W) memmap
     proba = np.lib.format.open_memmap(C.BUILD / "proba_u8.npy", mode="w+", dtype=np.uint8, shape=(len(CLASSES), H, W))

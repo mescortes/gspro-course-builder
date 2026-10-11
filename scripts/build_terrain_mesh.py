@@ -5,7 +5,7 @@ meshes share identical boundary vertices (no T-junctions, no cracks). Triangle s
 whether it lies in the detail zone around the focus hole.
 
 Output: build/terrain_mesh.npz
-  V      (n,3) float64  UTM easting, northing, NAVD88 height
+  V      (n,3) float64  UTM easting, northing, height (config.CRS_LABEL)
   F      (m,3) int32
   surf   (m,)  int16    index into SURFACES
   hole   (m,)  int16
@@ -31,9 +31,9 @@ MAX_AREA = {"green": 0.03, "fringe": 0.06, "tee": 0.12, "bunker": 0.08, "fairway
             "cartpath": 0.3, "native": 0.8, "deeprough": 1.0, "rough": 0.6, "road": 3.0, "building": 4.0, "court": 4.0, "water": 1.0,
             "bunkerlip": 0.03, "wateredge": 0.1}
 COARSE = 6.0          # outside any hole zone
-SCENERY = 2.5         # Lake nine (visible from play, not played)
+SCENERY = 2.5         # scenery holes (visible from play, not played)
 FOCUS_HOLES = C.PLAYABLE
-SCENERY_HOLES = tuple(range(19, 28))
+SCENERY_HOLES = tuple(C.SCENERY_HOLES)
 DETAIL_BUFFER = 45.0
 
 

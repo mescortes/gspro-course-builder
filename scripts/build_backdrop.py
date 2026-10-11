@@ -1,10 +1,10 @@
-"""Backdrop terrain: a 5 km square of USGS 1 m DEM (2 m overview) around the detailed core, draped with imagery.
+"""Backdrop terrain: a 5 km square of the HRDEM 1 m DTM (2 m grid) around the detailed core, draped with SWOOP 2025.
 
 The inner boundary reuses the exact boundary vertices (and heights) of the core terrain mesh, so the join is
 watertight. Two rings: near (core + 640 m, finer mesh, 0.5 m imagery) and far (to 2.5 km, 1.2 m imagery).
 Output: build/backdrop_mesh.npz, data/imagery/backdrop_near_<extent>.jpg, data/imagery/backdrop_far_<extent>.jpg
 """
-import sys, subprocess
+import sys
 import numpy as np
 import rasterio
 import triangle
@@ -51,11 +51,11 @@ def lift_shadows(a, knee=40.0, keep=0.6, chroma=1.25):
     return out
 
 
-def imagery(ext, zoom, res, path):
+def imagery(ext, res, path):
     raw = path.with_name(path.stem + "_raw.jpg")
     if not path.with_suffix(".tif").exists():
-        subprocess.run([sys.executable, str(C.ROOT / "scripts/fetch_tiles.py"), "esri", str(zoom), str(ext["xmin"]), str(ext["ymin"]),
-                        str(ext["xmax"]), str(ext["ymax"]), str(res), str(path.with_suffix(".tif"))], check=True)
+        import fetch_imageserver
+        fetch_imageserver.fetch(ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], res, path.with_suffix(".tif"))
     if not raw.exists() or raw.stat().st_mtime < path.with_suffix(".tif").stat().st_mtime:
         with rasterio.open(path.with_suffix(".tif")) as ds:
             a = np.moveaxis(ds.read(), 0, -1)
@@ -100,8 +100,8 @@ def main():
     V = np.c_[Vt + o, z]
     np.savez_compressed(C.BUILD / "backdrop_mesh.npz", V=V, F=Ft.astype(np.int32), ring=ring, n_seam=n0)
     print("backdrop triangles", len(Ft), "near", (ring == 1).sum(), "far", (ring == 2).sum())
-    imagery(NEAR, 18, 0.5, NEAR_IMG)
-    imagery(FAR, 17, 1.25, FAR_IMG)
+    imagery(NEAR, 0.5, NEAR_IMG)
+    imagery(FAR, 1.25, FAR_IMG)
 
 
 if __name__ == "__main__":

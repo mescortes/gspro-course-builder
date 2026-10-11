@@ -1,0 +1,356 @@
+{
+ "source": "research workflow (front-nine / back-nine agents), 2026-10-11",
+ "holes": [
+  {
+   "hole": 1,
+   "name": null,
+   "description": "Par 5. Blue tee 559 yds on both GolfPass and AllSquare (white 535/533, red 514/515, gold 433/430). Men's stroke index 3 (AllSquare). gcabbott, a Westmount member blogging in 2020, calls it a 'fantastic mid-length opener' that 'has all of the defining characteristics of Westmount that you'll experience the rest of the round: rolling fairways, elevated approach shots, and challenging greens.' SCOREGolf's 2024-25 Canada Top 100 text, as republished by FOGOLF, says 'the opening long par 5 sets the tone.' Background: top100golfcourses.com and gcabbott both say Thompson's original first three holes were turned into the driving range and practice area after land was added in 1958, so today's hole 1 is not Thompson's original opener. No source gives the dogleg direction or a bunker count.",
+   "confidence": "sourced",
+   "shape": "not stated by any source",
+   "elevation": "elevated approach shot / green sits above the landing area (gcabbott); rolling fairway",
+   "green": "described only as 'challenging'; no tier or slope detail",
+   "hazards": [
+    "rolling fairway (uneven lies)",
+    "no bunker, water or OB detail found"
+   ],
+   "source_urls": [
+    "https://gcabbott.wordpress.com/2020/05/23/ranking-the-18-holes-at-westmount-golf-and-country-club/",
+    "https://www.fogolf.com/828405/top-100-golf-courses-in-canada-2024-2025-part-ii/",
+    "https://www.top100golfcourses.com/golf-course/westmount",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club/scorecard-and-layout",
+    "https://www.allsquaregolf.com/golf-courses/canada/westmount-golf-and-country-club",
+    "https://www.westmountgolf.com/theclub/golfcourseoverview.aspx"
+   ]
+  },
+  {
+   "hole": 2,
+   "name": null,
+   "description": "Par 4. Blue tee 373 yds (GolfPass) or 368 yds (AllSquare); white 357/352. Stroke index 11. gcabbott: the hole 'offers an early opportunity in the round to take out the driver and to hit your golf ball as far as possible with minimal penalty.' Its strategy lies in the approach and the green: 'a large green that slopes from right-to-left and requires good distance control', and 'The little bunker on the right is punishing, as the entire green slopes away from it.' No source gives the shape or any elevation.",
+   "confidence": "sourced",
+   "shape": "not stated; the tee shot is described as forgiving (driver with minimal penalty)",
+   "elevation": "not stated",
+   "green": "large; slopes right-to-left, away from the right greenside bunker",
+   "hazards": [
+    "one small greenside bunker on the right (green slopes away from it)"
+   ],
+   "source_urls": [
+    "https://gcabbott.wordpress.com/2020/05/23/ranking-the-18-holes-at-westmount-golf-and-country-club/",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club/scorecard-and-layout",
+    "https://www.allsquaregolf.com/golf-courses/canada/westmount-golf-and-country-club",
+    "https://www.westmountgolf.com/theclub/golf/golfcourseoverview/golfcourseoverview_hole2"
+   ]
+  },
+  {
+   "hole": 3,
+   "name": null,
+   "description": "Par 3. Blue tee 195 yds (GolfPass) or 200 yds (AllSquare); white 179/183, red 165. Stroke index 17. Dave Finn (top100golfcourses.com): 'a photogenic par-3 over a fountain pond with a well-forested backdrop.' Eric Robinson (top100golfcourses.com): 'Hole #3 is one of the nicest par 3s in Ontario.' SCOREGolf, via FOGOLF, names 'the par 3, 3rd' as a highlight. gcabbott: the tee is 'right next to the patio' (the clubhouse patio). The 'small pond and fountain', 'largely decorative', 'help to hide a mound and the fairway approach to the green, making the distance deceptive and hiding from view a sound tactic to hit a running approach up to the green'. He calls it 'a clever little green', and says the hole 'was actually the sixth hole in the original routing.'",
+   "confidence": "sourced",
+   "shape": "par 3; plays over a pond; a fairway approach in front of the green allows a running shot",
+   "elevation": "not explicitly stated; a mound in front of the green is hidden behind the pond",
+   "green": "'clever little green' (gcabbott); can be reached with a running approach along the ground",
+   "hazards": [
+    "small decorative pond with fountain between tee and green",
+    "hidden mound short of the green",
+    "trees behind the green (well-forested backdrop)"
+   ],
+   "source_urls": [
+    "https://www.top100golfcourses.com/golf-course/westmount/reviews/19205",
+    "https://www.top100golfcourses.com/golf-course/westmount/reviews/37889",
+    "https://gcabbott.wordpress.com/2020/05/23/ranking-the-18-holes-at-westmount-golf-and-country-club/",
+    "https://www.fogolf.com/828405/top-100-golf-courses-in-canada-2024-2025-part-ii/",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club/scorecard-and-layout",
+    "https://www.westmountgolf.com/theclub/golf/golfcourseoverview/golfcourseoverview_hole3"
+   ]
+  },
+  {
+   "hole": 4,
+   "name": null,
+   "description": "Par 4. Blue tee 412 yds (GolfPass) or 416 yds (AllSquare); white 385/392. Stroke index 7. gcabbott ranks it 3rd of the 18 and says it is a favourite of the club's teaching professionals: 'vintage Stanley Thompson.' 'It makes excellent use of the rolling terrain to influence the best landing zones on the tee shot for a good lie to strike a demanding approach to another well-sloped green. An angled fairway also introduces an element of risk and reward off of the tee. Then, tall trees and greenside bunkers in just the right places.' The hole finishes at 'a real central hub of the golf course', where the snack shop called the Oasis stands. The club's visitor page confirms 'on-course washrooms at #4 green' (also a weather shelter).",
+   "confidence": "sourced",
+   "shape": "angled fairway relative to the tee (diagonal risk-reward drive); no dogleg direction given",
+   "elevation": "rolling terrain decides which landing zones give a level lie",
+   "green": "'well-sloped'; demanding approach",
+   "hazards": [
+    "greenside bunkers (count not given)",
+    "tall trees",
+    "rolling fairway / sloping lies"
+   ],
+   "source_urls": [
+    "https://gcabbott.wordpress.com/2020/05/23/ranking-the-18-holes-at-westmount-golf-and-country-club/",
+    "https://www.westmountgolf.com/visitors.aspx",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club/scorecard-and-layout",
+    "https://www.allsquaregolf.com/golf-courses/canada/westmount-golf-and-country-club",
+    "https://www.westmountgolf.com/theclub/golf/golfcourseoverview/golfcourseoverview_hole4"
+   ]
+  },
+  {
+   "hole": 5,
+   "name": null,
+   "description": "Par 5. Blue tee 558 yds (GolfPass) or 562 yds (AllSquare); white 532/537. Stroke index 1, the hardest hole on the card. gcabbott calls it a 'dogleg-left par-5'. Tree removal 'has taken much of the strategy away from the first two shots': 'Hit it as far as you can over and around the corner and down the fairway to position your approach. The green is elevated on a steep hill and slopes from back to front, making this hole all about the approach to the green and keeping your ball beneath the hole.' gcabbott says today's holes 5-7 came from Robbie Robinson, the three holes added in the 1950s. UPI's 1990 du Maurier Classic preview: 'The fifth hole, a par 5, 544 yard monster is one of the more difficult on the course. No one will reach this on two.' Dave Finn notes visitors can easily get confused finding the 5th tee.",
+   "confidence": "sourced",
+   "shape": "dogleg left",
+   "elevation": "green elevated on a steep hill (uphill approach)",
+   "green": "slopes back to front; keep the ball below the hole",
+   "hazards": [
+    "trees at the dogleg corner (thinned by tree removal)",
+    "steep slope up to the elevated green",
+    "no bunker count given"
+   ],
+   "source_urls": [
+    "https://gcabbott.wordpress.com/2020/05/23/ranking-the-18-holes-at-westmount-golf-and-country-club/",
+    "https://www.upi.com/Archives/1990/06/26/LPGA-This-Week/3066646372800/",
+    "https://www.top100golfcourses.com/golf-course/westmount/reviews/19205",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club/scorecard-and-layout",
+    "https://www.allsquaregolf.com/golf-courses/canada/westmount-golf-and-country-club"
+   ]
+  },
+  {
+   "hole": 6,
+   "name": null,
+   "description": "Par 3. Blue tee 202 yds (GolfPass) or 200 yds (AllSquare); white 180/176, gold 133/130. Stroke index 15. gcabbott: 'one of three holes that was added in the 1950s by a student of Stanley Thompson, Clinton (Robbie) Robinson'. It has an 'elevated tee shot to a hole framed by tall trees', with 'suspense that builds as your golf ball descends towards the green', and is 'complete with another great green complex.' No bunker or water detail is given.",
+   "confidence": "sourced",
+   "shape": "par 3",
+   "elevation": "elevated tee, playing downhill to the green",
+   "green": "'great green complex'; no detail",
+   "hazards": [
+    "tall trees framing the hole",
+    "no bunker or water detail found"
+   ],
+   "source_urls": [
+    "https://gcabbott.wordpress.com/2020/05/23/ranking-the-18-holes-at-westmount-golf-and-country-club/",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club/scorecard-and-layout",
+    "https://www.allsquaregolf.com/golf-courses/canada/westmount-golf-and-country-club",
+    "https://www.westmountgolf.com/theclub/golf/golfcourseoverview/golfcourseoverview_hole6"
+   ]
+  },
+  {
+   "hole": 7,
+   "name": null,
+   "description": "Par 5. Blue tee 541 yds (GolfPass) or 540 yds (AllSquare); white 503/504. Stroke index 5. gcabbott: 'The corner of this dogleg-right is perfectly located to offer a risk-reward opportunity for those who wish to reach the green in two shots. And the large green has multiple tiers to collect inaccurate shots.' Vinny Lazzara (top100golfcourses.com, Jan 2025): 'My favorite long hole is #7. A long par five that favors a couple of fades and an accurate short iron.' gcabbott says it is one of the Robinson holes (today's 5-7).",
+   "confidence": "sourced",
+   "shape": "dogleg right (favours a fade)",
+   "elevation": "not stated",
+   "green": "large, with multiple tiers",
+   "hazards": [
+    "dogleg corner on the right (risk-reward for going for the green in two)",
+    "no bunker or water detail found"
+   ],
+   "source_urls": [
+    "https://gcabbott.wordpress.com/2020/05/23/ranking-the-18-holes-at-westmount-golf-and-country-club/",
+    "https://www.top100golfcourses.com/golf-course/westmount/reviews/41840",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club/scorecard-and-layout",
+    "https://www.allsquaregolf.com/golf-courses/canada/westmount-golf-and-country-club"
+   ]
+  },
+  {
+   "hole": 8,
+   "name": null,
+   "description": "Short, driveable par 4. Blue tee 283 yds (GolfPass) or 289 yds (AllSquare); white 265/270, gold 240/243. Stroke index 13. gcabbott ranks it 1st of the 18: 'the path to the green is narrow and fraught with trouble. Furthermore, out of bounds is on the left side for any wayward strikes. Many players will elect to hit a 200-yard first shot and favour the right side of the fairway. But with a small green that slopes severely from right to left, there is a price to pay for the comfort of a tee shot out safely to the right.' Dave Finn: 'a driveable par-4 with out-of-bounds lurking on the left side and a green that is protected by three ominous bunkers'; he also says visitors can get confused finding the 8th tee. SCOREGolf, via FOGOLF, names 'the short 8th'. Golf Canada's 2022 Canadian Women's Amateur coverage records an eagle on 'the par-4 8th' after a drive 'settled just short of the green'.",
+   "confidence": "sourced",
+   "shape": "short driveable par 4; narrow route to the green; the safe layup is about 200 yds down the right side. No dogleg described.",
+   "elevation": "not stated",
+   "green": "small; slopes severely from right to left; three greenside bunkers",
+   "hazards": [
+    "out of bounds along the left side",
+    "three bunkers guarding the green",
+    "narrow approach corridor"
+   ],
+   "source_urls": [
+    "https://gcabbott.wordpress.com/2020/05/23/ranking-the-18-holes-at-westmount-golf-and-country-club/",
+    "https://www.top100golfcourses.com/golf-course/westmount/reviews/19205",
+    "https://www.fogolf.com/828405/top-100-golf-courses-in-canada-2024-2025-part-ii/",
+    "https://www.golfcanada.ca/?p=255942",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club/scorecard-and-layout",
+    "https://www.allsquaregolf.com/golf-courses/canada/westmount-golf-and-country-club"
+   ]
+  },
+  {
+   "hole": 9,
+   "name": null,
+   "description": "Par 4. Blue tee 401 yds (GolfPass) or 400 yds (AllSquare); white 373/375. Stroke index 9. gcabbott: 'this ninth hole also makes clever use of fairway shapes to influence the approach to playing the hole. The right side offers the best angle to approach a long, narrow green; however, it results in a longer approach and penalizes any shots that go a bit too far to the right. The shortest approach requires flirting with the trees on the left side, and brings a greenside bunker more into play.' No source states a dogleg direction. Because the left line is shorter, the hole may bend left, but that is an inference only.",
+   "confidence": "sourced",
+   "shape": "not explicitly stated; the left line is the shorter approach (possible slight bend left, INFERRED, unconfirmed)",
+   "elevation": "not stated",
+   "green": "long and narrow; the best angle into it is from the right side of the fairway",
+   "hazards": [
+    "trees along the left side",
+    "a greenside bunker that comes into play from the left line (its side is not stated)",
+    "trouble for tee shots that run too far right"
+   ],
+   "source_urls": [
+    "https://gcabbott.wordpress.com/2020/05/23/ranking-the-18-holes-at-westmount-golf-and-country-club/",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club/scorecard-and-layout",
+    "https://www.allsquaregolf.com/golf-courses/canada/westmount-golf-and-country-club",
+    "https://www.westmountgolf.com/theclub/golf/golfcourseoverview/golfcourseoverview_hole9"
+   ]
+  },
+  {
+   "hole": 10,
+   "name": null,
+   "description": "Par 4. Yardages from the GolfPass scorecard: 334 Blue / 319 White / 304 Red / 217 Gold. Ian Andrew (golfclubatlas forum, 2011) named 10 among the holes at Westmount he thinks are 'all exceptional holes' (1, 4, 9, 10, 14, 15, 16), but he gave no physical description. No source I could reach describes its shape, elevation, hazards or green. It is a short par 4 by yardage, but it is not on Ian Andrew's 'Best Short Fours in Canada' list, and no source says it is driveable (the driveable short par 4 that reviewers mention is the 8th). The club's flyover page for hole 10 has no text, and its Vimeo video is private or unavailable. Layout must come from LiDAR, imagery and OSM.",
+   "confidence": "unknown",
+   "shape": "unknown",
+   "elevation": "unknown",
+   "green": "unknown",
+   "hazards": [],
+   "source_urls": [
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club",
+    "http://web.archive.org/web/20250710074845/https://golfclubatlas.com/forum/index.php/topic,47274.0.html",
+    "https://www.westmountgolf.com/theclub/golf/golfcourseoverview/golfcourseoverview_hole10"
+   ]
+  },
+  {
+   "hole": 11,
+   "name": null,
+   "description": "Par 5. GolfPass scorecard: 556 Blue / 531 White / 492 Red / 448 Gold. The green was reconstructed or redesigned by Doug Carrick (Carrick Design) in the 2015 renovation; ASGCA: 'Carrick re-shaped of all bunkers and re-designed of the 11th and 12th greens'. Top100: 'replaced the 11th and 12th greens in 2015'. A 2009 golfclubatlas article (Robert Thompson) said earlier Tom McBroom work had 'created two greens out of step with Thompson's work' but did not name them. That they were 11 and 12 is my inference, not a sourced fact. A 2026 reviewer says all five par 5s (1, 5, 7, 11, 13) 'play ~550yds from the tips'. No source describes the hole's shape, elevation or hazards.",
+   "confidence": "unknown",
+   "shape": "unknown",
+   "elevation": "unknown",
+   "green": "Green rebuilt/redesigned by Doug Carrick in 2015 (sourced); shape and contour not described",
+   "hazards": [
+    "bunkers reshaped in the 2015 Carrick all-course bunker renovation (course-wide statement; specific bunkers on this hole not described)"
+   ],
+   "source_urls": [
+    "https://asgca.org/?p=721",
+    "https://www.top100golfcourses.com/golf-course/westmount",
+    "https://greatlakesloops.substack.com/p/the-golf-nomad-14-northeast-usa-and",
+    "http://web.archive.org/web/20250807185452/https://golfclubatlas.com/in-my-opinion/andrew-cowan-dewar-mingay-thompson-canadas-top-golf-courses/",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club"
+   ]
+  },
+  {
+   "hole": 12,
+   "name": null,
+   "description": "Short par 3. GolfPass scorecard: 141 Blue / 127 White / 108 Red / 93 Gold; it is the easiest-rated hole (handicap 18). Vinny Lazzara (Top100, Jan 2025): 'Number 12 is my favorite short hole. The view from the tee is inspring. It plays from an elevated platform to an elevated green. Accuracy with your short iron gets you on the green, but doesn't guarantee you par.' The green was redesigned or rebuilt by Doug Carrick in 2015 (ASGCA; Top100). A 2026 reviewer notes that 12 and 17 are similar in length. Bunker positions are not described.",
+   "confidence": "sourced",
+   "shape": "straight (par 3)",
+   "elevation": "Elevated tee platform to an elevated green (sourced)",
+   "green": "Elevated green, rebuilt/redesigned by Carrick in 2015; putting described as difficult even after hitting the green ('doesn't guarantee you par')",
+   "hazards": [
+    "green-side bunkering not specifically described"
+   ],
+   "source_urls": [
+    "https://www.top100golfcourses.com/golf-course/westmount/reviews/41840",
+    "https://asgca.org/?p=721",
+    "https://www.top100golfcourses.com/golf-course/westmount",
+    "https://greatlakesloops.substack.com/p/the-golf-nomad-14-northeast-usa-and",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club"
+   ]
+  },
+  {
+   "hole": 13,
+   "name": null,
+   "description": "Par 5, and the last par 5 on the course. GolfPass scorecard: 554 Blue / 520 White / 503 Red / 439 Gold. The Golf Nomad (June 2026): 'Holes 1, 5, 7, 11, & 13 are all par 5's ... the last one you face is at the 13th', and they 'all play ~550yds from the tips and >500yds from one-ins'. Cathy Johnston birdied 13 and 14 in the final round of the 1990 du Maurier Classic (UPI). No source describes its shape, elevation, hazards or green.",
+   "confidence": "unknown",
+   "shape": "unknown",
+   "elevation": "unknown",
+   "green": "unknown",
+   "hazards": [],
+   "source_urls": [
+    "https://greatlakesloops.substack.com/p/the-golf-nomad-14-northeast-usa-and",
+    "https://www.upi.com/Archives/1990/07/01/Johnston-wins-du-Maurier/4953646804800/",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club"
+   ]
+  },
+  {
+   "hole": 14,
+   "name": null,
+   "description": "Par 4. GolfPass scorecard: 375 Blue / 359 White / 318 Red / 293 Gold. where2golf: 'one of Westmount's most picturesque holes is the par-4 14th. Here the narrowing fairway drops down to a well-bunkered green, which enjoys a beautiful backdrop of tall mature trees.' The fairway narrows and falls toward the green, so the approach plays downhill to a green below the landing area. The club's visitors page lists an inclement-weather shelter 'behind the 14th green', so model a small shelter structure there. Ian Andrew (2011) listed 14 among Westmount's 'exceptional holes'. Johnston birdied 14 in the 1990 du Maurier final round.",
+   "confidence": "sourced",
+   "shape": "unknown (fairway narrows toward the green)",
+   "elevation": "Downhill: fairway drops down to the green (sourced)",
+   "green": "Well-bunkered green framed by tall mature trees behind it",
+   "hazards": [
+    "multiple green-side bunkers ('well-bunkered green')",
+    "tall mature trees behind/around the green",
+    "narrowing fairway (tree-lined)"
+   ],
+   "source_urls": [
+    "https://www.where2golf.com/canada-ontario/westmount-golf-country-club/",
+    "https://www.westmountgolf.com/visitors.aspx",
+    "http://web.archive.org/web/20250710074845/https://golfclubatlas.com/forum/index.php/topic,47274.0.html",
+    "https://www.upi.com/Archives/1990/07/01/Johnston-wins-du-Maurier/4953646804800/",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club"
+   ]
+  },
+  {
+   "hole": 15,
+   "name": null,
+   "description": "Long par 4 and the hardest-rated hole on the back nine (handicap 2 on GolfPass). GolfPass scorecard: 453 Blue / 396 White / 367 Red / 315 Gold. All Square Golf: 'the par 4 15th, which features a sharply sloping fairway leading to a green that has been notched into a hillside.' The Golf Nomad (June 2026): the 15th is where the course's land movement 'is the most prominent. There is not a single bunker on the entirety of the long par 4 & the green is perched on a massive hill.' Ian Andrew (golfclubatlas, 2009): 'Westmount's strength is the wonderful collection of par fours, some like the 15th are truly exceptional.' At the 2022 Canadian Women's Amateur, a player 'chipped in from behind the green' here (Golf Canada), so there is playable ground behind the green. Model it with no bunkers, a strongly canted fairway, and an uphill approach to a green cut into a hillside.",
+   "confidence": "sourced",
+   "shape": "unknown (sharply side-sloping, heavily contoured fairway)",
+   "elevation": "Uphill approach: the green is perched on a large hill, notched into a hillside (sourced)",
+   "green": "Elevated green notched into a hillside; no bunkers around it; there is playable ground behind it",
+   "hazards": [
+    "NO bunkers anywhere on the hole (sourced, 2026)",
+    "severe fairway slope and humps (uneven lies)",
+    "steep slope below/in front of the elevated green"
+   ],
+   "source_urls": [
+    "https://www.allsquaregolf.com/golf-courses/canada/westmount-golf-and-country-club",
+    "https://greatlakesloops.substack.com/p/the-golf-nomad-14-northeast-usa-and",
+    "http://web.archive.org/web/20250807185452/https://golfclubatlas.com/in-my-opinion/andrew-cowan-dewar-mingay-thompson-canadas-top-golf-courses/",
+    "https://www.golfcanada.ca/?p=255942",
+    "https://www.golfcanada.ca/?p=255817",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club"
+   ]
+  },
+  {
+   "hole": 16,
+   "name": null,
+   "description": "Long par 4. GolfPass scorecard: 439 Blue / 418 White / 400 Red / 359 Gold. All Square Golf gives 447 yards and says the hole's 'yards also culminate in an especially punishing green'. Matt Bosela (Top100, 2020) calls the routing 'almost flawless, with the only blip being the strange walk back to the 16th tee (we had to look for awhile to find where we had to go)'. The 16th tee therefore sits back away from the 15th green, not right beside it. Ian Andrew (2011) listed 16 among Westmount's 'exceptional holes'. No source describes the fairway shape or bunker positions.",
+   "confidence": "sourced",
+   "shape": "unknown",
+   "elevation": "unknown",
+   "green": "Described as an 'especially punishing green' (severe contour/slope implied; specifics not given)",
+   "hazards": [
+    "tree-lined (course-wide characteristic)",
+    "bunker positions not described"
+   ],
+   "source_urls": [
+    "https://www.allsquaregolf.com/golf-courses/canada/westmount-golf-and-country-club",
+    "https://www.top100golfcourses.com/golf-course/westmount/reviews/26855",
+    "http://web.archive.org/web/20250710074845/https://golfclubatlas.com/forum/index.php/topic,47274.0.html",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club"
+   ]
+  },
+  {
+   "hole": 17,
+   "name": null,
+   "description": "Par 3. GolfPass scorecard: 165 Blue / 149 White / 132 Red / 113 Gold. In the first round of the 2022 Canadian Women's Amateur, a player 'carved an iron into the 149-yard par-3 No. 17' for a hole-in-one (Golf Canada). A 2026 reviewer says 12 and 17 are similar in length. No source describes its elevation, bunkers or green. An unverified search-engine summary claimed a 'late 2022 routing change' that made 17 a new par 5. Nothing corroborates it, and both the June 2026 review (par 3s at 12 and 17, last par 5 at 13) and the current scorecard contradict it, so treat 17 as a par 3.",
+   "confidence": "unknown",
+   "shape": "straight (par 3)",
+   "elevation": "unknown",
+   "green": "unknown",
+   "hazards": [],
+   "source_urls": [
+    "https://www.golfcanada.ca/?p=255817",
+    "https://greatlakesloops.substack.com/p/the-golf-nomad-14-northeast-usa-and",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club"
+   ]
+  },
+  {
+   "hole": 18,
+   "name": null,
+   "description": "Par 4 finishing hole. GolfPass scorecard: 384 Blue / 367 White / 351 Red / 334 Gold. Robert Thompson (golfclubatlas, 2009): 'A weak finisher, where trees force players to consider hitting an iron, also hurts the course. In fact, overgrowth of trees is common through Westmount. The ninth would make a much better finishing hole.' So the tee shot is hemmed in by trees, and as of 2009 tree encroachment made players consider an iron off the tee. Tree removal since then is unknown, so check current imagery. 1990 du Maurier Classic (UPI): the winner, 'after hitting a her drive onto the fringe at No. 18, dropped a 30-foot putt to save par'. 2022 Canadian Women's Amateur (Golf Canada): a player 'left a little bit of long putts like on 18 here'. No source describes the fairway shape, bunkers or elevation.",
+   "confidence": "sourced",
+   "shape": "unknown (tree-lined, tight tee shot)",
+   "elevation": "unknown",
+   "green": "unknown (long putts possible, implying a reasonably large green)",
+   "hazards": [
+    "trees encroaching on the tee-shot corridor (sourced, 2009)",
+    "bunker positions not described"
+   ],
+   "source_urls": [
+    "http://web.archive.org/web/20250807185452/https://golfclubatlas.com/in-my-opinion/andrew-cowan-dewar-mingay-thompson-canadas-top-golf-courses/",
+    "https://www.upi.com/Archives/1990/07/01/Johnston-wins-du-Maurier/4953646804800/",
+    "https://www.golfcanada.ca/?p=255942",
+    "https://www.golfpass.com/travel-advisor/courses/27520-westmount-golf-and-country-club"
+   ]
+  }
+ ],
+ "notes": [
+  "FRONT-NINE RESEARCH SUMMARY (Westmount G&CC, Kitchener ON). Research used text only: WebSearch, WebFetch and small curl probes. No browser was used and no media was played. Probe files are saved under /tmp/claude-1000/-home-owner--sessions-cse-01KdqpZtNCdQ9mEvqKNRp2cj-Faire-ai-executor/465097aa-0f5b-58d7-b78f-3bbccea3f493/scratchpad/research_probe/.\n\nMAIN SOURCE: a hole-by-hole ranking of all 18 holes by gcabbott, who joined Westmount as a member in 2018 (blog post dated 23 May 2020, written from the club's 2018 flyovers): https://gcabbott.wordpress.com/2020/05/23/ranking-the-18-holes-at-westmount-golf-and-country-club/. It is the only source that describes every front-nine hole. Supporting sources:\n- top100golfcourses.com reviews by Dave Finn (19205), Eric Robinson (37889), Vinny Lazzara (41840, Jan 2025) and Matt Bosela (26855).\n- SCOREGolf 2024-25 Canada Top 100 text, as republished by FOGOLF. Westmount was #13.\n- UPI's 1990 du Maurier Classic preview.\n- Golf Canada's coverage of the 2022 Canadian Women's Amateur, held at Westmount.\n\nCLUB FLYOVERS: westmountgolf.com/theclub/golfcourseoverview.aspx embeds one Vimeo flyover per hole (2018). The pages carry no hole text. Vimeo IDs:\n- H1 268453958, H2 268477865, H3 268477914, H4 268477951, H5 271303615, H6 268478009, H7 268478015, H8 268478018, H9 268478060.\n- oEmbed confirms the titles 'Westmount G&CC Flyover Hole #N' (uploaded 2018-05-07, empty descriptions) for holes 1-4 and 6. The other four return 404 from oEmbed.\n- The flyovers are the best visual reference for hand checks, but they were not watched.\n\nSCORECARD:\n- Front-nine pars are 5-4-3-4-5-3-5-4-4 (out 37); the course is par 73. Both scorecards agree on the pars.\n- GolfPass blue yardages for holes 1-9: 559/373/195/412/558/202/541/283/401, out 3524. GolfPass lists the course total as 6943 but its holes add up to 6925.\n- AllSquare blue yardages (last edited July 2020): 559/368/200/416/562/200/540/289/400.\n- Men's stroke index for holes 1-9 (AllSquare): 3/11/17/7/1/15/5/13/9.\n- Golf Canada lists 7,018 yds, so a newer back tee probably exists.\n\nHISTORY THAT AFFECTS THE ROUTING:\n- top100golfcourses.com: Thompson's 1931 layout was par 71. Land added in 1958 brought in three new holes, and Thompson's opening three holes became the practice facility.\n- gcabbott: today's holes 5-7 are the Robbie Robinson holes, and today's 3rd was Thompson's original 6th.\n- Doug Carrick reshaped every bunker and rebuilt the 11th and 12th greens (ASGCA; top100 dates it 2015). WAC Golf, whose Keith Cutten managed the job for the contractor, places the work around 2013.\n- Bunker descriptions written before that renovation may be out of date. Finn's review mentions the 2015 clubhouse work, so it is post-2015.\n\nROUTING CLUES FOR MATCHING OSM AND LiDAR:\n- The 3rd tee is next to the clubhouse patio.\n- The 4th green sits at a central hub with the Oasis snack shop and on-course washrooms; the washrooms double as a weather shelter (club visitors page).\n- The club also lists weather shelters at the pump house behind the reservoir and behind the 14th green.\n- Finn: the walks to the 5th and 8th tees are confusing for non-members, which suggests longer green-to-tee transitions.\n- Bosela: the par 5s are front-loaded (holes 1, 5 and 7). Many tee shots play downhill, and many holes climb gently from the landing area to the green.\n- General character (top100golfcourses.com): fairways 'dipping and rising, seldom allowing the golfer a level lie'; wide landing areas; 'flashed bunkers prevail around the greens'. The club calls an uneven stance a 'Westmount lie'.\n\nNOT FOUND:\n- No club-written hole descriptions or yardage-book text.\n- No golfclubatlas.com thread or Ian Andrew blog post specific to Westmount turned up.\n- No source gives the dogleg direction for holes 1, 2, 4, 8 or 9 (hole 4 is only called 'angled'), or bunker counts beyond hole 2 (one, right) and hole 8 (three).\n- No creek is mentioned on any front-nine hole. The only front-nine water is the decorative pond with fountain on hole 3.",
+  "BACK-NINE RESEARCH SUMMARY (sources fetched 2026-10-11; no browser tools used)\n\nScorecard (GolfPass, Blue/White/Red/Gold): 10 P4 334/319/304/217; 11 P5 556/531/492/448; 12 P3 141/127/108/93; 13 P5 554/520/503/439; 14 P4 375/359/318/293; 15 P4 453/396/367/315; 16 P4 439/418/400/359; 17 P3 165/149/132/113; 18 P4 384/367/351/334. Back nine par 36, course par 73 (37-36). Total yardage is 6943 on GolfPass and where2golf, and 7018 on Golf Canada. All Square Golf has a different, probably older scorecard (e.g. 10=310, 15=382, 16=401 in its Blue column, and its own text says 16 is 447). Its men's handicaps for 10-18 are 10, 2, 18, 4, 14, 6, 8, 16, 12, which differ from GolfPass. Use the GolfPass yardages and check them against LiDAR and OSM hole lengths.\n\nClub website: the official course tour (westmountgolf.com/theclub/golfcourseoverview.aspx, with pages golfcourseoverview_hole10 through _hole18) has hole thumbnails and Vimeo flyovers only, and no text. The flyover video IDs for holes 10-18 are 268478067, 268478071, 268478121, 268478125, 268478129, 268478159, 268478165, 268478172 and 268478176. Vimeo returns 404 or 'Sorry' for them (private or domain-locked), so their titles and descriptions cannot be read. The 'Course Map' image on the visitors page covers only the clubhouse, putting green, 1st tee and range. The visitors page says inclement-weather shelters are at 'the pump house behind the reservoir, behind the 14th green and the on-course washrooms at #4 green'.\n\nCourse-wide character from multiple sources, useful for terrain and green modelling:\n- Top100: 'Fairways flow with the contours, dipping and rising, seldom allowing the golfer a level lie. Landing areas for tee shots are wide, but flashed bunkers prevail around the greens.'\n- Matt Bosela (Top100, 2020): 'no forced carries', 'many appealing downhill tee shots', and 'many holes slowly climb from the landing area to the green'.\n- Dave Finn (Top100, 2017): 'large greens are fast with subtle breaks', 'not as much dramatic elevation changes as I would have expected', 'open and groomed under the trees', and stones rise in the bunkers.\n- 1990 LPGA preview (UPI): 'undulating fairways and greens', 'traps waiting to catch stray tee shots', 'greens are fast and slick'.\n- Ian Andrew (2009): Westmount was built to 'a more modest bunker style' than Thompson's flamboyant courses. Carrick reshaped all bunkers in 2015.\n- The course was 'routed through bush and swampland'. In 1958, three new holes were added 'at the expense of the opening trio', which became the practice facility. This presumably affects the front nine, but the sources do not say which holes.\n- Green speed at the 2022 Canadian Women's Amateur was about 11 on the Stimpmeter (Turf & Rec).\n\nUnverified or rejected claims: (1) A search-engine summary said a 'late 2022 routing change' added a new par-3 12th and a par-5 17th. No page I could read says this, and the June 2026 Golf Nomad review (par 3s at 12 and 17, last par 5 at 13) and the scorecard contradict it, so ignore it. (2) A search summary claimed the closing holes are called the 'Mad Mile' with a sign at the 15th tee. No source corroborates it, so I did not include it. No source mentions a creek or pond on any back-nine hole. The only water feature reviewers mention is the 'fountain pond' on the par-3 3rd (front nine). Locate any back-nine water from OSM and imagery.\n\nAccess notes: golfclubatlas.com returns a Cloudflare 403 to direct fetches, so two of its pages were read through Wayback Machine snapshots (URLs given above). The SCOREGolf course-guide page exists but blocks Anthropic's crawler, so it was not used. golfdigest.com and golfview.ca returned 403. Probe files are in /tmp/claude-1000/-home-owner--sessions-cse-01KdqpZtNCdQ9mEvqKNRp2cj-Faire-ai-executor/465097aa-0f5b-58d7-b78f-3bbccea3f493/scratchpad/research_probe/."
+ ]
+}

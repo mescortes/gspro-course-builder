@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MountainGate North/South</title>
+<title>Westmount G&amp;CC</title>
 <style>
   :root { --bg: #0e1410; --fg: #e8efe6; --panel: rgba(14, 20, 16, 0.78); --accent: #8fd18a; --line: #5a7a58; }
   @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --panel: rgba(255,255,255,0.86); --fg: #142014; --bg: #dfe8dc; --line: #7d9a7b; } }
@@ -29,7 +29,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
-  <h1>MountainGate CC — North/South</h1>
+  <h1>Westmount Golf &amp; Country Club</h1>
   <h2>Hole</h2><div id="holes"></div>
   <h2>Camera</h2><div id="shots"></div>
   <h2>Views</h2><div id="views"></div>
@@ -47,7 +47,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Grass } from './grass.js';
 
 const params = new URLSearchParams(location.search);
-const MODEL = params.get('model') || '../output/mountain_gate_ns.glb';
+const MODEL = params.get('model') || '../output/westmount.glb';
 const HOLES = params.get('holes') || '../output/holes.json';
 const GRASS_SPEC = params.get('grass') || '../output/gspro/grass_3dg.json';
 const LOD_DIST = parseFloat(params.get('lod') || '240');     // detailed trees within this distance (m)

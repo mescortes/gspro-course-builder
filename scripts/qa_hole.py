@@ -9,7 +9,7 @@
 
 Usage: python scripts/qa_hole.py <hole> [<hole> ...]
 Coordinates in the images: grid lines every 10 m (close-ups) or 25 m (overviews), labelled with the last 3 digits of
-the UTM easting (vertical lines) / northing (horizontal lines), e.g. "582" on a vertical line = E 362582.
+the UTM easting (vertical lines) / northing (horizontal lines), e.g. "582" on a vertical line = E 537582.
 """
 import sys, json, math
 import numpy as np
@@ -28,7 +28,7 @@ COL = {"deeprough": (0, 90, 30), "green": (60, 255, 255), "fringe": (120, 220, 2
 FILL = {"deeprough": (22, 75, 32), "green": (188, 229, 164), "fringe": (150, 200, 130), "fairway": (67, 229, 97), "semirough": (54, 183, 77),
         "rough": (39, 132, 56), "tee": (160, 229, 184), "bunker": (240, 235, 170), "cartpath": (190, 190, 187),
         "native": (190, 117, 29), "road": (85, 85, 85), "building": (200, 60, 60), "court": (51, 85, 170), "water": (0, 0, 192)}
-TEE_COL = {"championship": (230, 180, 20), "middle": (40, 80, 230), "forward": (250, 250, 250)}
+TEE_COL = {k: tuple(int(c[i:i + 2], 16) for i in (1, 3, 5)) for k, c in C.TEE_COLOURS.items()}
 
 
 def read_img(b, res, src=None):

@@ -1,11 +1,12 @@
 """Run the whole pipeline (or a sub-range of steps). Usage: build_all.py [first_step] [last_step]"""
-import subprocess, sys, time
+import os, shutil, subprocess, sys, time
 from pathlib import Path
 S = Path(__file__).parent
 sys.path.insert(0, str(S)); import config as C
 STEPS = [
     ("register",   "register_imagery.py"),   # imagery translated onto the LiDAR (config.IMAGERY_SHIFT)
     ("rasters",    "build_rasters.py"),      # LiDAR -> DEM / DSM / CHM / intensity
+    ("paths",      "trace_paths.py"),        # cart-path centre lines from the photo (OSM maps none at Westmount)
     ("classify",   "surface_classify.py"),   # imagery + LiDAR per-pixel surfaces
     ("vectorize",  "vectorize.py"),          # clean surface partition (features/auto_core.geojson)
     ("assemble",   "assemble_features.py"),  # auto + manual overrides -> features/course_surfaces.geojson
@@ -22,17 +23,20 @@ STEPS = [
     ("prefabs",    "export_tree_prefabs.py"),  # Unity tree prefabs (LOD0-2) + reference sizes
     ("fbx",        None),                    # Blender: FBX meshes in the Unity terrain frame
     ("maps",       "make_maps.py"),          # yardage-book hole maps, green maps, course map
+    ("views",      "make_views.py"),         # viewer camera presets (viewer/views.json) from hole 1
 ]
+# headless Blender for the FBX step: $BLENDER, else `blender` on PATH
+BLENDER = os.environ.get("BLENDER") or shutil.which("blender") or "blender"
 names = [n for n, _ in STEPS]
 a = names.index(sys.argv[1]) if len(sys.argv) > 1 else 0
 b = names.index(sys.argv[2]) if len(sys.argv) > 2 else len(STEPS) - 1
 for n, script in STEPS[a:b + 1]:
     if script is None:
         t = time.time(); print(f"== {n}", flush=True)
-        subprocess.run(["blender", "-b", "--python", str(S / "export_fbx_blender.py"), "--", str(C.OUTPUT / "mountain_gate_ns_noveg.glb"),
+        subprocess.run([BLENDER, "-b", "--python-exit-code", "1", "--python", str(S / "export_fbx_blender.py"), "--", str(C.OUTPUT / f"{C.MODEL_NAME}_noveg.glb"),
                         str(C.OUTPUT / "gspro"), str(C.OUTPUT / "gspro/terrain.json")], check=True, stdout=subprocess.DEVNULL)
         if (C.OUTPUT / "gspro/tree_prefabs.glb").exists():
-            subprocess.run(["blender", "-b", "--python", str(S / "glb_to_fbx_blender.py"), "--", str(C.OUTPUT / "gspro/tree_prefabs.glb"),
+            subprocess.run([BLENDER, "-b", "--python-exit-code", "1", "--python", str(S / "glb_to_fbx_blender.py"), "--", str(C.OUTPUT / "gspro/tree_prefabs.glb"),
                             str(C.OUTPUT / "gspro/tree_prefabs.fbx")], check=True, stdout=subprocess.DEVNULL)
         print(f"   {n} done in {time.time() - t:.0f}s", flush=True)
         continue

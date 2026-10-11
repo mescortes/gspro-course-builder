@@ -13,8 +13,9 @@ def fmt_tee(t):
 
 def table():
     H = json.load(open(C.OUTPUT / "holes.json"))["holes"]
-    rows = ["| Hole | Nine | Par | SI | Championship | Middle | Forward | Green (yd deep × wide) | Elev. change | Hazards |",
-            "|---|---|---|---|---|---|---|---|---|---|"]
+    keys = C.TEE_KEYS
+    rows = ["| Hole | Par | SI | " + " | ".join(C.TEE_NAMES[k] for k in keys) + " | Green (yd deep × wide) | Elev. change | Hazards |",
+            "|---|---|---|" + "---|" * len(keys) + "---|---|---|"]
     for h in H:
         tees = {t["key"]: t for t in h["tees"]}
         g = h["green"]
@@ -22,13 +23,11 @@ def table():
         for z in h["hazards"]:
             hz[z["type"]] = hz.get(z["type"], 0) + 1
         hz_s = ", ".join(f"{n} {k}" for k, n in sorted(hz.items())) or "–"
-        rows.append(f"| {h['hole']} | {h['nine']} {h['nine_hole']} | {h['par']} | {h['handicap']} | "
-                    f"{fmt_tee(tees['championship'])} | {fmt_tee(tees['middle'])} | {fmt_tee(tees['forward'])} | "
-                    f"{g['depth_yd']:.0f} × {g['width_yd']:.0f} | {round(h['elevation_change_m']) or 0:+d} m | {hz_s} |")
-    tot = {k: sum(next(t for t in h["tees"] if t["key"] == k)["yards"] for h in H) for k in ("championship", "middle", "forward")}
-    card = {k: sum(h["scorecard_yards"][k] for h in H) for k in tot}
-    rows.append(f"| **Total** | | **{sum(h['par'] for h in H)}** | | **{tot['championship']:.0f}** ({card['championship']}) | "
-                f"**{tot['middle']:.0f}** ({card['middle']}) | **{tot['forward']:.0f}** ({card['forward']}) | | | |")
+        rows.append(f"| {h['hole']} | {h['par']} | {h['handicap']} | " + " | ".join(fmt_tee(tees[k]) for k in keys) +
+                    f" | {g['depth_yd']:.0f} × {g['width_yd']:.0f} | {round(h['elevation_change_m']) or 0:+d} m | {hz_s} |")
+    tot = {k: sum(next(t for t in h["tees"] if t["key"] == k)["yards"] for h in H) for k in keys}
+    card = {k: sum(h["scorecard_yards"][k] for h in H) for k in keys}
+    rows.append(f"| **Total** | **{sum(h['par'] for h in H)}** | | " + " | ".join(f"**{tot[k]:.0f}** ({card[k]})" for k in keys) + " | | | |")
     return "\n".join(rows)
 
 

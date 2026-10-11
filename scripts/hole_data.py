@@ -1,6 +1,6 @@
 """Hole metadata for every playable hole: tee boxes and markers, yardages, green geometry, pins, aim points, hazards.
 
-Writes output/holes.json ({"holes": [...]}, UTM 11N + model-frame coordinates) and output/hole01.json (hole 1, kept
+Writes output/holes.json ({"holes": [...]}, config.CRS + model-frame coordinates) and output/hole01.json (hole 1, kept
 for compatibility). This is what GSPro's GreenKeeper needs (tees, pins, aim/shot points, hazards) and it also drives
 the tests, maps, viewer camera presets and tee-marker / flagstick placement.
 
@@ -20,12 +20,12 @@ sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
 
 YD = 1 / 0.9144
-TEE_KEYS = ("championship", "middle", "forward")
-TEE_NAMES = {"championship": "Championship (Gold)", "middle": "Middle (Blue)", "forward": "Forward (White)"}
+TEE_KEYS = C.TEE_KEYS        # back -> front, the order of the yardages in config.SCORECARD
+TEE_NAMES = C.TEE_NAMES
 # hand-checked aim points (course hole -> list of UTM points); default = interior vertices of the OSM line of play.
 # Per-hole QA overrides live in features/overrides/holeNN_meta.json:
-#   {"aim_points_utm": [[e, n], ...], "tees_utm": {"forward": [e, n], ...}, "notes": "..."}
-AIM_OVERRIDES = {1: [(362565.0, 3775300.0)]}
+#   {"aim_points_utm": [[e, n], ...], "tees_utm": {"<tee key>": [e, n], ...}, "notes": "..."}
+AIM_OVERRIDES = {}
 
 
 def hole_meta(h):
@@ -152,7 +152,7 @@ def hole_record(h, line, feats, terr, all_feats):
     # card distance, as forward markers on a fairway are. QA overrides below still win.
     for t in tees:
         t["source"] = "pad"
-        if t["pad_err"] > FAIRWAY_MARKER_GAP and t["key"] != "championship":
+        if t["pad_err"] > FAIRWAY_MARKER_GAP and t["key"] != TEE_KEYS[0]:
             pos = point_at_distance(t["card"] / YD, aims, gc, np.asarray(tees[0]["pos"]))
             if pos is not None:
                 t["pos"] = pos; t["measured"] = play_distance(pos, aims, gc) * YD; t["source"] = "fairway_marker"
@@ -235,7 +235,7 @@ def hole_record(h, line, feats, terr, all_feats):
         ah = terr.h(*a)
         rec["aim_points"].append({"name": "dogleg", "utm": [round(float(a[0]), 2), round(float(a[1]), 2), round(ah, 2)],
                                   "model": model(a[0], a[1], ah),
-                                  "from_championship_yd": round(math.dist(tees[0]["pos"], a) * YD, 1) if tees else None})
+                                  "from_back_tee_yd": round(math.dist(tees[0]["pos"], a) * YD, 1) if tees else None})
     play = LineString([tuple(tees[0]["pos"]) if tees else tuple(coords[0])] + [tuple(a) for a in aims] + [tuple(gc)])
     rec["centerline_utm"] = [[round(x, 2), round(y, 2)] for x, y in play.coords]
     for g, p in hf:
@@ -270,7 +270,7 @@ def main():
                             for t in rec["tees"]) + f"  green {rec['green']['area_sqft']} sqft", flush=True)
         else:
             print(f"hole {h}: {rec.get('error', 'no tees')}")
-    out = {"course": "MountainGate Country Club", "layout": "North/South", "crs": C.CRS,
+    out = {"course": C.COURSE_NAME, "layout": C.LAYOUT, "crs": C.CRS, "tee_sets": [{"key": k, "name": n} for k, n, _ in C.TEES],
            "model_frame": {"origin_utm": [C.ORIGIN_E, C.ORIGIN_N], "base_height": C.BASE_H, "axes": "x=east, y=up, z=south (metres)"},
            "holes": holes}
     C.OUTPUT.mkdir(exist_ok=True)

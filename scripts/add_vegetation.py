@@ -13,8 +13,8 @@ import config as C
 
 TREES = C.DATA / "trees"
 PH = C.DATA / "textures"; GEN = C.DATA / "textures_gen"
-BARK = {"oak": "jolcham_oak_bark_01", "pine": "pine_bark", "sycamore": "bark_platanus", "eucalyptus": "eucalyptus_bark",
-        "shrub": "jolcham_oak_bark_01"}
+BARK = {"maple": "trident_maple_bark", "oak": "jolcham_oak_bark_01", "pine": "pine_bark", "spruce": "knotted_pine_bark",
+        "shrub": "bark_brown_01"}
 CELL = 256.0
 
 

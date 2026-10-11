@@ -1,6 +1,7 @@
-"""Fetch XYZ web-mercator imagery tiles covering a UTM 11N bbox and reproject to a UTM GeoTIFF.
+"""Fetch XYZ web-mercator imagery tiles covering a bbox in config.CRS and reproject to a GeoTIFF in that CRS.
 Usage: fetch_tiles.py SOURCE ZOOM xmin ymin xmax ymax res out.tif
-SOURCE: esri (Esri World Imagery; reference/tracing use, see README for terms)"""
+SOURCE: esri (Esri World Imagery). Not used by the pipeline: the Esri licence does not allow exporting tiles for offline
+or derived use, so the course is built from the open SWOOP 2025 imagery (fetch_imageserver.py). Kept as a quick-look tool."""
 import sys, os, io, math, time, concurrent.futures as cf
 import numpy as np, requests, rasterio
 from rasterio.warp import reproject, Resampling
@@ -8,10 +9,13 @@ from rasterio.transform import from_origin, from_bounds
 from pyproj import Transformer
 from PIL import Image
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import config as C
+
 SOURCES = {
     "esri": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
 }
-CACHE = "data/imagery/tilecache"
+CACHE = str(C.DATA / "imagery" / "tilecache")
 R = 6378137.0
 def merc_tile_bounds(x, y, z):
     n = 2 ** z; size = 2 * math.pi * R / n
@@ -37,7 +41,7 @@ def get_tile(src, z, x, y):
 
 def main():
     src = sys.argv[1]; z = int(sys.argv[2]); xmin, ymin, xmax, ymax, res = map(float, sys.argv[3:8]); out = sys.argv[8]
-    t = Transformer.from_crs("EPSG:32611", "EPSG:3857", always_xy=True)
+    t = Transformer.from_crs(C.CRS, "EPSG:3857", always_xy=True)
     cx, cy = t.transform([xmin, xmax, xmin, xmax], [ymin, ymin, ymax, ymax])
     mx0, mx1, my0, my1 = min(cx), max(cx), min(cy), max(cy)
     n = 2 ** z; size = 2 * math.pi * R / n
@@ -64,8 +68,8 @@ def main():
     dst_transform = from_origin(xmin, ymax, res, res)
     for b in range(3):
         reproject(mosaic[:, :, b], dst[b], src_transform=src_transform, src_crs="EPSG:3857",
-                  dst_transform=dst_transform, dst_crs="EPSG:32611", resampling=Resampling.lanczos)
-    with rasterio.open(out, "w", driver="GTiff", width=W, height=H, count=3, dtype="uint8", crs="EPSG:32611",
+                  dst_transform=dst_transform, dst_crs=C.CRS, resampling=Resampling.lanczos)
+    with rasterio.open(out, "w", driver="GTiff", width=W, height=H, count=3, dtype="uint8", crs=C.CRS,
                        transform=dst_transform, compress="deflate", tiled=True) as d:
         d.write(dst)
     print("wrote", out, dst.shape)

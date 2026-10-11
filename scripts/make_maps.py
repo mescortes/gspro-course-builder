@@ -1,4 +1,4 @@
-"""Yardage-book style hole map + green map (PNG) for North #1."""
+"""Yardage-book style hole maps + green maps (PNG) for every hole, and a whole-course map."""
 import sys, json, math
 import numpy as np
 import rasterio
@@ -60,14 +60,14 @@ def hole_map(hole, feats, dem, T, out, trees=None):
     # line of play + distances
     cl = np.asarray(hole["centerline_utm"])
     ax.plot(cl[:, 0], cl[:, 1], color="white", lw=1.2, ls="--", zorder=4)
-    tee = np.asarray(next(t for t in hole["tees"] if t["key"] == "championship")["utm"][:2])
+    tee = np.asarray(next(t for t in hole["tees"] if t["key"] == C.TEE_KEYS[0])["utm"][:2])
     gc = np.asarray(hole["green"]["centre_utm"][:2])
-    cols = {"championship": "#d4a017", "middle": "#2a52be", "forward": "#f5f5f5"}
+    cols = C.TEE_COLOURS
     for t in hole["tees"]:
         ax.plot(*t["utm"][:2], "o", ms=7, mfc=cols[t["key"]], mec="black", zorder=6)
         ax.annotate(f"{t['yards']:.0f}", t["utm"][:2], xytext=(6, -12), textcoords="offset points", fontsize=8, color="black",
                     bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.8), zorder=7)
-    # distance arcs from the championship tee, centred on the first leg of the line of play
+    # distance arcs from the back tee, centred on the first leg of the line of play
     first = np.asarray(cl[1]); ang0 = math.atan2(first[1] - tee[1], first[0] - tee[0])
     for yd in ((150, 200, 250) if hole["par"] > 3 else (100, 150)):
         r = yd / YD
@@ -75,7 +75,7 @@ def hole_map(hole, feats, dem, T, out, trees=None):
         ax.plot(tee[0] + r * np.cos(th), tee[1] + r * np.sin(th), color="white", lw=0.6, alpha=0.7, zorder=4)
         ax.text(tee[0] + r * math.cos(ang0 + 0.5), tee[1] + r * math.sin(ang0 + 0.5), f"{yd}", color="white",
                 fontsize=7, zorder=5, ha="center")
-    # hazard distances from the championship tee (front / carry)
+    # hazard distances from the back tee (front / carry)
     for hz in hole["hazards"]:
         poly = np.asarray(hz["polygon_utm"])
         d = np.hypot(*(poly - tee).T) * YD
@@ -91,9 +91,9 @@ def hole_map(hole, feats, dem, T, out, trees=None):
             bbox=dict(boxstyle="round", fc="white", alpha=0.85))
     ax.set_xlim(b[0], b[2]); ax.set_ylim(b[1], b[3]); ax.set_aspect("equal")
     card = " / ".join(str(v) for v in hole["scorecard_yards"].values())
-    ax.set_title(f"MountainGate CC — hole {hole['hole']} ({hole['nine']} {hole['nine_hole']}) · Par {hole['par']} · " +
+    ax.set_title(f"{C.COURSE_SHORT} — hole {hole['hole']} · Par {hole['par']} · " +
                  " / ".join(f"{t['yards']:.0f}" for t in hole["tees"]) +
-                 f" yd (model)\nscorecard {card} · hazard labels: yards from Championship tee (front/back)", fontsize=10)
+                 f" yd (model)\nscorecard {card} · hazard labels: yards from {C.TEE_NAMES[C.TEE_KEYS[0]]} tee (front/back)", fontsize=10)
     ax.set_xticks([]); ax.set_yticks([])
     ax.plot([b[2] - 70, b[2] - 20], [b[1] + 12, b[1] + 12], color="white", lw=3); ax.text(b[2] - 45, b[1] + 16, "50 m", color="white", ha="center", fontsize=8)
     ax.annotate("N", xy=(b[0] + 15, b[3] - 12), xytext=(b[0] + 15, b[3] - 35), arrowprops=dict(arrowstyle="-|>", color="white"), color="white", ha="center")
@@ -141,7 +141,7 @@ def green_map(hole, feats, dem, T, out):
 
 
 def course_map(data, feats, dem, T, out):
-    """Whole-course map: surfaces over hillshade, lines of play, tees and hole numbers (North blue, South red)."""
+    """Whole-course map: surfaces over hillshade, lines of play, tees and hole numbers (front nine blue, back nine red)."""
     e = C.CORE
     fig, ax = plt.subplots(figsize=(12, 15.6), dpi=150)
     for g, p in feats:
@@ -153,7 +153,7 @@ def course_map(data, feats, dem, T, out):
     for h in data["holes"]:
         if not h.get("tees"):
             continue
-        col = "#1f4fd1" if h["nine"] == "North" else "#d1361f"
+        col = "#1f4fd1" if h["hole"] <= 9 else "#d1361f"
         cl = np.asarray(h["centerline_utm"])
         ax.plot(cl[:, 0], cl[:, 1], color="white", lw=1.0, zorder=4)
         ax.plot(*cl[0], "o", ms=4, color=col, zorder=5)
@@ -162,9 +162,10 @@ def course_map(data, feats, dem, T, out):
                     bbox=dict(boxstyle="circle,pad=0.25", fc=col, ec="white", lw=1))
     ax.set_xlim(e["xmin"], e["xmax"]); ax.set_ylim(e["ymin"], e["ymax"]); ax.set_aspect("equal")
     ax.set_xticks([]); ax.set_yticks([])
-    tot = {k: sum(t["yards"] for h in data["holes"] for t in h.get("tees", []) if t["key"] == k) for k in ("championship", "middle", "forward")}
-    ax.set_title("MountainGate CC — North/South (1–9 North, blue · 10–18 South, red) · model yardage "
-                 f"{tot['championship']:.0f} / {tot['middle']:.0f} / {tot['forward']:.0f} (card 6719 / 6358 / 5667)", fontsize=11)
+    tot = {k: sum(t["yards"] for h in data["holes"] for t in h.get("tees", []) if t["key"] == k) for k in C.TEE_KEYS}
+    card = {k: sum(v[1 + i] for v in C.SCORECARD.values()) for i, k in enumerate(C.TEE_KEYS)}
+    ax.set_title(f"{C.COURSE_NAME} (1–9 blue · 10–18 red)\nmodel yardage " + " / ".join(f"{tot[k]:.0f}" for k in C.TEE_KEYS) +
+                 " (card " + " / ".join(str(card[k]) for k in C.TEE_KEYS) + ", " + " / ".join(C.TEE_NAMES[k] for k in C.TEE_KEYS) + ")", fontsize=11)
     ax.plot([e["xmax"] - 230, e["xmax"] - 30], [e["ymin"] + 30, e["ymin"] + 30], color="white", lw=3, zorder=7)
     ax.text(e["xmax"] - 130, e["ymin"] + 42, "200 m", color="white", ha="center", zorder=7)
     fig.tight_layout(); fig.savefig(out); plt.close(fig)

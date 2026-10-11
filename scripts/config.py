@@ -1,6 +1,8 @@
-"""Shared project configuration: coordinate frames, extents, resolutions.
+"""Shared project configuration: coordinate frames, extents, resolutions, course definition.
 
-World frame: NAD83(2011) / UTM zone 11N (EPSG:6340 ~ EPSG:26911/32611 at this accuracy), NAVD88 heights (m).
+World frame: NAD83(CSRS) / UTM zone 17N (EPSG:2958), the frame of the Ontario LiDAR; heights CGVD2013 (m).
+WGS84 inputs (OSM, web imagery) are projected with pyproj; the imagery is then registered to the LiDAR empirically
+(measure_registration.py), which also absorbs the ~1 m WGS84 / NAD83(CSRS) difference.
 Model frame (glTF, Y-up, metres): x = E - ORIGIN_E, y = H - BASE_H, z = -(N - ORIGIN_N).
 """
 import os
@@ -12,20 +14,26 @@ BUILD = ROOT / "build"
 FEATURES = ROOT / "features"
 OUTPUT = ROOT / "output"
 
-CRS = "EPSG:32611"
-ORIGIN_E = 362650.0
-ORIGIN_N = 3775300.0
-BASE_H = 350.0  # metres NAVD88 subtracted from heights in the model frame
+COURSE_NAME = "Westmount Golf & Country Club"
+COURSE_SHORT = "Westmount G&CC"
+LAYOUT = "18 holes"
+MODEL_NAME = "westmount"          # output/<MODEL_NAME>.glb, output/<MODEL_NAME>_noveg.glb
+UNITY_SCRIPT = "WestmountSetup.cs"
+
+CRS = "EPSG:2958"
+CRS_LABEL = "NAD83(CSRS) / UTM zone 17N (EPSG:2958); heights CGVD2013 (m)"
+ORIGIN_E = 537500.0
+ORIGIN_N = 4810850.0
+BASE_H = 345.0  # metres CGVD2013 subtracted from heights in the model frame
 
 PROFILE = os.environ.get("MG_PROFILE", "course")
-# Build extent: all 27 holes + ~100 m margin (UTM metres), 6 x 8 tiles of 256 m.
-# (v1 was the 640 m square around North #1: xmin=362330, ymin=3774980, xmax=362970, ymax=3775620)
-CORE = dict(xmin=362100.0, ymin=3774150.0, xmax=363636.0, ymax=3776198.0)
+# Build extent: all 18 holes (OSM course outline E 536898-538156, N 4810400-4811320) + >= 100 m margin, 6 x 5 tiles of 256 m.
+CORE = dict(xmin=536760.0, ymin=4810220.0, xmax=538296.0, ymax=4811500.0)
 TILE = 256.0  # processing tile size (m); rasters are built tile by tile with overlap
 # Unity/GSPro terrain square (2048 m, 4097^2 heightmap at 0.5 m) centred on CORE; cells outside CORE come from the backdrop DEM
-TERRAIN = dict(xmin=361844.0, ymin=3774150.0, xmax=363892.0, ymax=3776198.0)
-if PROFILE == "test":  # small regression build around North #1 (MG_PROFILE=test), written to build_test/
-    CORE = dict(xmin=362330.0, ymin=3774980.0, xmax=362970.0, ymax=3775620.0)
+TERRAIN = dict(xmin=536504.0, ymin=4809836.0, xmax=538552.0, ymax=4811884.0)
+if PROFILE == "test":  # small regression build around holes 1-2 (MG_PROFILE=test), written to build_test/
+    CORE = dict(xmin=537340.0, ymin=4810720.0, xmax=537980.0, ymax=4811360.0)
     TERRAIN = dict(CORE)
     BUILD = ROOT / "build_test"
     FEATURES = BUILD / "features"
@@ -35,44 +43,68 @@ if PROFILE == "test":  # small regression build around North #1 (MG_PROFILE=test
 DEM_RES = 0.25  # metres
 
 LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))
+LIDAR_LEAF_OFF = True   # March 2018 flights: deciduous crowns are sparse in the CHM (detect_trees.py closes them)
 
-# Aerial imagery covering CORE (+20 m) at ~0.125 m, EPSG:32611 GeoTIFF. Esri World Imagery by default; point this at
-# a NAIP mosaic (scripts/fetch_naip.py) for a fully public-domain build.
-IMAGERY_RAW = DATA / "imagery" / "esri_z20_course.tif"
-# Esri imagery sits 2.75 m west of the LiDAR (measure_registration.py: 123 bunkers, uniform, MAD 0.25-0.5 m);
-# the pipeline reads the registered copy written by register_imagery.py
-IMAGERY_SHIFT = (2.75, 0.0)
-IMAGERY = DATA / "imagery" / "esri_z20_course_reg.tif"
+# Aerial imagery covering CORE (+20 m): Ontario SWOOP 2025, 0.16 m, 4 bands (R, G, B, NIR), native EPSG:2958, Open
+# Government Licence - Ontario (scripts/fetch_imageserver.py). The pipeline reads the registered copy written by
+# register_imagery.py; band 4 (NIR) feeds the classifier, everything else reads bands 1-3.
+IMAGERY_RAW = DATA / "imagery" / "swoop2025_course.tif"
+IMAGERY_RES = 0.16
+# SWOOP 2025 vs the 2018 LiDAR (measure_registration.py, 59 bunkers: photo sand vs LiDAR hollows): dx 0.00 m, dy -0.25 m,
+# MAD 0.25 m, uniform over the course (north/south/east/west halves agree); OSM buildings within 0.5 m
+IMAGERY_SHIFT = (0.0, -0.25)  # metres +E/+N applied to the photo
+IMAGERY = DATA / "imagery" / "swoop2025_course_reg.tif"
+IMAGERY_CREDIT = "Contains information licensed under the Open Government Licence - Ontario (SWOOP 2025 orthoimagery)"
 
 YARDS_PER_M = 1.0 / 0.9144
 
-# ---- course definition: GSPro course "North/South" = North nine (holes 1-9) + South nine (holes 10-18)
-# OpenStreetMap numbers the 27 holes 1-9 North, 10-18 Lake, 19-27 South.
+
+# ---- course definition: OSM golf=hole refs 1-18 are the course holes (verified against the scorecard pars)
 def course_hole(osm_ref):
-    """OSM golf=hole ref -> course hole number (North 1-9, South 10-18, Lake 19-27 = scenery)."""
-    r = int(osm_ref)
-    if 1 <= r <= 9:
-        return r
-    if 19 <= r <= 27:
-        return r - 9
-    if 10 <= r <= 18:
-        return r + 9
-    return 99
+    """OSM golf=hole ref -> course hole number (99 = not a course hole)."""
+    try:
+        r = int(osm_ref)
+    except (TypeError, ValueError):
+        return 99
+    return r if 1 <= r <= 18 else 99
+
 
 PLAYABLE = tuple(range(1, 19))
-NINE = {**{h: "North" for h in range(1, 10)}, **{h: "South" for h in range(10, 19)}, **{h: "Lake" for h in range(19, 28)}}
-# Scorecard (golfingrecord.com Lake/North + South/Lake cards; Championship/Gold, Middle/Blue, Forward/White yards)
+SCENERY_HOLES = ()  # holes visible from play but not played (none at Westmount)
+NINE = {**{h: "Front" for h in range(1, 10)}, **{h: "Back" for h in range(10, 19)}}
+
+# Tee sets, back to front: (key, display name, marker colour). SCORECARD yardages follow this order. The club's
+# combination sets (Blue/White, White/Red, Red/Gold) reuse these boxes hole by hole and need no geometry of their own.
+TEES = (("blue", "Blue", "#2a52be"), ("white", "White", "#f5f5f5"), ("red", "Red", "#c8102e"), ("gold", "Gold", "#d4a017"))
+TEE_KEYS = tuple(k for k, _, _ in TEES)
+TEE_NAMES = {k: n for k, n, _ in TEES}
+TEE_COLOURS = {k: c for k, _, c in TEES}
+# Scorecard: Golf Canada Score Centre (course 20954), live 2026-10-11 = the 2025-07 card (new back tees on 5 and 11 in
+# 2024, hole 8 lengthened in 2025). Cross-checked against the club's 2024 card, Golf Ontario and Wayback captures
+# (research/NOTES.md). (par, Blue, White, Red, Gold)
 SCORECARD = {
-    1: (4, 342, 323, 307),  2: (3, 189, 169, 153),  3: (4, 346, 323, 298),  4: (4, 299, 289, 266),
-    5: (5, 516, 498, 467),  6: (4, 434, 408, 366),  7: (3, 172, 154, 131),  8: (4, 438, 420, 401),
-    9: (5, 466, 453, 403), 10: (4, 417, 391, 366), 11: (4, 400, 387, 359), 12: (3, 174, 153, 97),
-    13: (4, 365, 356, 224), 14: (5, 535, 513, 460), 15: (4, 412, 361, 326), 16: (3, 202, 190, 180),
-    17: (4, 450, 430, 382), 18: (5, 562, 540, 481),
+    1: (5, 559, 535, 514, 433),  2: (4, 373, 357, 335, 286),  3: (3, 195, 179, 165, 160),  4: (4, 412, 385, 365, 323),
+    5: (5, 605, 568, 527, 455),  6: (3, 202, 180, 163, 133),  7: (5, 541, 503, 483, 449),  8: (4, 305, 275, 260, 245),
+    9: (4, 401, 373, 346, 334), 10: (4, 334, 319, 304, 217), 11: (5, 580, 540, 502, 451), 12: (3, 141, 127, 108, 93),
+    13: (5, 554, 520, 503, 439), 14: (4, 375, 359, 318, 293), 15: (4, 453, 396, 367, 315), 16: (4, 439, 418, 400, 359),
+    17: (3, 165, 149, 132, 113), 18: (4, 384, 367, 351, 334),
 }
-# Men's stroke index on the North/South card (golfingrecord N/S, offcourse.co, greenskeeper per-nine; verified 2026-10-10)
-HANDICAP = dict(zip(range(1, 19), (16, 10, 6, 18, 8, 2, 14, 4, 12, 15, 1, 13, 9, 5, 11, 17, 7, 3)))
-RATINGS = {  # tee: (men rating, men slope, women rating, women slope, total yards)
-    "championship": (73.2, 134, 80.4, 143, 6719), "middle": (71.6, 132, 78.3, 139, 6358), "forward": (68.3, 123, 74.7, 129, 5667)}
+# Men's stroke index (Golf Canada 2026 allocation)
+HANDICAP = dict(zip(range(1, 19), (7, 13, 9, 1, 3, 15, 11, 17, 5, 12, 6, 18, 8, 10, 2, 4, 16, 14)))
+HANDICAP_WOMEN = dict(zip(range(1, 19), (3, 11, 15, 9, 1, 17, 5, 13, 7, 14, 6, 18, 8, 12, 2, 4, 16, 10)))
+RATINGS = {  # tee: (men rating, men slope, women rating, women slope, total yards) - Golf Canada, re-rated late 2024
+    "blue": (73.0, 132, None, None, 7018), "white": (71.1, 129, 76.9, 135, 6550),
+    "red": (69.3, 121, 75.1, 130, 6143), "gold": (66.3, 113, 71.3, 121, 5432)}
+
+
+# LiDAR tree archetypes (detect_trees.assign_archetypes): Southern Ontario parkland species groups
+#   maple  sugar / silver / Norway maple, basswood: dense rounded deciduous crowns
+#   oak    red / bur oak, honey locust, ash: broad, more open, irregular crowns
+#   pine   eastern white pine (+ Scots / red pine): tall, open, layered, high crown base
+#   spruce Norway / white / blue spruce, cedar: dense narrow cones with branches to the ground
+#   shrub  under 4.5 m
+TREE_ARCHETYPES = ("maple", "oak", "pine", "spruce", "shrub")
+
 
 def to_model(e, n, h):
     """UTM easting/northing/height -> glTF model coordinates (x, y, z)."""

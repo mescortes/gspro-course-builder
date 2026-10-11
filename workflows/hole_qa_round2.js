@@ -1,5 +1,5 @@
 export const meta = {
-  name: 'mountaingate-hole-qa-r2',
+  name: 'westmount-hole-qa-r2',
   description: 'QA round 2: check the rebuilt (LiDAR-registered) 18-hole model for regressions and residual issues; verify and apply fixes',
   phases: [
     { title: 'Inspect', detail: '6 inspectors x 3 holes on the rebuilt model' },
@@ -7,30 +7,31 @@ export const meta = {
   ],
 }
 
-const ROOT = '/Users/daniele/Development/mountain-gate'
+const ROOT = '/home/owner/_sessions/cse_01KdqpZtNCdQ9mEvqKNRp2cj/westmount-gspro'
 const GROUPS = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15], [16, 17, 18]]
 
-const COMMON = `HARD RULE - BROWSER: NEVER use any browser tools (mcp__Claude_Browser__*, mcp__claude-in-chrome__*, preview_*, navigate, computer, tabs_*); they drive the user's visible browser and can play audio. Research only with WebSearch/WebFetch (text). You are working on a survey-grade 3D model of MountainGate Country Club (Los Angeles) for the GSPro golf simulator.
-Project root: ${ROOT}. Python: ${ROOT}/.venv/bin/python (run from the project root). Coordinates: UTM 11N metres (EPSG:32611).
-Course = North/South: holes 1-9 North, 10-18 South. Lake holes (scenery) are 19-27; 98 = cart paths, 99 = background.
-This is QA ROUND 2. Read build/qa/round2_context.md first: it explains what changed since round 1 (imagery registered to the LiDAR,
-automatic tee/bunker validation, deep rough, overrides shifted, tee decisions). Round-1 verdicts: build/qa/qa_round1_verdicts.json.
+const COMMON = `HARD RULE - BROWSER: NEVER use any browser tools (mcp__Claude_Browser__*, mcp__claude-in-chrome__*, preview_*, navigate, computer, tabs_*); they drive the user's visible browser and can play audio. Research only with WebSearch/WebFetch (text). You are working on a survey-grade 3D model of Westmount Golf & Country Club (Kitchener, Ontario; Stanley Thompson 1931, par 73) for the GSPro golf simulator.
+Project root: ${ROOT}. Python: ${ROOT}/.venv/bin/python (run from the project root). Coordinates: NAD83(CSRS) / UTM 17N metres (EPSG:2958).
+Holes 1-18; 98 = cart paths, 99 = background. Tee sets back to front: Blue, White, Red, Gold.
+This is QA ROUND 2. Read build/qa/round2_context.md first: it explains what changed since round 1. Round-1 verdicts: build/qa/qa_round1_verdicts.json.
+DATA: LiDAR = Ontario 2018 leaf-off; photo = SWOOP 2025 leaf-off spring, registered to the LiDAR (0.25 m north shift). Greens look pale/straw-coloured,
+west fairways brown-striped, trees bare (thin trunk shadows), tall crowns lean a few metres (the photo is not a true ortho). New tees since 2018 on holes 5,
+11 (and 8) may show in the photo but not in the LiDAR. Cart paths were traced automatically from the photo (OSM has none) and corrected in round 1.
 
 FILES: build/qa/holeNN/{overview,surfaces,hillshade,tees,green}.png + info.json (freshly generated from the rebuilt model),
 output/holes.json, features/course_surfaces.geojson (surfaces; property "source": "override" marks QA overrides), features/overrides/,
 research/hole_descriptions.json, research/NOTES.md, output/maps/holeNN_map.png and holeNN_green.png.
 IMAGE LEGEND: outlines green=cyan, fringe=pale teal, fairway=bright green, semirough/rough=green shades, deep rough=dark green, tee=magenta,
 bunker=yellow, cart path=light grey, native/mulch=orange, water=blue, building=red, road=dark grey. THICK = this hole, thin = other/background.
-Tee dots gold/blue/white "C 343/342" = measured/card yards. Red circles = aim points, white line = line of play, red dots = pins.
+Tee dots blue/white/red/gold "B 559/559" = measured/card yards. Red circles = aim points, white line = line of play, red dots = pins.
 GRID: 25 m lines (overview/surfaces/hillshade) or 10 m (tees/green), labelled with the last 3 digits of the easting/northing. info.json ->
 image_bounds_utm gives exact bounds; pixel (px, py) -> E = xmin + px*(xmax-xmin)/width, N = ymax - py*(ymax-ymin)/height.
-The imagery now IS registered to the LiDAR, so photo features, LiDAR hollows/decks and model outlines should coincide (within ~0.5 m).
-YARDAGE: |tee -> aim1| + ... + |aimN -> green centre| in metres / 0.9144. Documented accepted tee gaps: hole 10 Forward (~8 yd short),
-hole 11 Forward (~6 yd long), hole 17 all tees (~15-20 yd short, markers on the real OSM decks), hole 18 Forward (~35 yd short, only real pad).
+Photo features, LiDAR hollows/decks and model outlines should coincide (within ~0.5 m).
+YARDAGE: |tee -> aim1| + ... + |aimN -> green centre| in metres / 0.9144. Documented accepted tee gaps: see KNOWN_TEE_GAPS in tests/test_course.py.
 OVERRIDES: features/overrides/holeNN.geojson (FeatureCollection; Polygon in UTM; properties surface, hole, reason, frame). An override is burned
 on top of the automatic map (later overrides win). Valid surfaces: green, fringe, fairway, semirough, rough, deeprough, tee, bunker, cartpath,
-native, water. Meta: features/overrides/holeNN_meta.json {"aim_points_utm": [[e, n], ...], "tees_utm": {"championship"|"middle"|"forward": [e, n]},
-"notes": "...", "frame": "lidar"}. NEW geometry must carry "frame": "lidar" (it is drawn on the registered imagery).
+native, water. Meta: features/overrides/holeNN_meta.json {"aim_points_utm": [[e, n], ...], "tees_utm": {"blue"|"white"|"red"|"gold": [e, n]},
+"notes": "...", "frame": "lidar"}. NEW geometry must carry "frame": "lidar".
 Never edit scripts or any other file. Be conservative: only fix what is clearly wrong in the imagery/LiDAR.`
 
 const INSPECT = {
@@ -71,10 +72,10 @@ return await pipeline(GROUPS,
 
 YOUR TASK: inspect holes ${holes.join(', ')} of the REBUILT model. For each hole look at all five images, info.json and the green map, then check:
 (a) registration: bunker outlines sit on the sand AND in the LiDAR hollows, cart paths on the paths, greens on the pads;
-(b) round-1 overrides (source "override" in course_surfaces.geojson) still line up after the +2.75 m shift and are still right; list any that are
+(b) round-1 overrides (source "override" in course_surfaces.geojson) still line up and are still right; list any that are
     now misaligned or harmful under round1_regressions;
 (c) green outline and greenside bunkers; (d) every real tee pad present and assigned to this hole, markers on pads, yardages vs card
-    (respect the documented gaps); (e) fairway outline; aim points on doglegs; (f) water, deep rough (chaparral only, not mown rough), native;
+    (respect the documented gaps); (e) fairway outline; aim points on doglegs; (f) water, deep rough (dense shrubs / unmown undergrowth only, not mown rough), native (mulch / bare beds only);
 (g) anything else that would look or play wrong in GSPro.
 Write fixes ONLY to build/qa/holeNN/proposal_r2.geojson (and proposal_r2_meta.json); to remove a harmful round-1 override, list it in your
 summary instead (the verifier edits the override file). Render a proposal with

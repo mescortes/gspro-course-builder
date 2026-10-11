@@ -11,8 +11,9 @@ the FBX as the 'Col' colour layer):
   B  reserved (0)
 Non-grass surfaces get (0, 0, 0). The same masks drive the viewer's preview grass (viewer/grass.js).
 
-SPEC also lists blade settings per surface. Heights and densities are our estimates for MountainGate's kikuyu /
-bermuda rough (no public source gives per-surface 3DG values); the 3DG property names are from the Stix docs.
+SPEC also lists blade settings per surface. Heights and densities are our estimates for Westmount's cool-season
+(Kentucky bluegrass / ryegrass / fine fescue) rough (no public source gives per-surface 3DG values); the 3DG property
+names are from the Stix docs.
 """
 import json
 import numpy as np

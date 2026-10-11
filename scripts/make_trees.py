@@ -15,21 +15,22 @@ OUT = C.DATA / "trees"
 
 ARCH = {
     # crown envelope: kind, vertical start/end as fraction of height, horizontal radius; trunk: height fraction
-    "oak":        dict(H=11.0, R=6.0, crown=("ellipsoid", 0.22, 1.0), trunk=0.20, attract=1100, seg=0.45, infl=3.5, kill=0.9,
-                       tropism=(0, 0.10, 0), tip_r=0.012, exp=2.05, cards=1100, card=(1.3, 1.9), lean=0.15, nsides=10,
-                       up_bias=0.65, trunk_r=0.32, clumps=22, clump_sd=0.25),
-    "pine":       dict(H=15.0, R=4.8, crown=("irregular", 0.45, 1.0), trunk=0.40, attract=900, seg=0.5, infl=5.0, kill=0.9,
-                       tropism=(0, 0.20, 0), tip_r=0.014, exp=2.05, cards=950, card=(1.4, 2.1), lean=0.16, nsides=9, clumps=13,
-                       clump_sd=0.15, up_bias=0.55, trunk_r=0.32, tip_depth=3),
-    "sycamore":   dict(H=13.0, R=5.0, crown=("ovoid", 0.30, 1.0), trunk=0.28, attract=900, seg=0.5, infl=3.8, kill=1.0,
-                       tropism=(0, 0.25, 0), tip_r=0.012, exp=2.05, cards=850, card=(1.4, 2.0), lean=0.08, nsides=9,
-                       up_bias=0.5, trunk_r=0.30, clumps=18, clump_sd=0.28),
-    "eucalyptus": dict(H=22.0, R=5.0, crown=("ovoid", 0.40, 1.0), trunk=0.40, attract=800, seg=0.7, infl=5.0, kill=1.4,
-                       tropism=(0, 0.30, 0), tip_r=0.013, exp=2.05, cards=700, card=(1.6, 2.4), lean=0.10, nsides=9, droop=0.35,
-                       up_bias=0.2, trunk_r=0.38, clumps=16, clump_sd=0.25),
-    "shrub":      dict(H=3.2, R=2.0, crown=("ellipsoid", 0.05, 1.0), trunk=0.05, attract=260, seg=0.25, infl=1.5, kill=0.4,
-                       tropism=(0, 0.1, 0), tip_r=0.008, exp=2.1, cards=260, card=(0.8, 1.2), lean=0.0, nsides=6,
-                       up_bias=0.5, trunk_r=0.06),
+    # (Southern Ontario parkland species groups, see config.TREE_ARCHETYPES)
+    "maple":  dict(H=14.0, R=6.0, crown=("ovoid", 0.24, 1.0), trunk=0.24, attract=1100, seg=0.45, infl=3.6, kill=0.9,
+                   tropism=(0, 0.18, 0), tip_r=0.012, exp=2.05, cards=1150, card=(1.3, 1.9), lean=0.08, nsides=10,
+                   up_bias=0.6, trunk_r=0.34, clumps=24, clump_sd=0.27),
+    "oak":    dict(H=13.0, R=7.0, crown=("ellipsoid", 0.24, 1.0), trunk=0.22, attract=1100, seg=0.5, infl=3.8, kill=0.95,
+                   tropism=(0, 0.06, 0), tip_r=0.012, exp=2.05, cards=1000, card=(1.3, 2.0), lean=0.15, nsides=10,
+                   up_bias=0.65, trunk_r=0.38, clumps=18, clump_sd=0.24),
+    "pine":   dict(H=19.0, R=5.2, crown=("irregular", 0.45, 1.0), trunk=0.42, attract=900, seg=0.55, infl=5.0, kill=0.9,
+                   tropism=(0, 0.12, 0), tip_r=0.014, exp=2.05, cards=950, card=(1.5, 2.2), lean=0.12, nsides=9, clumps=11,
+                   clump_sd=0.14, up_bias=0.7, trunk_r=0.36, tip_depth=3),
+    "spruce": dict(H=15.0, R=3.3, crown=("cone", 0.04, 1.0), trunk=0.06, attract=1000, seg=0.4, infl=2.6, kill=0.7,
+                   tropism=(0, -0.05, 0), tip_r=0.010, exp=2.1, cards=1300, card=(1.0, 1.5), lean=0.02, nsides=8,
+                   up_bias=0.35, trunk_r=0.26, leader=True, droop=0.25, tip_depth=4),
+    "shrub":  dict(H=3.2, R=2.0, crown=("ellipsoid", 0.05, 1.0), trunk=0.05, attract=260, seg=0.25, infl=1.5, kill=0.4,
+                   tropism=(0, 0.1, 0), tip_r=0.008, exp=2.1, cards=260, card=(0.8, 1.2), lean=0.0, nsides=6,
+                   up_bias=0.5, trunk_r=0.06),
 }
 
 
@@ -52,9 +53,13 @@ def sample_envelope(a, rng):
             p = c + rng.normal(0, a.get("clump_sd", 0.22), 3)
         else:
             p = rng.uniform(-1, 1, 3)
-        if np.sum(p ** 2) > 1:
-            continue
         x, yv, z = p  # yv in [-1,1] -> vertical
+        if kind == "cone":  # foliage shell of a cone (bare interior, as in real spruces): radius shrinks to the apex
+            rmax = 1.0 - 0.97 * (yv + 1) / 2
+            if not rmax - 0.28 <= np.hypot(x, z) <= rmax:
+                continue
+        elif np.sum(p ** 2) > 1:
+            continue
         if kind == "ovoid" and yv < 0 and np.hypot(x, z) > 0.8 * np.sqrt(max(0, 1 - yv ** 2)):
             continue
         cy = H * (z0 + (z1 - z0) * (yv + 1) / 2)
@@ -67,7 +72,7 @@ def colonise(a, rng):
     H = a["H"]; seg = a["seg"]
     nodes = [np.zeros(3)]; parent = [-1]
     lean = np.array([rng.normal(0, a["lean"]), 1.0, rng.normal(0, a["lean"])]); lean /= np.linalg.norm(lean)
-    th = a["trunk"] * H
+    th = (0.97 if a.get("leader") else a["trunk"]) * H
     while nodes[-1][1] < th:
         p = nodes[-1] + lean * seg + rng.normal(0, 0.03, 3) * seg
         nodes.append(p); parent.append(len(nodes) - 2)
@@ -203,6 +208,8 @@ def cards(nodes, parent, r, children, a, rng, lod):
     rel = (nodes[thin] - centre) / np.array([R, half_h, R])
     dist = np.linalg.norm(rel, axis=1)
     w = 0.25 + np.clip(dist, 0, 1.2) ** 2
+    if a["crown"][0] == "cone":  # few branch tips near the apex (the leader kills them): favour the upper whorls
+        w *= 0.5 + 2.5 * np.clip(nodes[thin, 1] / H, 0, 1)
     anchors = nodes[rng.choice(thin, n_cards, p=w / w.sum())]
     P, Nn, UV, I, COL = [], [], [], [], []
     scale_up = 1.0 if lod == "hi" else 1.45

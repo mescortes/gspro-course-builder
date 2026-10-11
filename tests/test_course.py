@@ -1,5 +1,5 @@
-"""Regression tests for the North/South model: data alignment, surface partition, per-hole data vs the scorecard,
-mesh integrity, glTF and the GSPro/OPCD package. Run with MG_PROFILE=test to check the small North #1 build."""
+"""Regression tests for the Westmount model: data alignment, surface partition, per-hole data vs the scorecard,
+mesh integrity, glTF and the GSPro/OPCD package. Run with MG_PROFILE=test to check the small holes 1-2 build."""
 import json, math, struct, sys
 from pathlib import Path
 
@@ -15,7 +15,7 @@ import config as C  # noqa: E402
 
 SURF = C.FEATURES / "course_surfaces.geojson"
 MESH = C.BUILD / "terrain_mesh.npz"
-GLB = C.OUTPUT / "mountain_gate_ns.glb"
+GLB = C.OUTPUT / f"{C.MODEL_NAME}.glb"
 HOLES = C.OUTPUT / "holes.json"
 GSPRO = C.OUTPUT / "gspro"
 FULL = C.PROFILE == "course"
@@ -23,10 +23,6 @@ PLAYABLE = list(C.PLAYABLE) if FULL else [1, 2]
 # Known, documented mismatches between the card and the real tee boxes (research/NOTES.md, QA round 1).
 # (hole, tee) -> max allowed |measured - card| in yards
 KNOWN_TEE_GAPS = {
-    (10, "forward"): 10,      # pinned to the real forward pad (~358 yd); no pad delivers the card's 366
-    (11, "forward"): 8,       # only forward pad measures ~365 vs 359
-    (17, "championship"): 17, (17, "middle"): 15, (17, "forward"): 14,  # markers on the three OSM tee decks (~435/417/370)
-    (18, "forward"): 37,      # only forward pad (OSM 1157472363) ~446 yd vs card 481 (composite forward set)
 }
 
 
@@ -68,12 +64,14 @@ def test_hole_has_green_tees_fairway(feats, hn):
 
 
 def test_hole1_features(feats):
+    """Westmount #1 (par 5): a ~675 m2 green ringed by four bunkers, plus two fairway bunkers down the right."""
     h1 = [(g, p) for g, p in feats if p["hole"] == 1]
     green = max((g for g, p in h1 if p["surface"] == "green"), key=lambda g: g.area)
-    assert 150 < green.area < 450, "North #1 has a small green (~2300 sq ft)"
+    assert 450 < green.area < 900, f"hole 1 green {green.area:.0f} m2"
     near_bunkers = [g for g, p in h1 if p["surface"] == "bunker" and g.distance(green) < 6]
-    assert len(near_bunkers) == 2, "one bunker left and one right-front of the green"
-    assert all(40 < b.area < 150 for b in near_bunkers), "bunker polygons should hug the sand"
+    assert len(near_bunkers) == 4, f"{len(near_bunkers)} greenside bunkers"
+    assert all(50 < b.area < 220 for b in near_bunkers), "bunker polygons should hug the sand"
+    assert len([g for g, p in h1 if p["surface"] == "bunker"]) >= 6
 
 
 def test_bunkers_are_depressions_in_lidar(feats, dem):
@@ -94,7 +92,8 @@ def test_bunkers_are_depressions_in_lidar(feats, dem):
 
 def test_bunker_edges_are_sand_not_grass_faces(feats):
     """QA round 2: greenside bunkers spilled 1-2 m onto the grass faces. The outer 1 m of the automatic bunkers must be
-    mostly sand in the (registered) photo: clearly green pixels (Lab a* < -14) outside tree canopy stay a minority."""
+    mostly sand in the (registered) photo: clearly green pixels (Lab a* < -14, or NDVI > 0.25 with a NIR band: the spring
+    photo's turf is rarely that green) outside tree canopy stay a minority."""
     from rasterio.mask import mask as rmask
     from shapely.geometry import mapping
     from skimage.color import rgb2lab
@@ -112,7 +111,11 @@ def test_bunker_edges_are_sand_not_grass_faces(feats):
                           out_shape=m.shape, boundless=True, fill_value=0)
             m &= chm < 2.0
             lab = rgb2lab(np.moveaxis(a.data[:3], 0, -1))
-            flagged += int((lab[..., 1][m] < -14).sum()); total += int(m.sum())
+            turf = lab[..., 1] < -14
+            if a.shape[0] >= 4:
+                r, n = a.data[0].astype(float), a.data[3].astype(float)
+                turf |= (n - r) / (n + r + 1e-3) > 0.25
+            flagged += int(turf[m].sum()); total += int(m.sum())
     frac = flagged / total
     assert frac < 0.30, f"{frac:.0%} of the bunker edge strip is grass-coloured"
 
@@ -142,17 +145,17 @@ def test_no_orphan_tees(feats):
     assert not orphans, f"{len(orphans)} tee patches belong to no hole: {orphans[:8]}"
 
 
-def test_water_hazard_on_hole13(holes):
+def test_water_hazard_on_hole3(holes):
     if not FULL:
-        pytest.skip("hole 13 not in the test extent")
-    assert any(z["type"] == "water" for z in holes[13]["hazards"]), "the South #4 pond must be a water hazard"
+        pytest.skip("hole 3 not in the test extent")
+    assert any(z["type"] == "water" for z in holes[3]["hazards"]), "the pond right of the 3rd (OSM 918946248) must be a water hazard"
 
 
 # ---------------------------------------------------------------- hole data vs scorecard
 @pytest.mark.parametrize("hn", PLAYABLE)
 def test_tee_yardages_match_scorecard(holes, hn):
     h = holes[hn]
-    assert len(h["tees"]) == 3
+    assert len(h["tees"]) == len(C.TEES)
     for t in h["tees"]:
         allowed = KNOWN_TEE_GAPS.get((hn, t["key"]), 6.0)
         assert abs(t["yards"] - t["scorecard_yards"]) <= allowed, f"hole {hn} {t['key']}: {t['yards']} vs card {t['scorecard_yards']}"
@@ -160,8 +163,8 @@ def test_tee_yardages_match_scorecard(holes, hn):
 
 @pytest.mark.parametrize("hn", PLAYABLE)
 def test_tees_ordered(holes, hn):
-    ys = {t["key"]: t["yards"] for t in holes[hn]["tees"]}
-    assert ys["championship"] >= ys["middle"] >= ys["forward"]
+    ys = [{t["key"]: t["yards"] for t in holes[hn]["tees"]}[k] for k in C.TEE_KEYS]
+    assert all(a >= b - 0.5 for a, b in zip(ys[:-1], ys[1:])), f"hole {hn}: tees out of order {ys}"
 
 
 @pytest.mark.parametrize("hn", PLAYABLE)
@@ -181,8 +184,7 @@ def test_pins_on_green(holes, hn):
 @pytest.mark.parametrize("hn", PLAYABLE)
 def test_green_surface_is_smooth(holes, hn):
     """The model's putting surface follows the LiDAR and is never steeper than it (smoothing only removes noise).
-    MountainGate's hillside greens are steeply tilted: on the bare LiDAR greens 3 and 5 average 5.5-6 %, with tier
-    slopes to ~13 %. The absolute cap catches banks drawn into a green."""
+    The absolute cap catches banks drawn into a green (Thompson greens tilt, but none averages 7 % on the LiDAR)."""
     from hole_data import green_analysis
     from types import SimpleNamespace
     s = holes[hn]["green"]["slope_pct"]
@@ -199,14 +201,20 @@ def test_green_surface_is_smooth(holes, hn):
 def test_hole1_regression(holes):
     h = holes[1]
     ys = {t["key"]: t["yards"] for t in h["tees"]}
-    assert abs(ys["championship"] - 342) <= 4 and abs(ys["middle"] - 323) <= 4 and abs(ys["forward"] - 307) <= 4
-    assert -16 < h["elevation_change_m"] < -8, "North #1 plays downhill to a raised green"
+    for k, card in zip(C.TEE_KEYS, C.SCORECARD[1][1:]):
+        assert abs(ys[k] - card) <= 4, f"hole 1 {k}: {ys[k]} vs {card}"
+    assert -8 < h["elevation_change_m"] < -3, "the 1st tee by the clubhouse sits ~6 m above the green"
 
 
 def test_scorecard_totals():
-    assert sum(v[1] for v in C.SCORECARD.values()) == 6719
-    assert sum(v[0] for v in C.SCORECARD.values()) == 72
+    """Golf Canada card: par 73 (37 out / 36 in); each tee's holes add up to its published total; SI permutations."""
+    assert sum(v[0] for v in C.SCORECARD.values()) == 73
+    assert sum(C.SCORECARD[h][0] for h in range(1, 10)) == 37
+    for i, k in enumerate(C.TEE_KEYS):
+        assert sum(v[1 + i] for v in C.SCORECARD.values()) == C.RATINGS[k][4], k
+    assert [C.RATINGS[k][4] for k in C.TEE_KEYS] == [7018, 6550, 6143, 5432]
     assert sorted(C.HANDICAP.values()) == list(range(1, 19))
+    assert sorted(C.HANDICAP_WOMEN.values()) == list(range(1, 19))
 
 
 # ---------------------------------------------------------------- mesh
@@ -388,7 +396,7 @@ def test_heightmap_roundtrip(dem):
     meta = json.load(open(GSPRO / "terrain.json"))
     n = meta["resolution"]
     q = np.fromfile(GSPRO / meta["heightmap"], dtype="<u2").reshape(n, n)
-    lo, hi = meta["height_range_navd88_m"]
+    lo, hi = meta["height_range_m"]
     h = lo + q.astype(float) / 65535 * (hi - lo)
     z, T = dem
     te = meta["utm_extent"]; e = C.CORE
@@ -409,7 +417,7 @@ def test_outer_terrain_plot():
     meta = json.load(open(GSPRO / "terrain.json"))["outer"]
     n = meta["resolution"]
     q = np.fromfile(GSPRO / meta["heightmap"], dtype="<u2").reshape(n, n)
-    lo, hi = meta["height_range_navd88_m"]
+    lo, hi = meta["height_range_m"]
     h = lo + q.astype(float) / 65535 * (hi - lo)
     oe, te = meta["utm_extent"], C.TERRAIN
     assert abs((oe["xmax"] - oe["xmin"]) - 2 * (te["xmax"] - te["xmin"])) < 1e-6
@@ -455,7 +463,7 @@ def test_greenkeeper_covers_all_holes():
     else:
         assert set(PLAYABLE) <= set(got)
     for h in gk["holes"]:
-        assert len(h["tees"]) == 3 and len(h["pins"]) >= 4
+        assert len(h["tees"]) == len(C.TEES) and len(h["pins"]) >= 4
 
 
 def test_tree_prefabs_and_placements():
@@ -466,7 +474,7 @@ def test_tree_prefabs_and_placements():
     nodes = g["nodes"]
     by_name = {n["name"]: n for n in nodes}
     meta = json.load(open(GSPRO / "tree_prefabs.json"))
-    assert {p["archetype"] for p in meta["prefabs"]} == {"oak", "pine", "sycamore", "eucalyptus", "shrub"}
+    assert {p["archetype"] for p in meta["prefabs"]} == set(C.TREE_ARCHETYPES)
     for p in meta["prefabs"]:
         n = by_name[p["name"]]
         kids = sorted(nodes[i]["name"] for i in n.get("children", []))
@@ -513,9 +521,9 @@ def test_fbx_manifest_opcd_objects():
 
 
 def test_unity_editor_script_ships_and_parses():
-    """The Unity helpers (MountainGate menu) travel with the package; we cannot compile them without Unity, but they
+    """The Unity helpers (Westmount menu) travel with the package; we cannot compile them without Unity, but they
     must at least be valid C# (tree-sitter parse) and use only Unity 2018.2 APIs we rely on."""
-    src = (GSPRO / "unity/Editor/MountainGateSetup.cs").read_bytes()
+    src = (GSPRO / "unity/Editor" / C.UNITY_SCRIPT).read_bytes()
     assert b"SplatPrototype" in src and b"TerrainLayer" not in src.split(b"// Unity 2018.2")[0]  # 2018.2: no TerrainLayer
     ts = pytest.importorskip("tree_sitter"); tscs = pytest.importorskip("tree_sitter_c_sharp")
     tree = ts.Parser(ts.Language(tscs.language())).parse(src)

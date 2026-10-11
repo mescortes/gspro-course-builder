@@ -4,7 +4,15 @@ from rasterio.windows import from_bounds
 from rasterio.enums import Resampling
 from PIL import Image, ImageDraw
 sys.path.insert(0, 'scripts'); import config as C
-from qa_rasters import hillshade
+
+
+def hillshade(z, res, az=315, alt=35):
+    """Lambertian hillshade (0..1) of a DEM array with cell size `res` m; sun azimuth / altitude in degrees."""
+    z = np.where(np.isfinite(z), z, np.nanmean(z))
+    gy, gx = np.gradient(z, res)
+    slope = np.arctan(np.hypot(gx, gy)); aspect = np.arctan2(-gx, gy)
+    a, b = np.radians(az), np.radians(alt)
+    return np.clip(np.sin(b) * np.cos(slope) + np.cos(b) * np.sin(slope) * np.cos(a - aspect), 0, 1)
 
 def crop(path, b, res, bands=None):
     with rasterio.open(path) as ds:

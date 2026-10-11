@@ -368,17 +368,17 @@ def add_water_planes(glb, parent):
         seen[base] = seen.get(base, 0) + 1
         name = base if seen[base] == 1 else f"{base}_{seen[base]}"
         m = glb.mesh(name, [dict(pos=pos, nrm=nrm, uv0=uv0, col=None, idx=tri, material=mat)])
-        glb.node(name, mesh=m, parent=parent, extras={"water_level_navd88": w["level"]})
+        glb.node(name, mesh=m, parent=parent, extras={"water_level_m": w["level"]})
         n += 1
     print("water planes", n)
 
 
 def main(out=None):
-    out = out or (C.OUTPUT / "mountain_gate_ns.glb")
+    out = out or (C.OUTPUT / f"{C.MODEL_NAME}.glb")
     C.OUTPUT.mkdir(exist_ok=True)
     glb = GLB()
-    root = glb.node("MountainGate_NorthSouth", extras={
-        "crs": C.CRS, "origin_utm": [C.ORIGIN_E, C.ORIGIN_N], "base_height_navd88": C.BASE_H,
+    root = glb.node(C.COURSE_SHORT.replace(" ", "_").replace("&", "and"), extras={
+        "course": C.COURSE_NAME, "crs": C.CRS, "crs_label": C.CRS_LABEL, "origin_utm": [C.ORIGIN_E, C.ORIGIN_N], "base_height": C.BASE_H,
         "axes": "x=east, y=up, z=south (glTF); metres"})
     add_terrain(glb, root)
     try:

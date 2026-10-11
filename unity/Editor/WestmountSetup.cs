@@ -1,13 +1,13 @@
-// MountainGate North/South: Unity editor helpers for the GSPro / OPCD hand-off (output/gspro/).
+// Westmount G&CC: Unity editor helpers for the GSPro / OPCD hand-off (output/gspro/).
 // Unity 2018.2.8f1 (the OPCD base project version); built-in render pipeline. Put this file in Assets/Editor/.
 //
-// Menu "MountainGate/...":
+// Menu "Westmount/...":
 //   1. Build Terrains       inner + outer (OPCD 'Plot (Outer)') Unity terrains from the 16-bit RAW heightmaps and overlays
 //   2. Place Trees          LiDAR trees from trees.csv as tree_prefabs.fbx objects (LOD groups) with trunk colliders
 //   3. Water Reflection Probes   a realtime / on-awake reflection probe over every *_WaterPlane (OPCD guidance)
 //   4. Add 3D Grass (3DG)   Stix Games Grass Renderer on *_SemiRough / *_Rough / *_DeepRough meshes, layer '600m cull'
 // Run SetMeshMaterials (OPCD) on course_meshes.fbx as usual; the meshes carry OPCD names (Hole##_<Surface>).
-// Files are read from the folder chosen in the window (default: Assets/MountainGate). Nothing here needs network access.
+// Files are read from the folder chosen in the window (default: Assets/Westmount). Nothing here needs network access.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -16,16 +16,16 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-public class MountainGateSetup : EditorWindow
+public class WestmountSetup : EditorWindow
 {
-    string dataDir = "Assets/MountainGate";
-    string treeModelPath = "Assets/MountainGate/tree_prefabs.fbx";
+    string dataDir = "Assets/Westmount";
+    string treeModelPath = "Assets/Westmount/tree_prefabs.fbx";
     float treeMaxDistance = 0f;      // 0 = all trees; else only trees within this many metres of a course mesh
     bool treeColliders = true;
     Material grassSemiRough, grassRough, grassDeepRough;
 
-    [MenuItem("MountainGate/Setup Window")]
-    static void Open() { GetWindow<MountainGateSetup>("MountainGate"); }
+    [MenuItem("Westmount/Setup Window")]
+    static void Open() { GetWindow<WestmountSetup>("Westmount"); }
 
     void OnGUI()
     {
@@ -106,7 +106,7 @@ public class MountainGateSetup : EditorWindow
             outer.basemapDistance = 20000f;
             outer.heightmapPixelError = 8f;
         }
-        Debug.Log("MountainGate: terrains built (inner at the origin; course meshes and trees use the same frame)");
+        Debug.Log("Westmount: terrains built (inner at the origin; course meshes and trees use the same frame)");
     }
 
     // ------------------------------------------------------------------ trees
@@ -136,7 +136,7 @@ public class MountainGateSetup : EditorWindow
         Func<string, int> col = (k) => Array.IndexOf(head, k);
         int cPrefab = col("prefab"), cx = col("unity_x"), cy = col("unity_y"), cz = col("unity_z"), cYaw = col("yaw_deg"),
             cSxz = col("scale_xz"), cSy = col("scale_y");
-        GameObject root = new GameObject("MountainGate_Trees");
+        GameObject root = new GameObject("Westmount_Trees");
         Dictionary<string, Transform> cells = new Dictionary<string, Transform>();
         int placed = 0;
         for (int i = 1; i < lines.Length; i++)
@@ -170,7 +170,7 @@ public class MountainGateSetup : EditorWindow
             GameObjectUtility.SetStaticEditorFlags(t, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
             placed++;
         }
-        Debug.Log("MountainGate: placed " + placed + " trees in " + cells.Count + " cells");
+        Debug.Log("Westmount: placed " + placed + " trees in " + cells.Count + " cells");
     }
 
     static void AddLodGroup(GameObject t)
@@ -206,10 +206,10 @@ public class MountainGateSetup : EditorWindow
             p.size = new Vector3(r.bounds.size.x + 40f, 60f, r.bounds.size.z + 40f);
             p.resolution = 256;
             p.boxProjection = false;
-            p.farClipPlane = 5000f;   // keep the mountains in the reflection
+            p.farClipPlane = 5000f;   // keep the distant backdrop in the reflection
             n++;
         }
-        Debug.Log("MountainGate: " + n + " water reflection probes");
+        Debug.Log("Westmount: " + n + " water reflection probes");
     }
 
     // ------------------------------------------------------------------ 3D grass
@@ -245,7 +245,7 @@ public class MountainGateSetup : EditorWindow
             if (layer >= 0) go.layer = layer;
             n++;
         }
-        Debug.Log("MountainGate: 3DG on " + n + " meshes. The meshes' colour layer 'Col' holds 3DG vertex densities " +
+        Debug.Log("Westmount: 3DG on " + n + " meshes. The meshes' colour layer 'Col' holds 3DG vertex densities " +
                   "(R = grass type 1, G = type 2 / dry): set each 3DG material's Density Mode to 'Vertex density'. See grass_3dg.json.");
     }
 

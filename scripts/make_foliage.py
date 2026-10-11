@@ -52,15 +52,16 @@ def recolor(sp, hsv_target, rng, var=0.08):
 
 
 SPEC = {
-    # archetype: source sprites, target HSV, leaves per card, leaf scale (fraction of card), twig colour, extra hues
-    "oak":        dict(src="island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv=(0.21, 0.58, 0.27), n=420, scale=(0.040, 0.060), twig=(70, 58, 45),
-                       alt=[((0.19, 0.5, 0.36), 0.2)]),
-    "sycamore":   dict(src="island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv=(0.20, 0.55, 0.45), n=90, scale=(0.10, 0.15), twig=(110, 100, 85),
-                       alt=[((0.11, 0.65, 0.55), 0.12), ((0.16, 0.6, 0.5), 0.15)]),
-    "eucalyptus": dict(src="island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv=(0.25, 0.25, 0.42), n=90, scale=(0.12, 0.18), twig=(120, 95, 75), alt=[]),
-    "shrub":      dict(src="island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv=(0.19, 0.42, 0.30), n=380, scale=(0.035, 0.055), twig=(80, 70, 55),
-                       alt=[((0.12, 0.35, 0.40), 0.15)]),
-    "pine":       dict(src=None, hsv=(0.26, 0.45, 0.30), n=0, scale=(0, 0), twig=(85, 70, 55), alt=[]),
+    # archetype: source sprites (None = procedural needles), target HSV, leaves per card, leaf scale (fraction of card),
+    # twig colour, extra hues (Southern Ontario summer foliage)
+    "maple":  dict(src="island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv=(0.23, 0.62, 0.40), n=120, scale=(0.085, 0.13), twig=(95, 82, 66),
+                   alt=[((0.21, 0.55, 0.47), 0.18), ((0.25, 0.65, 0.33), 0.15)]),
+    "oak":    dict(src="island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv=(0.22, 0.58, 0.29), n=300, scale=(0.050, 0.075), twig=(72, 60, 48),
+                   alt=[((0.20, 0.5, 0.36), 0.2)]),
+    "shrub":  dict(src="island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv=(0.22, 0.48, 0.32), n=380, scale=(0.035, 0.055), twig=(80, 70, 55),
+                   alt=[((0.17, 0.40, 0.40), 0.15)]),
+    "pine":   dict(src=None, hsv=(0.30, 0.38, 0.33), n=0, scale=(0, 0), twig=(92, 74, 58), alt=[]),    # eastern white pine
+    "spruce": dict(src=None, hsv=(0.37, 0.42, 0.24), n=0, scale=(0, 0), twig=(80, 62, 48), alt=[]),    # Norway / white / blue spruce
 }
 
 
@@ -107,8 +108,8 @@ def make_card(spec, sps, rng, size=512, pine=False):
     return card
 
 
-def pine_card(rng, size=512):
-    """Aleppo-pine style tufts: needles in bundles along a few short twigs."""
+def pine_card(rng, size=512, hsv=(0.30, 0.38, 0.33)):
+    """White-pine style tufts: long soft needles in bundles along a few short twigs."""
     import colorsys
     card = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(card)
@@ -125,10 +126,41 @@ def pine_card(rng, size=512):
             spread = rng.normal(0, 0.75)
             a2 = ang + spread
             nl = size * rng.uniform(0.10, 0.17) * (0.6 + 0.4 * f)
-            h = 0.25 + rng.normal(0, 0.02); sat = np.clip(0.42 + rng.normal(0, 0.08), 0.2, 0.7)
-            v = np.clip(0.22 + 0.14 * f + rng.normal(0, 0.05), 0.10, 0.5)
+            h = hsv[0] + rng.normal(0, 0.02); sat = np.clip(hsv[1] + rng.normal(0, 0.08), 0.2, 0.7)
+            v = np.clip(hsv[2] - 0.08 + 0.14 * f + rng.normal(0, 0.05), 0.10, 0.5)
             col = tuple(int(c * 255) for c in colorsys.hsv_to_rgb(h, sat, v)) + (255,)
             d.line([(bx, by), (bx + np.cos(a2) * nl, by + np.sin(a2) * nl)], fill=col, width=2)
+    return card
+
+
+def spruce_card(rng, size=512, hsv=(0.37, 0.42, 0.24)):
+    """Spruce sprays: a drooping branchlet with side shoots densely clothed in short, stiff needles."""
+    import colorsys
+    card = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(card)
+    for t in range(rng.integers(2, 4)):
+        x0, y0 = size * rng.uniform(0.3, 0.7), size * 0.12
+        ang = np.pi / 2 + rng.normal(0, 0.35)            # main shoot hangs down the card
+        L = size * rng.uniform(0.6, 0.8)
+        x1, y1 = x0 + np.cos(ang) * L, y0 + np.sin(ang) * L
+        shoots = [((x0, y0), (x1, y1), 1.0)]
+        for k in range(rng.integers(5, 9)):                # side shoots, alternating, shorter towards the tip
+            f = rng.uniform(0.1, 0.9); bx, by = x0 + (x1 - x0) * f, y0 + (y1 - y0) * f
+            a2 = ang + (1 if k % 2 else -1) * rng.uniform(0.6, 1.1)
+            l2 = size * rng.uniform(0.12, 0.25) * (1.1 - f)
+            shoots.append(((bx, by), (bx + np.cos(a2) * l2, by + np.sin(a2) * l2), 0.7))
+        for (ax_, ay_), (bx_, by_), w in shoots:
+            d.line([(ax_, ay_), (bx_, by_)], fill=(86, 66, 50, 255), width=3 if w == 1.0 else 2)
+            sl = np.hypot(bx_ - ax_, by_ - ay_)
+            sa = np.arctan2(by_ - ay_, bx_ - ax_)
+            for k in range(int(sl * 1.6)):
+                f = rng.uniform(0, 1); px_, py_ = ax_ + (bx_ - ax_) * f, ay_ + (by_ - ay_) * f
+                a3 = sa + rng.choice([-1, 1]) * rng.uniform(0.5, 1.3)
+                nl = size * rng.uniform(0.018, 0.032)
+                h = hsv[0] + rng.normal(0, 0.015); sat = np.clip(hsv[1] + rng.normal(0, 0.07), 0.2, 0.7)
+                v = np.clip(hsv[2] + 0.1 * (1 - f) * rng.uniform() + rng.normal(0, 0.04), 0.08, 0.45)
+                col = tuple(int(c * 255) for c in colorsys.hsv_to_rgb(h % 1, sat, v)) + (255,)
+                d.line([(px_, py_), (px_ + np.cos(a3) * nl, py_ + np.sin(a3) * nl)], fill=col, width=2)
     return card
 
 
@@ -136,10 +168,15 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for name, spec in SPEC.items():
         rng = np.random.default_rng(sum(map(ord, name)))
-        sps = sprites(REF / spec["src"], min_px=300) if name != "pine" else []
+        sps = sprites(REF / spec["src"], min_px=300) if spec["src"] else []
         atlas = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
         for k in range(4):
-            card = pine_card(rng, 512) if name == "pine" else make_card(spec, sps, rng, 512)
+            if name == "pine":
+                card = pine_card(rng, 512, spec["hsv"])
+            elif name == "spruce":
+                card = spruce_card(rng, 512, spec["hsv"])
+            else:
+                card = make_card(spec, sps, rng, 512)
             atlas.paste(card, ((k % 2) * 512, (k // 2) * 512))
         # bleed colour into transparent texels so mip-mapping does not produce dark halos
         a = np.asarray(atlas).astype(np.float32)

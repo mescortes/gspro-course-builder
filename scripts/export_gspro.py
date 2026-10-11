@@ -1,11 +1,11 @@
 """GSPro / OPCD hand-off package (output/gspro/) for the terrain square config.TERRAIN.
 
   heightmap_<N>.raw      Unity terrain heightmap, 16-bit little-endian ("Windows" byte order), N x N (N = 2^k + 1),
-                         north row first. Inside the build extent: the course DEM; outside: USGS 1 m DEM (feathered).
+                         north row first. Inside the build extent: the course DEM; outside: the 1-2 m backdrop DEM (feathered).
   heightmap_<N>.png      same data as 16-bit greyscale PNG
   terrain.json           size, height range, origin, import settings, Unity <-> UTM transform
   overlay_8192.jpg       satellite overlay for the Inkscape tracing layer (north-up, covers the terrain exactly)
-  course_opcd.svg        OPCD-style SVG: mm = metres, layers Hole01..Hole18 (+ Hole19..27 Lake scenery), Hole98 (cart
+  course_opcd.svg        OPCD-style SVG: mm = metres, layers Hole01..Hole18 (+ any config.SCENERY_HOLES), Hole98 (cart
                          paths), Hole99 (outer rough and non-hole surfaces); OPCD palette fills; shapes stacked bottom ->
                          top as OPCD expects (no holes/donuts)
   trees.csv              tree placements in Unity terrain coordinates (for OPCD Arborist / prefab placement)
@@ -74,8 +74,9 @@ def heightmap():
     meta = {"heightmap": f"heightmap_{N}.raw", "resolution": N, "format": "RAW 16-bit unsigned, little-endian (Unity: Byte Order = Windows)",
             "row_order": "first row = NORTH edge (GIS north-up). In Unity's Import Raw dialog tick 'Flip Vertically' so north stays at +Z.",
             "terrain_size_m": {"width_x": SIZE, "length_z": TE["ymax"] - TE["ymin"], "height_y": hmax - hmin},
-            "height_range_navd88_m": [hmin, hmax], "sample_spacing_m": SIZE / (N - 1),
-            "crs": "NAD83(2011) / UTM zone 11N (EPSG:6340); heights NAVD88 (Geoid18)",
+            "height_range_m": [hmin, hmax], "sample_spacing_m": SIZE / (N - 1),
+            "crs": C.CRS_LABEL,
+            "model_origin": [C.ORIGIN_E, C.ORIGIN_N, C.BASE_H],
             "unity_frame": {"x": "easting - %.1f" % TE["xmin"], "z": "northing - %.1f" % TE["ymin"], "y": "height - %.1f" % hmin},
             "utm_extent": TE, "build_extent_utm": C.CORE, "svg_document_mm": [SIZE, TE["ymax"] - TE["ymin"]],
             "overlay": "overlay_8192.jpg",
@@ -119,7 +120,7 @@ def outer_terrain(n=4097, px=8192):
     Image.fromarray(out).save(OUT / f"outer_overlay_{px}.jpg", quality=90)
     return {"heightmap": f"outer_heightmap_{n}.raw", "resolution": n, "overlay": f"outer_overlay_{px}.jpg",
             "terrain_size_m": {"width_x": oe["xmax"] - oe["xmin"], "length_z": oe["ymax"] - oe["ymin"], "height_y": hmax - hmin},
-            "height_range_navd88_m": [hmin, hmax], "utm_extent": oe, "sunk_inside_inner_m": OUTER_SINK,
+            "height_range_m": [hmin, hmax], "utm_extent": oe, "sunk_inside_inner_m": OUTER_SINK,
             "unity_position": {"x": oe["xmin"] - TE["xmin"], "z": oe["ymin"] - TE["ymin"], "y": hmin},
             "note": "OPCD 'Plot (Outer)': import like the inner terrain (16-bit, Windows byte order, Flip Vertically) and place "
                     "it at unity_position relative to the inner terrain's origin (y relative to the inner terrain's height base)."}
@@ -235,7 +236,9 @@ def greenkeeper(hmin):
                       "green_center": u(h["green"]["centre_utm"]),
                       "hazards": [{"type": z["type"], "polygon": [[round(x - TE["xmin"], 2), round(y - TE["ymin"], 2)] for x, y in z["polygon_utm"]]}
                                   for z in h["hazards"]]})
-    gk = {"course": "MountainGate Country Club — North/South", "frame": "Unity terrain (x east, y up, z north) metres",
+    gk = {"course": C.COURSE_NAME, "layout": C.LAYOUT, "frame": "Unity terrain (x east, y up, z north) metres",
+          "tee_sets": [{"key": k, "name": n, "colour": c} for k, n, c in C.TEES],
+          "ratings": {k: dict(zip(("men_rating", "men_slope", "women_rating", "women_slope", "total_yards"), v)) for k, v in C.RATINGS.items()},
           "terrain": "see terrain.json", "holes": holes}
     json.dump(gk, open(OUT / "greenkeeper.json", "w"), indent=1)
     for old in OUT.glob("hole01_greenkeeper.json"):
@@ -251,7 +254,9 @@ def main():
     grass_spec_json()
     import shutil   # Unity editor helpers (terrains, trees, water probes, 3DG) travel with the package
     (OUT / "unity/Editor").mkdir(parents=True, exist_ok=True)
-    shutil.copy(C.ROOT / "unity/Editor/MountainGateSetup.cs", OUT / "unity/Editor/MountainGateSetup.cs")
+    for old in (OUT / "unity/Editor").glob("*.cs"):
+        old.unlink()
+    shutil.copy(C.ROOT / "unity/Editor" / C.UNITY_SCRIPT, OUT / "unity/Editor" / C.UNITY_SCRIPT)
     meta = json.load(open(OUT / "terrain.json"))
     meta["outer"] = outer_terrain()
     meta["outer"]["unity_position"]["y"] = round(meta["outer"]["unity_position"]["y"] - hmin, 3)
