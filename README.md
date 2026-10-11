@@ -44,29 +44,29 @@ cards and Wayback captures by an adversarial verifier; see [research/NOTES.md](r
 
 Per hole, as modelled. Tee columns give the measured yards (GreenKeeper's rule: tee → aim points nearer the green →
 green centre), with the card yards in brackets where they differ by more than 6 yd. None does: every tee is within
-6 yd of the card, and 68 of 72 are within 3 yd.
+6 yd of the card, and 69 of 72 are within 3 yd.
 
 <!-- holes-table -->
 | Hole | Par | SI | Blue | White | Red | Gold | Green (yd deep × wide) | Elev. change | Hazards |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | 5 | 7 | 559 | 535 | 514 | 434 | 40 × 24 | -6 m | 6 bunker |
-| 2 | 4 | 13 | 373 | 357 | 335 | 286 | 48 × 18 | +10 m | 2 bunker |
+| 2 | 4 | 13 | 373 | 357 | 335 | 286 | 47 × 18 | +10 m | 2 bunker |
 | 3 | 3 | 9 | 195 | 179 | 163 | 160 | 28 × 28 | -8 m | 2 bunker, 1 water |
-| 4 | 4 | 1 | 415 | 386 | 367 | 323 | 32 × 25 | -6 m | 3 bunker, 1 water |
-| 5 | 5 | 3 | 600 | 568 | 527 | 450 | 42 × 29 | +5 m | 7 bunker |
-| 6 | 3 | 15 | 202 | 180 | 163 | 133 | 32 × 32 | -8 m | 6 bunker |
+| 4 | 4 | 1 | 415 | 386 | 366 | 323 | 32 × 25 | -6 m | 3 bunker, 1 water |
+| 5 | 5 | 3 | 600 | 568 | 527 | 450 | 42 × 29 | +5 m | 4 bunker |
+| 6 | 3 | 15 | 202 | 180 | 163 | 133 | 32 × 32 | -8 m | 5 bunker |
 | 7 | 5 | 11 | 541 | 503 | 480 | 449 | 42 × 26 | -8 m | 4 bunker |
-| 8 | 4 | 17 | 305 | 275 | 260 | 245 | 27 × 23 | +4 m | 7 bunker |
+| 8 | 4 | 17 | 305 | 275 | 260 | 245 | 27 × 23 | +4 m | 5 bunker |
 | 9 | 4 | 5 | 401 | 373 | 346 | 334 | 35 × 19 | +6 m | 2 bunker, 1 water |
-| 10 | 4 | 12 | 334 | 319 | 304 | 217 | 28 × 32 | -3 m | 3 bunker, 2 native_area |
+| 10 | 4 | 12 | 334 | 319 | 304 | 217 | 28 × 32 | -3 m | 2 bunker, 3 native_area |
 | 11 | 5 | 6 | 580 | 540 | 502 | 451 | 37 × 24 | +0 m | 2 bunker, 1 native_area |
 | 12 | 3 | 18 | 141 | 127 | 108 | 93 | 32 × 27 | -6 m | 3 bunker |
 | 13 | 5 | 8 | 554 | 520 | 503 | 439 | 35 × 28 | -6 m | 2 bunker |
 | 14 | 4 | 10 | 375 | 359 | 318 | 293 | 29 × 27 | -5 m | 3 bunker |
-| 15 | 4 | 2 | 453 | 396 | 367 | 315 | 26 × 28 | +3 m | – |
+| 15 | 4 | 2 | 453 | 396 | 367 | 315 | 25 × 28 | +3 m | – |
 | 16 | 4 | 4 | 439 | 418 | 400 | 359 | 33 × 28 | -4 m | 1 bunker |
-| 17 | 3 | 16 | 165 | 145 | 132 | 113 | 27 × 27 | -5 m | 9 bunker |
-| 18 | 4 | 14 | 384 | 367 | 351 | 334 | 36 × 27 | +4 m | 1 bunker |
+| 17 | 3 | 16 | 165 | 145 | 132 | 113 | 27 × 27 | -5 m | 3 bunker |
+| 18 | 4 | 14 | 384 | 367 | 351 | 334 | 36 × 26 | +4 m | 1 bunker |
 | **Total** | **73** | | **7015** (7018) | **6546** (6550) | **6139** (6143) | **5428** (5432) | | | |
 <!-- /holes-table -->
 
@@ -113,7 +113,8 @@ The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the Mountain
 10. **QA** (multi-agent, `workflows/hole_qa_round1.js`, `hole_qa_round2.js`; 24 agents in two rounds). Per-hole
     inspectors compare the model with the photo and LiDAR, and adversarial verifiers approve or reject every proposed
     correction.
-    * Approved corrections (123 features) live in `features/overrides/`.
+    * Approved corrections (123 features) live in `features/overrides/`, with one path traced by hand afterwards
+      (`hole18_paths.geojson`).
     * Issues that recurred across holes were fixed in the pipeline, with tests: leaf litter, shadowed sand, path gaps,
       off-course sidewalks, false tees, L-shaped pads, tees newer than the LiDAR, pins on steep greens, missing
       shelters.
@@ -129,6 +130,8 @@ Measured on this build:
 * **Disk:** about 4 GB, including the 1.2 GB output package.
 * **Time:** about 25 min for all steps on 96 cores. The longest steps are vectorize, rasters, classify and export,
   at about 4-5 min each.
+* **On a 32-core, 93 GB runner** (fresh clone, 2026-10-11): about 33 min. The first backdrop run takes 11 min and is
+  cached afterwards. Peak memory, sampled every 2 s, was 5.6 GB.
 
 ```bash
 uv venv --python 3.12 .venv
@@ -148,7 +151,9 @@ python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?v=
 
 * **2018 terrain, newer tees.** The LiDAR predates the rebuilt tees on holes 5 and 11 (about 2023), the 2025 back tee
   on hole 8 and the 2025 boxes on hole 17. Those tees are synthetic level decks at the polygon's mean 2018 height,
-  with graded banks. Their real heights are unknown, and some banks are 1-2 m.
+  with graded banks. Their real heights are unknown, and some banks are 1-2 m. The hole 12 tees were rebuilt after
+  2018 too (one long two-terrace box in the 2025 photo); the model keeps the four 2018 LiDAR decks, which still give
+  the card yardages (see `TODO.md`).
 * **Closest tees to the card.**
   * Hole 5 Blue is 600 against 605. Only an aim point hugging the fairway's west edge reaches 605 from the back of
     the new deck.
