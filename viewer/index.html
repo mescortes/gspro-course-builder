@@ -244,7 +244,7 @@ function makeReflectiveWater(o) {
   // Water.js expects an XY plane whose normal is +Z; ours is XZ (normal +Y): rotate it back, the mesh rotates it up
   g.rotateX(Math.PI / 2);
   const w = new Water(g, { textureWidth: 1024, textureHeight: 1024, waterNormals: pondNormals, sunDirection: sunDir.clone(),
-    sunColor: 0xbfb4a0, waterColor: 0x0a1d16, distortionScale: 0.3, fog: true, alpha: 1.0 });
+    sunColor: 0xbfb4a0, waterColor: 0x183a26, distortionScale: 0.3, fog: true, alpha: 1.0 });
   w.rotation.x = -Math.PI / 2; w.position.y = level;
   // Water.js clips the mirror view with an oblique near plane, which the logarithmic depth buffer overrides: the
   // pond bed below the surface showed up in the reflection as brown mud. Clip it with a world plane instead.
