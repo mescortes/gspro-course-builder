@@ -90,3 +90,16 @@ def test_curated_patios_are_valid():
     for f in json.load(open(path))["features"]:
         g = shape(f["geometry"]); p = f["properties"]
         assert g.geom_type == "Polygon" and g.is_valid and 20 < g.area < 1000 and p["kind"] == "patio" and p.get("note")
+
+
+def test_roof_uv_is_not_stretched_on_steep_slopes():
+    """Top-down UVs smeared the tile texture into streaks on the clubhouse's steep hips: UV distances must match the
+    surface distance on a slope as on a flat roof (texture tile 3 m)."""
+    from add_structures import roof_uv
+    P = np.array([[0, 0, 10.0], [0, 3, 13.0], [3, 0, 10.0]])          # a 45 degree plane rising to +y
+    N = np.tile(np.array([0, -1, 1.0]) / np.sqrt(2), (3, 1))
+    uv = roof_uv(P, N)
+    up = np.linalg.norm(uv[1] - uv[0]); across = np.linalg.norm(uv[2] - uv[0])
+    assert abs(up - np.sqrt(18) / 3) < 1e-6 and abs(across - 1.0) < 1e-6
+    flat = roof_uv(np.array([[0, 0, 5.0], [3, 0, 5.0]]), np.tile([0, 0, 1.0], (2, 1)))
+    assert abs(np.linalg.norm(flat[1] - flat[0]) - 1.0) < 1e-6

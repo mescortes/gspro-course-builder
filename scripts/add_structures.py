@@ -124,7 +124,7 @@ def roof_mesh(poly, dsm, dem, h_tag, tags=None, bdsm=None):
 
     bdsm: building-class (LiDAR class 6) DSM, NaN where a cell has no building return. Preferred over the first-return
     `dsm`, which carries the crowns of trees overhanging the roof: cells without building returns take the height of
-    the nearest roof vertex that has one, and only a light 0.8 m median is applied, so ridges and hips survive.
+    the nearest roof vertex that has one, and only a light 1.2 m median is applied, so ridges and hips survive.
 
     roof:shape=hipped (with height and roof:height, OSM conventions) builds a synthetic pyramid / hip roof instead: for
     shelters newer than the 2018 LiDAR, whose DSM is the tree canopy that stood there."""
@@ -168,7 +168,7 @@ def roof_mesh(poly, dsm, dem, h_tag, tags=None, bdsm=None):
                 _, j = cKDTree(V2[ok]).query(V2[~ok])
                 zb[~ok] = zb[ok][j]
             zb = np.minimum(zb, np.percentile(zb, 99) + 0.2)   # stray returns (antennas, birds)
-            nb = cKDTree(V2).query_ball_point(V2, 0.8)
+            nb = cKDTree(V2).query_ball_point(V2, 1.2)
             return V2, F, np.array([np.median(zb[i]) for i in nb]), ground
     z = dsm(inset[:, 0], inset[:, 1])
     top = ground + (h_tag if h_tag else float(np.median(z) - ground))
@@ -178,6 +178,20 @@ def roof_mesh(poly, dsm, dem, h_tag, tags=None, bdsm=None):
     nb = kd.query_ball_point(V2, 2.5)
     z = np.array([np.median(z[i]) for i in nb])
     return V2, F, z, ground
+
+
+def roof_uv(P, N, tile=3.0):
+    """Roof texture coordinates in each vertex's slope frame (u along the contour, v up the slope, `tile` m per
+    repeat): top-down UVs stretch the tiles into streaks on steep hips. Flat vertices fall back to plan x / y."""
+    P = np.asarray(P, float); N = np.asarray(N, float)
+    g = N[:, :2]; gl = np.linalg.norm(g, axis=1)
+    up = -g / np.maximum(gl, 1e-9)[:, None]                       # horizontal uphill direction
+    across = np.c_[-up[:, 1], up[:, 0]]
+    cz = np.clip(np.abs(N[:, 2]), 0.2, 1.0)
+    uv = np.c_[np.sum(P[:, :2] * across, 1), np.sum(P[:, :2] * up, 1) / cz] / tile
+    flat = gl < 1e-3
+    uv[flat] = P[flat, :2] / tile
+    return uv - np.floor(uv.mean(0))
 
 
 def add_buildings(glb, root):
@@ -225,7 +239,7 @@ def add_buildings(glb, root):
         for k in range(3):
             np.add.at(Nr, F[:, k], fn)
         Nr /= np.linalg.norm(Nr, axis=1, keepdims=True) + 1e-9
-        prims = [dict(pos=mm(Pr), nrm=model_vec(Nr), uv0=Pr[:, :2] / 3.0 - np.floor(Pr[:, :2].mean(0) / 3.0), idx=F, material=roof_m, col=tint)]
+        prims = [dict(pos=mm(Pr), nrm=model_vec(Nr), uv0=roof_uv(Pr, Nr), idx=F, material=roof_m, col=tint)]
         # walls: from below ground to the roof edge
         Pw, Nw, UVw, Iw = [], [], [], []
         ccw = Polygon(ring).exterior.is_ccw
@@ -297,7 +311,7 @@ def add_bridges(glb, root):
 PATIOS = C.ROOT / "features" / "patios.geojson"
 
 
-def patio_tables(poly, spacing=3.2, margin=1.4):
+def patio_tables(poly, spacing=4.0, margin=1.4):
     """Dining-table centres (n, 2): a staggered grid of `spacing` aligned with the patio's long side, kept `margin` m
     inside the paving (room for the chairs)."""
     import shapely
@@ -331,7 +345,7 @@ def add_patios(glb, root):
     pave = glb.material("Patio_Paving", base_color=_enc(PH / "concrete_floor_worn_001/diffuse.jpg", "albedo", 1024),
                         normal=_enc(PH / "concrete_floor_worn_001/nor_gl.jpg", "normal", 1024),
                         orm=_enc(PH / "concrete_floor_worn_001/arm.jpg", "orm", 1024))
-    metal = glb.material("Patio_Metal", base_factor=(0.08, 0.08, 0.08, 1), rough=0.5, metal=0.6)
+    metal = glb.material("Patio_Metal", base_factor=(0.22, 0.22, 0.21, 1), rough=0.5, metal=0.6)
     top_m = glb.material("Patio_TableTop", base_factor=(0.55, 0.52, 0.47, 1), rough=0.6)
     canvas = glb.material("Patio_Umbrella", base_factor=(0.86, 0.84, 0.78, 1), rough=0.9, double_sided=True)
     grp = glb.node("Patios", parent=root)
@@ -377,9 +391,10 @@ def add_patios(glb, root):
                 a0 = rng.uniform(0, np.pi / 2)
                 for a in a0 + np.arange(4) * np.pi / 2:          # four chairs round each table
                     cx, cy = x + 0.8 * np.cos(a), y + 0.8 * np.sin(a)
-                    part((cx, cy, z0), (cx, cy, z0 + 0.45), 0.2, 0.2, metal, 8)
+                    part((cx, cy, z0 + 0.4), (cx, cy, z0 + 0.45), 0.22, 0.22, metal, 4)      # seat
+                    part((cx, cy, z0), (cx, cy, z0 + 0.4), 0.03, 0.03, metal, 4, False)        # leg
                     bx, by = x + 1.0 * np.cos(a), y + 1.0 * np.sin(a)
-                    part((bx, by, z0 + 0.45), (bx, by, z0 + 0.9), 0.17, 0.17, metal, 4, False)
+                    part((bx, by, z0 + 0.45), (bx, by, z0 + 0.9), 0.04, 0.04, metal, 4, False)  # back post
         glb.node(f"Patio_{k}", mesh=glb.mesh(f"Patio_{k}", prims), parent=grp)
     print("patios", k + 1)
 
