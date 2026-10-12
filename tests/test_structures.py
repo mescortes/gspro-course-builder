@@ -103,3 +103,13 @@ def test_roof_uv_is_not_stretched_on_steep_slopes():
     assert abs(up - np.sqrt(18) / 3) < 1e-6 and abs(across - 1.0) < 1e-6
     flat = roof_uv(np.array([[0, 0, 5.0], [3, 0, 5.0]]), np.tile([0, 0, 1.0], (2, 1)))
     assert abs(np.linalg.norm(flat[1] - flat[0]) - 1.0) < 1e-6
+
+
+def test_roof_tint_is_one_colour_per_building():
+    """Per-vertex photo colour (rooftop units, shadows, crowns) mottled the clubhouse roof like rock: one robust
+    colour per roof, from the photo's median."""
+    from add_structures import roof_tint
+    rng = np.random.default_rng(0)
+    col = np.clip(0.3 + rng.normal(0, 0.15, (500, 3)), 0, 1)
+    t = roof_tint(col)
+    assert t.shape == (500, 3) and np.ptp(t, axis=0).max() < 1e-9

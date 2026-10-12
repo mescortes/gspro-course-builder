@@ -124,7 +124,7 @@ def roof_mesh(poly, dsm, dem, h_tag, tags=None, bdsm=None):
 
     bdsm: building-class (LiDAR class 6) DSM, NaN where a cell has no building return. Preferred over the first-return
     `dsm`, which carries the crowns of trees overhanging the roof: cells without building returns take the height of
-    the nearest roof vertex that has one, and only a light 1.2 m median is applied, so ridges and hips survive.
+    the nearest roof vertex that has one, and a 2 m median (rooftop units, LiDAR noise) still leaves the ridges and hips.
 
     roof:shape=hipped (with height and roof:height, OSM conventions) builds a synthetic pyramid / hip roof instead: for
     shelters newer than the 2018 LiDAR, whose DSM is the tree canopy that stood there."""
@@ -168,7 +168,7 @@ def roof_mesh(poly, dsm, dem, h_tag, tags=None, bdsm=None):
                 _, j = cKDTree(V2[ok]).query(V2[~ok])
                 zb[~ok] = zb[ok][j]
             zb = np.minimum(zb, np.percentile(zb, 99) + 0.2)   # stray returns (antennas, birds)
-            nb = cKDTree(V2).query_ball_point(V2, 1.2)
+            nb = cKDTree(V2).query_ball_point(V2, 2.0)
             return V2, F, np.array([np.median(zb[i]) for i in nb]), ground
     z = dsm(inset[:, 0], inset[:, 1])
     top = ground + (h_tag if h_tag else float(np.median(z) - ground))
@@ -192,6 +192,14 @@ def roof_uv(P, N, tile=3.0):
     flat = gl < 1e-3
     uv[flat] = P[flat, :2] / tile
     return uv - np.floor(uv.mean(0))
+
+
+def roof_tint(col):
+    """Vertex tint (n, 3) of a roof from its photo colours (sRGB 0-1): the median colour for every vertex, linearised
+    and normalised like the tiles' albedo."""
+    m = np.median(np.asarray(col, np.float32), 0)
+    lin = np.where(m <= 0.04045, m / 12.92, ((m + 0.055) / 1.055) ** 2.4)
+    return np.tile(np.clip(lin / 0.35, 0, 1), (len(col), 1))
 
 
 def add_buildings(glb, root):
@@ -226,9 +234,7 @@ def add_buildings(glb, root):
         rows, cols = rasterio.transform.rowcol(img.transform, V2[:, 0], V2[:, 1])
         a = img.read([1, 2, 3], window=rasterio.windows.Window(min(cols), min(rows), max(cols) - min(cols) + 1, max(rows) - min(rows) + 1))
         col = a[:, np.array(rows) - min(rows), np.array(cols) - min(cols)].T.astype(np.float32) / 255
-        col = ndimage.uniform_filter1d(col, 1, axis=0)
-        lin = np.where(col <= 0.04045, col / 12.92, ((col + 0.055) / 1.055) ** 2.4)
-        tint = np.clip(lin / 0.35, 0, 1)
+        tint = roof_tint(col)
         Pr = np.c_[V2, z]
         # orient roof triangles upward
         e1 = Pr[F[:, 1]] - Pr[F[:, 0]]; e2 = Pr[F[:, 2]] - Pr[F[:, 0]]
