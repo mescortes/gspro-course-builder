@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "gold": [
+   537210.15,
+   4810906.78
+  ]
+ },
+ "notes": "Gold is pinned 1 m inside the front of the new Gold box (hole14_gold.geojson, confirmed by the user 2026-10-12): 293.75 yd against the card's 293. The box measures 294-303 yd. The old OSM Gold pad by the cart path is burned to rough."
+}
