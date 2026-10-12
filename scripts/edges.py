@@ -22,8 +22,8 @@ LIP_DEPTH = 0.05       # sand sits this much below the lip edge (OPCD V4 add-on 
 LIP_HOLES = range(1, 19)
 WATER_EDGE_W = 0.15    # OPCD Water_Edge inset
 PLANE_OUTSET = 2.0     # OPCD WaterPlane outset under the banks
-BED_SHORE, BED_SLOPE, BED_MAX = 0.03, 0.35, 1.2   # bed depth below the water level: shore, gradient, maximum (m)
-BERM = 0.02            # land inside the plane's outset is kept at least this much above the water (no spill)
+BED_SHORE, BED_SLOPE, BED_MAX = 0.08, 0.35, 1.2   # bed depth below the water level: shore, gradient, maximum (m)
+BERM = 0.08            # land inside the plane's outset is kept at least this much above the water (no spill; 2 cm z-fought)
 
 
 def _polys(g):

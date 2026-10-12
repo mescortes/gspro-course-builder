@@ -8,6 +8,7 @@ Outputs (GeoTIFF, EPSG:32611) in build/:
   dem.tif        bare-earth elevation (TIN of ground returns, de-noised), DEM_RES spacing
   dem_raw.tif    TIN without smoothing (for QA)
   dsm.tif        first-return surface (max z per cell), 0.5 m
+  bdsm.tif       building-class (6) surface (max z per cell, NaN without building returns), 0.5 m
   chm.tif        canopy/object height above ground (dsm - dem), 0.5 m
   intensity.tif  mean ground-return intensity, DEM_RES spacing (NaN where no ground hit)
   ground_count.tif  ground returns per DEM cell
@@ -54,6 +55,13 @@ def tiles(ext):
             yield (i, j), dict(xmin=x0, ymin=y0, xmax=min(x0 + C.TILE, ext["xmax"]), ymax=min(y0 + C.TILE, ext["ymax"]))
 
 
+def surface_returns(cls, rn):
+    """(first, building) masks: non-noise first returns feed dsm.tif; every building-class (6) return feeds bdsm.tif,
+    the roof surface without the crowns of overhanging trees."""
+    first = (rn == 1) & (cls != 7) & (cls != 18)
+    return first, cls == 6
+
+
 def pass1(ext, res):
     """Stream LAZ once. Returns ground buckets per tile + global count/intensity grids + DSM."""
     W, H, T, _, _ = grid_spec(ext, res)
@@ -61,6 +69,7 @@ def pass1(ext, res):
     cnt = np.zeros(H * W, np.int32)
     isum = np.zeros(H * W, np.float32)
     dsm = np.full(H2 * W2, -np.inf, np.float32)
+    bdsm = np.full(H2 * W2, -np.inf, np.float32)
     tl = list(tiles(ext))
     buckets = {k: [] for k, _ in tl}
     nx = int(np.ceil((ext["xmax"] - ext["xmin"]) / C.TILE))
@@ -119,13 +128,17 @@ def pass1(ext, res):
                             if (ki, kj) in buckets:
                                 buckets[(ki, kj)].append(sp[a:b])
                 # DSM from first returns (non-noise)
-                f1 = (rn == 1) & (cls != 7) & (cls != 18)
+                f1, b6 = surface_returns(cls, rn)
+                cb = np.floor((x[b6] - ext["xmin"]) / 0.5).astype(np.int64)
+                rb = np.floor((ext["ymax"] - y[b6]) / 0.5).astype(np.int64)
+                okb = (cb >= 0) & (cb < W2) & (rb >= 0) & (rb < H2)
+                np.maximum.at(bdsm, rb[okb] * W2 + cb[okb], z[b6][okb].astype(np.float32))
                 c2 = np.floor((x[f1] - ext["xmin"]) / 0.5).astype(np.int64)
                 r2 = np.floor((ext["ymax"] - y[f1]) / 0.5).astype(np.int64)
                 ok = (c2 >= 0) & (c2 < W2) & (r2 >= 0) & (r2 < H2)
                 np.maximum.at(dsm, r2[ok] * W2 + c2[ok], z[f1][ok].astype(np.float32))
             print(f"  {f.name}: {n_in:,} pts in {time.time() - t0:.0f}s", flush=True)
-    return buckets, cnt.reshape(H, W), isum.reshape(H, W), dsm.reshape(H2, W2)
+    return buckets, cnt.reshape(H, W), isum.reshape(H, W), dsm.reshape(H2, W2), bdsm.reshape(H2, W2)
 
 
 def filter_ground(P):
@@ -143,7 +156,7 @@ def filter_ground(P):
 
 def main(ext=C.CORE, res=C.DEM_RES):
     t0 = time.time()
-    buckets, cnt, isum, dsm = pass1(ext, res)
+    buckets, cnt, isum, dsm, bdsm = pass1(ext, res)
     W, H, T, xc, yc = grid_spec(ext, res)
     write(C.BUILD / "ground_count.tif", cnt, T, nodata=-1)
     inten = np.where(cnt > 0, isum / np.maximum(cnt, 1), np.nan).astype(np.float32)
@@ -193,6 +206,7 @@ def main(ext=C.CORE, res=C.DEM_RES):
     med = ndimage.median_filter(chm, 3)
     chm = np.where(chm - med > 6, med, chm)  # single-cell spikes (birds / wires)
     write(C.BUILD / "dsm.tif", dsm, T2)
+    write(C.BUILD / "bdsm.tif", np.where(np.isfinite(bdsm), bdsm, np.nan).astype(np.float32), T2)
     write(C.BUILD / "chm.tif", chm, T2)
     print(f"rasters done in {time.time() - t0:.0f}s")
 
