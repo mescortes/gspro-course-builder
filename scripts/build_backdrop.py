@@ -51,16 +51,63 @@ def lift_shadows(a, knee=40.0, keep=0.6, chroma=1.25):
     return out
 
 
+SUMMER_GREEN = (84, 116, 54)   # sRGB target for the median vegetated backdrop pixel (cf. config.TURF_TINT rough)
+NDVI_LO, NDVI_HI = 0.08, 0.22   # NDVI ramp: below LO untouched (roads, roofs, water), above HI fully graded
+
+
+def summer_grade(a, ndvi, target=SUMMER_GREEN, keep_l=0.5):
+    """The spring photo drapes the backdrop in grey-brown dormant lawns and leaf-off woods. Move vegetated pixels (NDVI
+    ramp NDVI_LO..NDVI_HI) to summer: in Lab their chroma is re-centred on `target`, keeping each pixel's deviation from
+    the vegetated median (texture, mowing stripes, crowns); L moves `keep_l` of the way to the target. Pixels with NDVI
+    below NDVI_LO are returned unchanged."""
+    from skimage.color import rgb2lab, lab2rgb
+    w = np.clip((ndvi - NDVI_LO) / (NDVI_HI - NDVI_LO), 0, 1).astype(np.float32)
+    veg = w > 0.5
+    if not veg.any():
+        return a.copy()
+    step = 1 if veg.sum() < 2_000_000 else int(np.sqrt(veg.sum() / 2_000_000)) + 1
+    sample = rgb2lab(a[::step, ::step][veg[::step, ::step]][None].astype(np.float32) / 255)[0]
+    med = np.median(sample, 0)
+    tgt = rgb2lab(np.array([[target]], np.float32) / 255)[0, 0]
+    shift = np.array([(tgt[0] - med[0]) * keep_l, tgt[1] - med[1], tgt[2] - med[2]], np.float32)
+    out = a.copy()
+    rows = 2048
+    for r0 in range(0, a.shape[0], rows):
+        wr = w[r0:r0 + rows]
+        if not (wr > 0).any():
+            continue
+        lab = rgb2lab(a[r0:r0 + rows].astype(np.float32) / 255)
+        lab += shift * wr[..., None]
+        g = (np.clip(lab2rgb(lab), 0, 1) * 255 + 0.5).astype(np.uint8)
+        out[r0:r0 + rows] = np.where((wr > 0)[..., None], g, a[r0:r0 + rows])
+    return out
+
+
 def imagery(ext, res, path):
+    """<stem>.tif: SWOOP RGB; <stem>_nir.tif: its NIR band (same grid); <stem>_summer.tif: RGB after summer_grade
+    (read by the GSPro outer overlay); <stem>.jpg: the summer RGB with lift_shadows (viewer / glTF drape)."""
+    tif, nir, summer = path.with_suffix(".tif"), path.with_name(path.stem + "_nir.tif"), summer_tif(path)
     raw = path.with_name(path.stem + "_raw.jpg")
-    if not path.with_suffix(".tif").exists():
-        import fetch_imageserver
-        fetch_imageserver.fetch(ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], res, path.with_suffix(".tif"))
-    if not raw.exists() or raw.stat().st_mtime < path.with_suffix(".tif").stat().st_mtime:
-        with rasterio.open(path.with_suffix(".tif")) as ds:
-            a = np.moveaxis(ds.read(), 0, -1)
-        Image.fromarray(a).save(raw, quality=88)
-        Image.fromarray(lift_shadows(a)).save(path, quality=88)
+    import fetch_imageserver
+    if not tif.exists():
+        fetch_imageserver.fetch(ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], res, tif)
+    if not nir.exists():
+        fetch_imageserver.fetch(ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], res, nir, bands=(3,))
+    if summer.exists() and path.exists() and min(summer.stat().st_mtime, path.stat().st_mtime) > max(
+            tif.stat().st_mtime, nir.stat().st_mtime, __import__("os").stat(__file__).st_mtime):
+        return
+    from scipy import ndimage
+    with rasterio.open(tif) as ds:
+        a = np.moveaxis(ds.read(), 0, -1); prof = ds.profile
+    with rasterio.open(nir) as ds:
+        n = ds.read(1).astype(np.float32)
+    r = a[..., 0].astype(np.float32)
+    ndvi = ndimage.gaussian_filter((n - r) / np.maximum(n + r, 1), 1.0)
+    g = summer_grade(a, ndvi)
+    with rasterio.open(summer, "w", **dict(prof, compress="deflate")) as ds:
+        ds.write(np.moveaxis(g, -1, 0))
+    Image.fromarray(a).save(raw, quality=88)
+    Image.fromarray(lift_shadows(g)).save(path, quality=88)
 
 
 def main():
