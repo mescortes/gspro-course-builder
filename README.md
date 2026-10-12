@@ -62,12 +62,12 @@ green centre), with the card yards in brackets where they differ by more than 6 
 | 11 | 5 | 6 | 580 | 540 | 502 | 451 | 37 × 24 | +0 m | 2 bunker, 1 native_area |
 | 12 | 3 | 18 | 141 | 127 | 108 | 93 | 32 × 27 | -6 m | 3 bunker |
 | 13 | 5 | 8 | 554 | 520 | 503 | 439 | 35 × 28 | -6 m | 2 bunker |
-| 14 | 4 | 10 | 375 | 359 | 318 | 293 | 29 × 27 | -5 m | 3 bunker |
+| 14 | 4 | 10 | 375 | 359 | 318 | 294 | 29 × 27 | -5 m | 3 bunker |
 | 15 | 4 | 2 | 453 | 396 | 367 | 315 | 25 × 28 | +3 m | – |
 | 16 | 4 | 4 | 439 | 418 | 400 | 359 | 33 × 28 | -4 m | 1 bunker |
 | 17 | 3 | 16 | 165 | 145 | 132 | 113 | 27 × 27 | -5 m | 3 bunker |
 | 18 | 4 | 14 | 384 | 367 | 351 | 334 | 36 × 26 | +4 m | 1 bunker |
-| **Total** | **73** | | **7015** (7018) | **6546** (6550) | **6139** (6143) | **5428** (5432) | | | |
+| **Total** | **73** | | **7015** (7018) | **6546** (6550) | **6139** (6143) | **5429** (5432) | | | |
 <!-- /holes-table -->
 
 ## Data
@@ -107,14 +107,14 @@ The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the Mountain
    (`features/structures.geojson`, footprints from LiDAR building returns or the 2025 photo).
 8. **Mesh**: one conforming constrained Delaunay triangulation with fine triangles in the playing corridors, OPCD
    bunker lips (10 cm) and water objects. It joins a 5 km imagery-draped backdrop without seams. Tees built after the
-   2018 survey (holes 5, 8, 11 and 17) get a synthetic level deck with graded banks.
+   2018 survey (holes 5, 8, 11 and 17, and the new hole 14 Gold box) get a synthetic level deck with graded banks.
 9. **Hole data**: tee markers are slid along the real tee decks to the card yardages. Pins come from a green-slope
    analysis (<= 3 %, relaxed to <= 5 % on Westmount's steepest greens). Aim points come from the line of play.
 10. **QA** (multi-agent, `workflows/hole_qa_round1.js`, `hole_qa_round2.js`; 24 agents in two rounds). Per-hole
     inspectors compare the model with the photo and LiDAR, and adversarial verifiers approve or reject every proposed
     correction.
-    * Approved corrections (123 features) live in `features/overrides/`, with one path traced by hand afterwards
-      (`hole18_paths.geojson`).
+    * Approved corrections (123 features) live in `features/overrides/`, with two later additions confirmed in
+      review: a path traced by hand (`hole18_paths.geojson`) and the new hole 14 Gold box (`hole14_gold.geojson`).
     * Issues that recurred across holes were fixed in the pipeline, with tests: leaf litter, shadowed sand, path gaps,
       off-course sidewalks, false tees, L-shaped pads, tees newer than the LiDAR, pins on steep greens, missing
       shelters.
@@ -155,10 +155,12 @@ python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?v=
   2018 too (one long two-terrace box in the 2025 photo); the model keeps the four 2018 LiDAR decks, which still give
   the card yardages (see `TODO.md`).
 * **Closest tees to the card.**
-  * Hole 5 Blue is 600 against 605. Only an aim point hugging the fairway's west edge reaches 605 from the back of
-    the new deck.
-  * Hole 5 Gold is 450 against 455, and hole 17 White 145 against 149 (the pinned marker is at the back of the
-    2025 box).
+  * Hole 5 Blue is 600 against 605. The marker is at the back of the 2023 deck, and the Blue box was confirmed
+    in review; only an aim point hugging the fairway's west edge would reach 605, so the card is rounded or
+    measured on another line.
+  * Hole 5 Gold is 450 against 455.
+  * Hole 17 White is 145 against 149. The marker is at the back of the 2025 White/Red box, which was confirmed in
+    review; no point on that box measures 149.
 
   All are inside the 6 yd tolerance, so none is listed in `KNOWN_TEE_GAPS`.
 * **Leaf-off sources.** Tree species groups are inferred, not surveyed:

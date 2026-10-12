@@ -20,17 +20,12 @@ Open items after QA round 2. Every hole scored 8/10 or more from its verifier; d
 
 ## Course data to confirm on site or with the club
 
-* **Hole 5 Blue** measures 600 yd against the card's 605. Only an aim point within about 4 m of the fairway's west
-  edge reaches 605 from the back of the new deck, so the card is probably rounded or measured on another line.
-* **Hole 17 White** measures 145 against 149 (the pinned marker is at the back of the 2025 box). The heights of the
-  rebuilt (2025) decks are estimates: each synthetic deck sits at the polygon's mean 2018 height.
-* **Holes 5, 8, 11 and 17:** the tee decks built after the 2018 LiDAR are synthetic planes. A newer LiDAR or a site
-  survey would replace them.
+* **Holes 5, 8, 11, 14 (Gold) and 17:** the tee decks built after the 2018 LiDAR are synthetic planes, each at the
+  polygon's mean 2018 height. A newer LiDAR or a site survey would replace them.
 * **Hole 12 tees were rebuilt after the 2018 LiDAR.** The LiDAR has four small separate decks (the model's pads); the
   2025 photo shows one long, straight-edged box in two terraces, about 537373-537419 E, 4810467-4810522 N. Replacing
   the pads needs the new outlines and the deck heights (a site survey or newer LiDAR); the markers would then move,
   so the yardages (exact today) would need checking again.
-* **Hole 14:** a 9 x 12 m rectangle of new turf at about 537207, 4810908 (sod nursery or a new forward tee).
 
 ## Model polish
 
