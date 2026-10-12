@@ -104,7 +104,10 @@ The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the Mountain
    are told apart from bare hardwoods by pulse penetration and crown NDVI. Archetypes: maple, oak, white pine, spruce,
    shrub.
 7. **Structures**: OSM buildings, plus five shelters and service buildings OSM lacks
-   (`features/structures.geojson`, footprints from LiDAR building returns or the 2025 photo).
+   (`features/structures.geojson`, footprints from LiDAR building returns or the 2025 photo). Roofs follow the
+   building-class LiDAR returns (`bdsm.tif`), so the clubhouse keeps its ridges and hips without the crowns of the
+   trees that overhang it. The clubhouse restaurant patio beside the hole 3 tee (`features/patios.geojson`) is a
+   paved terrace with tables, chairs and umbrellas.
 8. **Mesh**: one conforming constrained Delaunay triangulation with fine triangles in the playing corridors, OPCD
    bunker lips (10 cm) and water objects. It joins a 5 km imagery-draped backdrop without seams. Tees built after the
    2018 survey (holes 5, 8, 11 and 17, and the new hole 14 Gold box) get a synthetic level deck with graded banks.
@@ -168,12 +171,15 @@ python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?v=
   * conifers are split into spruce and white pine;
   * crown sizes come from closed leaf-off canopy.
 * **Spring photo.** Turf colour in the glTF and viewer is a summer grade (`config.TURF_TINT`) over the photo's
-  variation. The photo itself shows dormant greens and brown fairways, and the backdrop beyond the course is pale
-  spring ground. GSPro assigns its own turf materials by object name.
+  variation. The photo itself shows dormant greens and brown fairways. Beyond the course, vegetated pixels of the
+  backdrop photo (by NDVI from its near-infrared band) are graded to summer green the same way
+  (`build_backdrop.summer_grade`), for the glTF drape and the GSPro outer-plot overlay. GSPro assigns its own turf
+  materials by object name.
 * **Cart paths** are traced automatically from the near-infrared photo and corrected in two QA rounds. A few short
   segments under evergreens are missing or interpolated (see `TODO.md`).
 * **Structures** OSM lacks are curated by hand (`features/structures.geojson`). The #4 / #13 shelter is newer than
-  the LiDAR, so its footprint is approximate (+/- 1 m).
+  the LiDAR, so its footprint is approximate (+/- 1 m). The patio outline is traced from the photo (+/- 1 m); its
+  furniture layout is generic, not a survey.
 * **Windows side not run here.** Unity, OPCD and GreenKeeper steps cannot run on this Linux build host. The Unity
   helper is syntax-checked (tree-sitter), not compiled. `grass_3dg.json` values are starting estimates. Open
   hand-off items are in `TODO.md`.

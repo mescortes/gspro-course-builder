@@ -44,6 +44,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Water } from 'three/addons/objects/Water.js';
 import { Grass } from './grass.js';
 
 const params = new URLSearchParams(location.search);
@@ -65,19 +66,41 @@ const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 12
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 
-// sky: equirectangular gradient (deep blue zenith -> hazy LA horizon), also used as the environment light
+// sky: equirectangular gradient (deep blue zenith -> pale summer horizon) with fair-weather cumulus (?clouds=0: none),
+// also used as the environment light
 const az = THREE.MathUtils.degToRad(135), el = THREE.MathUtils.degToRad(50);
 const sunDir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
+function drawCumulus(g, W, H) {
+  // flat-based clouds of soft puffs; smaller and flatter towards the horizon (equirectangular rows near H/2)
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 38; k++) {
+    const v = Math.pow(rnd(), 1.6);                       // 0 horizon .. 1 high: most clouds sit low in the view
+    const u = H / 512, base = H / 2 - 6 * u - v * 150 * u, sc = (0.35 + v * 0.9) * u, cx = rnd() * W, w = (40 + rnd() * 90) * sc;
+    for (let j = 0; j < 14; j++) {
+      const px = cx + (rnd() - 0.5) * w, r = (8 + rnd() * 16) * sc * (1 - Math.abs(px - cx) / w);
+      if (r < 2) continue;
+      const py = base - r * (0.4 + rnd() * 0.9) * 0.55;
+      for (const [dx, dy, a] of [[0, 0, 0.9], [-0.5, -0.7, 0.55]]) {   // body, sunlit top
+        const gx = px + dx * r * (Math.sign(sunDir.x) || 1) * 0.3, gy = py + dy * r * 0.3;
+        const rg = g.createRadialGradient(gx, gy, 0, gx, gy, r);
+        const sh = dy ? '255,255,252' : '232,236,242';
+        rg.addColorStop(0, `rgba(${sh},${a})`); rg.addColorStop(0.6, `rgba(${sh},${a * 0.6})`); rg.addColorStop(1, `rgba(${sh},0)`);
+        g.fillStyle = rg; g.beginPath(); g.rect(gx - r, gy - r, 2 * r, Math.min(2 * r, base - (gy - r))); g.fill();
+      }
+    }
+  }
+}
 function skyTexture() {
-  const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+  const W = 2048, H = 1024, c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d');
-  const grd = g.createLinearGradient(0, 0, 0, 512);
+  const grd = g.createLinearGradient(0, 0, 0, H);
   grd.addColorStop(0.00, '#2f6db8'); grd.addColorStop(0.30, '#5f97d3'); grd.addColorStop(0.45, '#a9c7e3');
   grd.addColorStop(0.50, '#d6e2ea'); grd.addColorStop(0.53, '#c2cdb8'); grd.addColorStop(1.00, '#7d8a64');
-  g.fillStyle = grd; g.fillRect(0, 0, 1024, 512);
-  const sx = ((Math.atan2(sunDir.x, -sunDir.z) / (2 * Math.PI)) + 0.5) * 1024, sy = (0.5 - Math.asin(sunDir.y) / Math.PI) * 512;
-  const rg = g.createRadialGradient(sx, sy, 2, sx, sy, 140); rg.addColorStop(0, 'rgba(255,250,235,0.9)'); rg.addColorStop(1, 'rgba(255,250,235,0)');
-  g.fillStyle = rg; g.fillRect(0, 0, 1024, 512);
+  g.fillStyle = grd; g.fillRect(0, 0, W, H);
+  const sx = ((Math.atan2(sunDir.x, -sunDir.z) / (2 * Math.PI)) + 0.5) * W, sy = (0.5 - Math.asin(sunDir.y) / Math.PI) * H;
+  const rg = g.createRadialGradient(sx, sy, 2, sx, sy, 280); rg.addColorStop(0, 'rgba(255,250,235,0.9)'); rg.addColorStop(1, 'rgba(255,250,235,0)');
+  g.fillStyle = rg; g.fillRect(0, 0, W, H);
+  if (params.get('clouds') !== '0') drawCumulus(g, W, H);
   const t = new THREE.CanvasTexture(c); t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
@@ -208,6 +231,50 @@ waterMat.onBeforeCompile = (sh) => {   // second, slower ripple layer at another
     normal = normalize( tbn * mapN );`).replace('void main() {', 'uniform float uTime;\nvoid main() {');
 };
 const waterUniforms = { uTime: { value: 0 } };
+// Ponds: planar reflections of the banks, trees and sky (three.js Water), dark green-brown pond colour, sun glints.
+// Each _WaterPlane is flat at its water level, which is what a planar reflector needs. ?water=simple keeps the old
+// glossy material (cheaper on weak GPUs).
+const waterPlanes = [], ponds = [];
+const pondNormals = new THREE.TextureLoader().load('assets/water_normal.png', (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+function makeReflectiveWater(o) {
+  o.updateWorldMatrix(true, false);
+  const g = o.geometry.clone().applyMatrix4(o.matrixWorld);
+  const level = g.attributes.position.getY(0);
+  g.translate(0, -level, 0);                            // Water reflects about its local y = 0 plane
+  // Water.js expects an XY plane whose normal is +Z; ours is XZ (normal +Y): rotate it back, the mesh rotates it up
+  g.rotateX(Math.PI / 2);
+  const w = new Water(g, { textureWidth: 1024, textureHeight: 1024, waterNormals: pondNormals, sunDirection: sunDir.clone(),
+    sunColor: 0xbfb4a0, waterColor: 0x0a1d16, distortionScale: 0.3, fog: true, alpha: 1.0 });
+  w.rotation.x = -Math.PI / 2; w.position.y = level;
+  // Water.js clips the mirror view with an oblique near plane, which the logarithmic depth buffer overrides: the
+  // pond bed below the surface showed up in the reflection as brown mud. Clip it with a world plane instead.
+  const keepAbove = [new THREE.Plane(new THREE.Vector3(0, 1, 0), -(level - 0.02))];
+  const mirror = w.onBeforeRender;
+  w.onBeforeRender = function (r, sc, cam) {
+    const prev = r.clippingPlanes; r.clippingPlanes = keepAbove;
+    try { mirror.call(this, r, sc, cam); } finally { r.clippingPlanes = prev; }
+  };
+  w.material.uniforms.size.value = 7.0;                 // ripple scale: fine pond ruffle, not ocean swell
+  w.name = o.name; w.renderOrder = 2;
+  o.parent.add(w); o.visible = false; ponds.push(w);
+}
+// Tree crowns: one foliage texture per archetype made every crown the same green. Each instance gets a species tint
+// and its own brightness / yellow-blue shift, hashed from its position so all LODs of a tree agree.
+const SPECIES_TINT = { maple: [1.0, 1.04, 0.9], oak: [0.9, 0.94, 0.78], pine: [0.84, 0.95, 0.9], spruce: [0.7, 0.84, 0.86],
+  shrub: [1.0, 1.0, 0.9] };
+function tintCrowns(o, arch) {
+  const base = SPECIES_TINT[arch] || [1, 1, 1], mtx = new THREE.Matrix4(), p = new THREE.Vector3(), c = new THREE.Color();
+  const hash = (x, z, k) => { const v = Math.sin(x * 12.9898 + z * 78.233 + k * 37.719) * 43758.5453; return v - Math.floor(v); };
+  for (let i = 0; i < o.count; i++) {
+    o.getMatrixAt(i, mtx); p.setFromMatrixPosition(mtx);
+    const x = Math.round(p.x * 10) / 10, z = Math.round(p.z * 10) / 10;
+    const b = 0.8 + 0.34 * hash(x, z, 1), t = hash(x, z, 2) * 2 - 1;   // brightness; -1 bluish .. +1 yellowish
+    const y = t > 0 ? [1 + 0.1 * t, 1 + 0.05 * t, 1 - 0.22 * t] : [1 + 0.08 * t, 1 + 0.02 * t, 1 - 0.06 * t];
+    c.setRGB(base[0] * y[0] * b, base[1] * y[1] * b, base[2] * y[2] * b);
+    o.setColorAt(i, c);
+  }
+  o.instanceColor.needsUpdate = true;
+}
 let grassSpec = {};
 try { const r = await fetch(GRASS_SPEC + '?' + Date.now()); if (r.ok) grassSpec = (await r.json()).viewer || {}; } catch (e) {}
 const grass = new Grass(scene, grassSpec);
@@ -227,11 +294,17 @@ loader.load(MODEL, (gltf) => {
       const m = o.material;
       if (m && m.map) { m.map.anisotropy = renderer.capabilities.getMaxAnisotropy(); }
       if (m && m.normalMap) { m.normalMap.anisotropy = 8; }
+      if (o.isInstancedMesh && m && /^Foliage_/.test(m.name)) tintCrowns(o, m.name.slice(8));
+      if (m && /^Bark_/.test(m.name) && !m.userData.lifted) { m.color.multiplyScalar(1.35); m.userData.lifted = true; }
       const isWater = /_WaterPlane/.test(o.name) || /_WaterPlane/.test(o.parent?.name || '');
-      if (isWater) { o.material = waterMat; o.castShadow = false; o.renderOrder = 2; }
+      if (isWater) {
+        if (params.get('water') === 'simple') { o.material = waterMat; o.castShadow = false; o.renderOrder = 2; }
+        else waterPlanes.push(o);
+      }
       let q = o; while (q && !isWater) { if (q.name === 'Terrain' || q.name === 'Backdrop_Terrain') { terrainMeshes.push(o); break; } q = q.parent; }
     }
   });
+  for (const o of waterPlanes) makeReflectiveWater(o);
   updateLod();
   grass.index(terrainMeshes);
   status.textContent = `loaded in ${((performance.now() - t0) / 1000).toFixed(1)} s · ${lodCells.size} tree cells · ${grass.tiles.size} grass tiles`;
@@ -263,6 +336,7 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   controls.update();
   waterUniforms.uTime.value = clock.getElapsedTime();
+  for (const w of ponds) w.material.uniforms.time.value = clock.getElapsedTime() * 0.35;
   grass.update(camera, clock.getElapsedTime());
   if (frameNo++ % 10 === 0) updateLod();
   const t = controls.target; sun.target.position.copy(t); sun.position.copy(t).addScaledVector(sunDir, 600);
