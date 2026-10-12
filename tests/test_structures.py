@@ -113,3 +113,15 @@ def test_roof_tint_is_one_colour_per_building():
     col = np.clip(0.3 + rng.normal(0, 0.15, (500, 3)), 0, 1)
     t = roof_tint(col)
     assert t.shape == (500, 3) and np.ptp(t, axis=0).max() < 1e-9
+
+
+def test_roof_shading_normals_ignore_lidar_noise():
+    """Per-vertex normals of the noisy LiDAR roof made the clubhouse look like rock. Shading normals come from the
+    roof smoothed over a few metres: a flat roof with +/- 15 cm noise shades as flat (within 6 degrees)."""
+    from add_structures import roof_mesh, roof_normals
+    rng = np.random.default_rng(0)
+    noisy = lambda e, n, order=1: 344.0 + rng.normal(0, 0.15, np.atleast_1d(e).shape)
+    V2, F, z, ground = roof_mesh(box(0, 0, 20, 12), _flat(340.0), _flat(340.0), 0, bdsm=noisy)
+    N = roof_normals(V2, F, z)
+    inner = (V2[:, 0] > 3) & (V2[:, 0] < 17) & (V2[:, 1] > 3) & (V2[:, 1] < 9)
+    assert np.degrees(np.arccos(np.clip(N[inner, 2], -1, 1))).max() < 6.0

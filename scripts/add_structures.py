@@ -194,6 +194,20 @@ def roof_uv(P, N, tile=3.0):
     return uv - np.floor(uv.mean(0))
 
 
+def roof_normals(V2, F, z, r=2.5):
+    """Vertex shading normals of a roof (n, 3, UTM axes, pointing up) from the surface averaged over `r` m: the mesh
+    keeps the LiDAR heights for its outline, but per-vertex normals of that noisy surface shaded it like rock."""
+    from scipy.spatial import cKDTree
+    zs = np.array([z[i].mean() for i in cKDTree(V2).query_ball_point(V2, r)])
+    P = np.c_[V2, zs]
+    fn = np.cross(P[F[:, 1]] - P[F[:, 0]], P[F[:, 2]] - P[F[:, 0]])
+    fn *= np.sign(fn[:, 2:3] + 1e-12)
+    N = np.zeros_like(P)
+    for k in range(3):
+        np.add.at(N, F[:, k], fn)
+    return N / (np.linalg.norm(N, axis=1, keepdims=True) + 1e-9)
+
+
 def roof_tint(col):
     """Vertex tint (n, 3) of a roof from its photo colours (sRGB 0-1): the median colour for every vertex, linearised
     and normalised like the tiles' albedo."""
@@ -240,11 +254,7 @@ def add_buildings(glb, root):
         e1 = Pr[F[:, 1]] - Pr[F[:, 0]]; e2 = Pr[F[:, 2]] - Pr[F[:, 0]]
         up = (e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0]) > 0
         F = np.where(up[:, None], F, F[:, [0, 2, 1]])
-        Nr = np.zeros_like(Pr)
-        fn = np.cross(Pr[F[:, 1]] - Pr[F[:, 0]], Pr[F[:, 2]] - Pr[F[:, 0]])
-        for k in range(3):
-            np.add.at(Nr, F[:, k], fn)
-        Nr /= np.linalg.norm(Nr, axis=1, keepdims=True) + 1e-9
+        Nr = roof_normals(V2, F, z)
         prims = [dict(pos=mm(Pr), nrm=model_vec(Nr), uv0=roof_uv(Pr, Nr), idx=F, material=roof_m, col=tint)]
         # walls: from below ground to the roof edge
         Pw, Nw, UVw, Iw = [], [], [], []
