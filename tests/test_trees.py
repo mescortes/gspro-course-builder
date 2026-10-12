@@ -57,3 +57,20 @@ def test_archetype_rules_separate_conifers_from_bare_hardwoods():
     assert got[68:73].count("pine") >= 4, got[68:73]
     assert got[73] == "shrub"
     assert 0.2 < got[:60].count("oak") / 60 < 0.8      # both hardwood groups are used
+
+
+def test_trees_are_moved_off_tees_greens_and_bunkers():
+    """Final renders: LiDAR tree positions are crown tops, so a leaning tree beside a tee lands on it, and the 2018 trees
+    stand where later tees were built (hole 8). A tree within max_shift of the edge moves just outside it; deeper
+    inside, it was cleared for the tee and is dropped."""
+    from shapely.geometry import box, Point
+    import detect_trees as DT
+    tee = box(0, 0, 20, 10)
+    feats = [{"geometry": {"type": "Point", "coordinates": c}, "properties": {"id": i}}
+             for i, c in enumerate([(19.0, 5.0), (10.0, 5.0), (30.0, 5.0)])]
+    out = DT.off_surfaces(feats, [tee], max_shift=4.0, clearance=0.75)
+    ids = [f["properties"]["id"] for f in out]
+    assert ids == [0, 2]
+    p = Point(out[0]["geometry"]["coordinates"])
+    assert not tee.contains(p) and abs(p.x - 20.75) < 0.05 and abs(p.y - 5.0) < 0.05
+    assert out[1]["geometry"]["coordinates"] == (30.0, 5.0)

@@ -38,12 +38,13 @@ if PROFILE == "test":  # small regression build around holes 1-2 (MG_PROFILE=tes
     BUILD = ROOT / "build_test"
     FEATURES = BUILD / "features"
     OUTPUT = BUILD / "output"
-    for _d in (BUILD, FEATURES, OUTPUT):
-        _d.mkdir(parents=True, exist_ok=True)
+for _d in (BUILD, FEATURES, OUTPUT):  # git-ignored (FEATURES only in the test profile): absent on a fresh clone
+    _d.mkdir(parents=True, exist_ok=True)
 DEM_RES = 0.25  # metres
 
 LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))
 LIDAR_LEAF_OFF = True   # March 2018 flights: deciduous crowns are sparse in the CHM (detect_trees.py closes them)
+IMAGERY_LEAF_OFF = True  # spring photo: the ground is visible through the bare crowns (vectorize.py keeps it)
 
 # Aerial imagery covering CORE (+20 m): Ontario SWOOP 2025, 0.16 m, 4 bands (R, G, B, NIR), native EPSG:2958, Open
 # Government Licence - Ontario (scripts/fetch_imageserver.py). The pipeline reads the registered copy written by
@@ -55,6 +56,12 @@ IMAGERY_RES = 0.16
 IMAGERY_SHIFT = (0.0, -0.25)  # metres +E/+N applied to the photo
 IMAGERY = DATA / "imagery" / "swoop2025_course_reg.tif"
 IMAGERY_CREDIT = "Contains information licensed under the Open Government Licence - Ontario (SWOOP 2025 orthoimagery)"
+
+# Turf colour of the glTF / viewer textures: the spring photo shows dormant, hazy turf (greens straw-coloured), so the
+# median colour of each turf surface is moved to a summer target (sRGB) and the photo only contributes the local
+# variation (mowing, wear, shade). None = use the photo's own colours. GSPro assigns its own turf materials by name.
+TURF_TINT = {"green": (96, 138, 62), "fringe": (88, 130, 56), "fairway": (86, 128, 54), "tee": (90, 132, 58),
+             "semirough": (78, 116, 50), "rough": (72, 108, 46)}
 
 YARDS_PER_M = 1.0 / 0.9144
 

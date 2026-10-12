@@ -65,3 +65,15 @@ def test_ndvi_ridges_find_a_bare_strip_in_turf():
     ndvi[96:104, :] = 0.02                  # 2 m bare strip at 0.25 m
     r = P.ndvi_ridges(ndvi, 0.25)
     assert r[100, 100] > 5 * max(r[60, 100], 1e-6) and r[100, 100] > P.RIDGE_MIN
+
+
+def test_long_bridges_need_facing_ends_and_a_clear_corridor():
+    from shapely.geometry import LineString
+    a = LineString([(0, 0), (60, 0)])
+    b = LineString([(85, 1), (150, 2)])              # 25 m gap under a spruce: both ends face each other
+    c = LineString([(60, 25), (60, 90)])             # 25 m from a's end but at 90 degrees: never bridged
+    out = P.bridge([a, b, c], max_gap=35.0, max_angle=25)
+    assert sorted(round(g.length) for g in out) == [65, 150]
+    # the same gap is refused when the connector would cross an excluded area (a green, a bunker, a fairway ...)
+    out = P.bridge([a, b, c], max_gap=35.0, max_angle=25, ok=lambda seg: False)
+    assert sorted(round(g.length) for g in out) == [60, 65, 65]

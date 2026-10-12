@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "white": [
+   537304.0,
+   4810961.0
+  ]
+ },
+ "notes": "White was an off-pad fairway marker in the rough between the two 18 tee decks. It is now pinned 1.3-1.7 m inside the NW (back) corner of the main deck; the notch-fill tee polygon in proposal.geojson covers that corner. There it measures 366.6 yd (card 367), and White, Red and Gold sit about 15.5 m apart on the 35 m main deck. Blue stays on the enlarged back deck (383 yd at its current spot)."
+}

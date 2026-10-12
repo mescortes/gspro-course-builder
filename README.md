@@ -1,17 +1,177 @@
-# Course-builder skeleton (snapshot 2026-10-11)
+# Westmount Golf & Country Club for GSPro
 
-A **plain copy** of the reusable core of the MountainGate build, taken while GSPro cosmetics (task #2) was in
-progress. Nothing has been refactored, so the files still carry MountainGate's settings. To start a new course:
+A survey-grade model of [Westmount Golf & Country Club](https://www.westmountgolf.com/) (Kitchener, Ontario; Stanley
+Thompson, 1931; par 73) for the [GSPro](https://gsprogolf.com/) golf simulator. It is built end to end from public data:
 
-1. Copy this folder to a new project and create the venv (see the main README's "Rebuilding" section).
-2. Follow `instructions.md`. §3 lists every file with course-specific constants: `scripts/config.py`,
-   `fetch_data.py` (`LIDAR_PROJECT`), `fetch_backdrop.py` (`URLS`), `export_fbx_blender.py` (`model_origin`),
-   `hole_data.py` (`AIM_OVERRIDES`), `make_views.py`, titles, and course-specific tests in `tests/test_course.py`.
-3. `features/overrides/` starts empty: the QA workflows (`workflows/hole_qa_round*.js`) fill it.
+* Ontario 2018 LiDAR;
+* 2025 Ontario orthoimagery;
+* OpenStreetMap;
+* the Golf Canada scorecard.
 
-Not included (one-off debugging or MountainGate-only):
+The pipeline produces:
 
-* scripts: `osm_summary.py`, `preview_trees.py`, `qa_trees.py`, `qa_rasters.py`, `render_blender.py`;
-* data: the data, research and output folders.
+* a textured glTF you can explore in the bundled three.js viewer;
+* an OPCD / GSPro hand-off package (Unity terrain heightmaps, overlays, OPCD SVG, FBX surface meshes named for
+  `SetMeshMaterial.cs`, tree prefabs and placements, GreenKeeper data, 3D-grass masks and a Unity editor helper).
 
-Before reusing, also pull in later fixes from the main repo: this copy predates the rest of task #2 and task #3.
+The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's job: see
+[research/GSPRO_COSMETICS.md](research/GSPRO_COSMETICS.md).
+
+![Course map](docs/images/course_map.jpg)
+
+| | |
+|---|---|
+| ![Hole 14 green](docs/images/render_h14_green.jpg) | ![Hole 16 green](docs/images/render_h16_green.jpg) |
+| Hole 14: approach to the green, between the greenside bunkers | Hole 16: the green on its plateau |
+| ![Hole 11 tee](docs/images/render_h11_tee.jpg) | |
+| Hole 11 Blue tee: the deck was rebuilt about 2023 and is synthetic over the 2018 terrain | |
+
+*Headless Blender (Cycles) renders of `output/westmount.glb`. The turf is graded to summer; trees use the
+LiDAR-derived archetypes. GSPro renders with its own materials.*
+
+## The course
+
+| Tee | Yards | Men rating / slope | Women rating / slope |
+|---|---|---|---|
+| Blue | 7,018 | 73.0 / 132 | – |
+| White | 6,550 | 71.1 / 129 | 76.9 / 135 |
+| Red | 6,143 | 69.3 / 121 | 75.1 / 130 |
+| Gold | 5,432 | 66.3 / 113 | 71.3 / 121 |
+
+Par 73 (37 out / 36 in). Source: Golf Canada Score Centre (live 2026-10-11). It was cross-checked against the club's
+cards and Wayback captures by an adversarial verifier; see [research/NOTES.md](research/NOTES.md). The combination sets
+(Blue/White 6,732, White/Red 6,322, Red/Gold 5,814) reuse these four boxes.
+
+Per hole, as modelled. Tee columns give the measured yards (GreenKeeper's rule: tee → aim points nearer the green →
+green centre), with the card yards in brackets where they differ by more than 6 yd. None does: every tee is within
+6 yd of the card, and 69 of 72 are within 3 yd.
+
+<!-- holes-table -->
+| Hole | Par | SI | Blue | White | Red | Gold | Green (yd deep × wide) | Elev. change | Hazards |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 5 | 7 | 559 | 535 | 514 | 434 | 40 × 24 | -6 m | 6 bunker |
+| 2 | 4 | 13 | 373 | 357 | 335 | 286 | 47 × 18 | +10 m | 2 bunker |
+| 3 | 3 | 9 | 195 | 179 | 163 | 160 | 28 × 28 | -8 m | 2 bunker, 1 water |
+| 4 | 4 | 1 | 415 | 386 | 366 | 323 | 32 × 25 | -6 m | 3 bunker, 1 water |
+| 5 | 5 | 3 | 600 | 568 | 527 | 450 | 42 × 29 | +5 m | 4 bunker |
+| 6 | 3 | 15 | 202 | 180 | 163 | 133 | 32 × 32 | -8 m | 5 bunker |
+| 7 | 5 | 11 | 541 | 503 | 480 | 449 | 42 × 26 | -8 m | 4 bunker |
+| 8 | 4 | 17 | 305 | 275 | 260 | 245 | 27 × 23 | +4 m | 5 bunker |
+| 9 | 4 | 5 | 401 | 373 | 346 | 334 | 35 × 19 | +6 m | 2 bunker, 1 water |
+| 10 | 4 | 12 | 334 | 319 | 304 | 217 | 28 × 32 | -3 m | 2 bunker, 3 native_area |
+| 11 | 5 | 6 | 580 | 540 | 502 | 451 | 37 × 24 | +0 m | 2 bunker, 1 native_area |
+| 12 | 3 | 18 | 141 | 127 | 108 | 93 | 32 × 27 | -6 m | 3 bunker |
+| 13 | 5 | 8 | 554 | 520 | 503 | 439 | 35 × 28 | -6 m | 2 bunker |
+| 14 | 4 | 10 | 375 | 359 | 318 | 293 | 29 × 27 | -5 m | 3 bunker |
+| 15 | 4 | 2 | 453 | 396 | 367 | 315 | 25 × 28 | +3 m | – |
+| 16 | 4 | 4 | 439 | 418 | 400 | 359 | 33 × 28 | -4 m | 1 bunker |
+| 17 | 3 | 16 | 165 | 145 | 132 | 113 | 27 × 27 | -5 m | 3 bunker |
+| 18 | 4 | 14 | 384 | 367 | 351 | 334 | 36 × 26 | +4 m | 1 bunker |
+| **Total** | **73** | | **7015** (7018) | **6546** (6550) | **6139** (6143) | **5428** (5432) | | | |
+<!-- /holes-table -->
+
+## Data
+
+| Input | Source | Licence |
+|---|---|---|
+| Terrain, trees | OMAFRA Lidar 2016-18 (Lake Erie package), flown March 2018 leaf-off, 14-20 pts/m2; NRCan CanElevation COPC tiles | Open Government Licence – Ontario / – Canada |
+| Imagery | SWOOP 2025 (Geospatial Ontario), 16 cm, R G B + near-infrared, spring 2025 | Open Government Licence – Ontario |
+| Backdrop terrain | NRCan HRDEM 1 m DTM (same 2018 survey) | Open Government Licence – Canada |
+| Course features | OpenStreetMap (holes, greens, fairways, tees, bunkers, water, buildings, roads) | ODbL |
+| Scorecard | Golf Canada Score Centre | facts |
+
+Attribution for anything shipped from this repository: *Contains information licensed under the Open Government
+Licence – Ontario* and *– Canada*; *© OpenStreetMap contributors*.
+
+Esri World Imagery and the Region of Waterloo / City of Waterloo orthophotos were deliberately **not** used. Their
+licences do not allow derived textures to be redistributed.
+
+## How it was built
+
+The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the MountainGate course-builder skeleton
+([instructions.md](instructions.md)) and was adapted to Ontario:
+
+1. **Research** (multi-agent, `workflows/course_research.js`): scorecard, hole notes and course facts; LiDAR, DEM and
+   imagery sources. Every claim was re-checked by an adversarial verifier.
+2. **Rasters**: the LiDAR is streamed into 0.25 m DEM, DSM, canopy height and intensity rasters (EPSG:2958, CGVD2013).
+3. **Imagery registration**: SWOOP 2025 sits 0.25 m south of the LiDAR (59 bunkers, sand vs hollows).
+4. **Cart paths** (`trace_paths.py`, new): OSM maps none at Westmount, so the path centre lines are traced as
+   NDVI ridges in the near-infrared photo. NDVI ignores the long tree shadows of the leaf-off photo.
+5. **Classification**: a random forest on photo Lab + NIR / NDVI and LiDAR features, trained on OSM labels, then
+   vectorised into a gap-free surface partition. LiDAR validation keeps a bunker only if it is a hollow and a tee only
+   if it is a flat deck.
+6. **Trees** (`detect_trees.py`): about 10,700 LiDAR trees. The leaf-off canopy is closed before segmentation. Conifers
+   are told apart from bare hardwoods by pulse penetration and crown NDVI. Archetypes: maple, oak, white pine, spruce,
+   shrub.
+7. **Structures**: OSM buildings, plus five shelters and service buildings OSM lacks
+   (`features/structures.geojson`, footprints from LiDAR building returns or the 2025 photo).
+8. **Mesh**: one conforming constrained Delaunay triangulation with fine triangles in the playing corridors, OPCD
+   bunker lips (10 cm) and water objects. It joins a 5 km imagery-draped backdrop without seams. Tees built after the
+   2018 survey (holes 5, 8, 11 and 17) get a synthetic level deck with graded banks.
+9. **Hole data**: tee markers are slid along the real tee decks to the card yardages. Pins come from a green-slope
+   analysis (<= 3 %, relaxed to <= 5 % on Westmount's steepest greens). Aim points come from the line of play.
+10. **QA** (multi-agent, `workflows/hole_qa_round1.js`, `hole_qa_round2.js`; 24 agents in two rounds). Per-hole
+    inspectors compare the model with the photo and LiDAR, and adversarial verifiers approve or reject every proposed
+    correction.
+    * Approved corrections (123 features) live in `features/overrides/`, with one path traced by hand afterwards
+      (`hole18_paths.geojson`).
+    * Issues that recurred across holes were fixed in the pipeline, with tests: leaf litter, shadowed sand, path gaps,
+      off-course sidewalks, false tees, L-shaped pads, tees newer than the LiDAR, pins on steep greens, missing
+      shelters.
+    * After round 2 every hole scored 8 or 9 out of 10. The verdicts are in `research/qa/`.
+11. **Export**: glTF, the OPCD package, FBX (headless Blender), maps.
+
+## Rebuilding
+
+Requires Python 3.12, [uv](https://github.com/astral-sh/uv) and headless Blender 4.2 LTS (for the FBX step).
+
+Measured on this build:
+* **RAM:** 11.5 GB at peak (the classifier). No other step exceeds 5 GB.
+* **Disk:** about 4 GB, including the 1.2 GB output package.
+* **Time:** about 25 min for all steps on 96 cores. The longest steps are vectorize, rasters, classify and export,
+  at about 4-5 min each.
+* **On a 32-core, 93 GB runner** (fresh clone, 2026-10-11): about 33 min. The first backdrop run takes 11 min and is
+  cached afterwards. Peak memory, sampled every 2 s, was 5.6 GB.
+
+```bash
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python numpy scipy rasterio shapely pyproj pillow scikit-image scikit-learn \
+    triangle matplotlib "laspy[lazrs]" requests pytest tree-sitter tree-sitter-c-sharp
+.venv/bin/python scripts/fetch_data.py lidar osm imagery   # 590 MB LiDAR + 250 MB imagery
+.venv/bin/python scripts/fetch_textures.py
+.venv/bin/python scripts/fetch_backdrop.py
+BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py      # all steps (about 25 min on 96 cores)
+.venv/bin/python -m pytest -q tests                                  # unit + built-course tests
+python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?v=1#h1-tee
+```
+
+`research/osm_*.json` hold the OSM snapshot the model was built from. Delete them before `fetch_data.py osm` to refresh.
+
+## Known limitations
+
+* **2018 terrain, newer tees.** The LiDAR predates the rebuilt tees on holes 5 and 11 (about 2023), the 2025 back tee
+  on hole 8 and the 2025 boxes on hole 17. Those tees are synthetic level decks at the polygon's mean 2018 height,
+  with graded banks. Their real heights are unknown, and some banks are 1-2 m. The hole 12 tees were rebuilt after
+  2018 too (one long two-terrace box in the 2025 photo); the model keeps the four 2018 LiDAR decks, which still give
+  the card yardages (see `TODO.md`).
+* **Closest tees to the card.**
+  * Hole 5 Blue is 600 against 605. Only an aim point hugging the fairway's west edge reaches 605 from the back of
+    the new deck.
+  * Hole 5 Gold is 450 against 455, and hole 17 White 145 against 149 (the pinned marker is at the back of the
+    2025 box).
+
+  All are inside the 6 yd tolerance, so none is listed in `KNOWN_TEE_GAPS`.
+* **Leaf-off sources.** Tree species groups are inferred, not surveyed:
+  * hardwoods are split into maple and oak by crown shape;
+  * conifers are split into spruce and white pine;
+  * crown sizes come from closed leaf-off canopy.
+* **Spring photo.** Turf colour in the glTF and viewer is a summer grade (`config.TURF_TINT`) over the photo's
+  variation. The photo itself shows dormant greens and brown fairways, and the backdrop beyond the course is pale
+  spring ground. GSPro assigns its own turf materials by object name.
+* **Cart paths** are traced automatically from the near-infrared photo and corrected in two QA rounds. A few short
+  segments under evergreens are missing or interpolated (see `TODO.md`).
+* **Structures** OSM lacks are curated by hand (`features/structures.geojson`). The #4 / #13 shelter is newer than
+  the LiDAR, so its footprint is approximate (+/- 1 m).
+* **Windows side not run here.** Unity, OPCD and GreenKeeper steps cannot run on this Linux build host. The Unity
+  helper is syntax-checked (tree-sitter), not compiled. `grass_3dg.json` values are starting estimates. Open
+  hand-off items are in `TODO.md`.

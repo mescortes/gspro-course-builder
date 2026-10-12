@@ -32,6 +32,10 @@ OVERRIDES: features/overrides/holeNN.geojson (FeatureCollection; Polygon in UTM;
 on top of the automatic map (later overrides win). Valid surfaces: green, fringe, fairway, semirough, rough, deeprough, tee, bunker, cartpath,
 native, water. Meta: features/overrides/holeNN_meta.json {"aim_points_utm": [[e, n], ...], "tees_utm": {"blue"|"white"|"red"|"gold": [e, n]},
 "notes": "...", "frame": "lidar"}. NEW geometry must carry "frame": "lidar".
+DUPLICATES: other holes are verified in parallel. Before adding a cart path (or any feature) near a hole boundary, check EVERY
+features/overrides/*.geojson for an existing feature within 2 m; two traces 1 m apart union into an over-wide path (round 1: holes 4/13, 5/7).
+DECKS: judge "is this a built tee deck" on build/dem_raw.tif (un-smoothed ground), not dem_final.tif.
+BUILDINGS: overrides cannot add buildings; curated shelters OSM lacks are in features/structures.geojson (report others under remaining issues).
 Never edit scripts or any other file. Be conservative: only fix what is clearly wrong in the imagery/LiDAR.`
 
 const INSPECT = {

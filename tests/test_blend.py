@@ -66,3 +66,98 @@ def test_green_blend_removes_noise_and_stays_continuous():
     ring = (rad > 10.5) & (rad < 13.0)
     smooth_ring = np.abs(np.diff(out - dem - noise, axis=1))[ring[:, 1:]].max()
     assert smooth_ring < 0.012                               # correction outside changes by < 12 mm per cell
+
+
+def test_tee_without_a_lidar_deck_is_levelled():
+    """Tees built after the 2018 LiDAR (holes 5, 8 back tees) have no deck in the terrain: the DEM under a tee that is
+    not already flat is replaced by a plane of at most 1 % slope at the tee's mean height, feathered into the ground."""
+    from build_terrain_mesh import level_tees
+    from rasterio.features import rasterize
+    dem, T, c = _plane(slope=0.06)
+    rng = np.random.default_rng(0)
+    dem = dem + 0.05 * np.sin(np.arange(dem.shape[1]) * RES * 1.3)[None, :] + rng.normal(0, 0.01, dem.shape)
+    tee = Point(c, c).buffer(5.0)
+    out = level_tees(dem.copy(), T, [tee])
+    m = rasterize([(tee.buffer(-0.3), 1)], out_shape=dem.shape, transform=T).astype(bool)
+    rr, cc = np.nonzero(m)
+    A = np.c_[cc, rr, np.ones(len(rr))] * [RES, RES, 1]
+    coef, res, *_ = np.linalg.lstsq(A, out[m], rcond=None)
+    assert np.std(out[m] - A @ coef) < 0.005, "levelled tee is a plane"
+    assert np.hypot(coef[0], coef[1]) <= 0.0105, f"tee slope {np.hypot(coef[0], coef[1]):.3f}"
+    assert abs(out[m].mean() - dem[m].mean()) < 0.02, "deck at the tee's mean height"
+    far = ~rasterize([(tee.buffer(2.5), 1)], out_shape=dem.shape, transform=T).astype(bool)
+    assert np.abs(out[far] - dem[far]).max() < 1e-9, "ground beyond the feather is untouched"
+
+
+def test_existing_flat_tee_deck_is_left_alone():
+    from build_terrain_mesh import level_tees
+    dem, T, c = _plane(slope=0.005)
+    tee = Point(c, c).buffer(5.0)
+    out = level_tees(dem.copy(), T, [tee])
+    assert np.abs(out - dem).max() < 1e-9
+
+
+def test_real_deck_with_a_drainage_fall_is_left_alone():
+    """Real 2018 decks fall 1.5-3 % for drainage (Westmount: 31 of 69 tees). They must not be re-levelled to 1 %."""
+    from build_terrain_mesh import level_tees
+    rng = np.random.default_rng(1)
+    dem, T, c = _plane(slope=0.028)
+    dem = dem + rng.normal(0, 0.02, dem.shape)
+    tee = Point(c, c).buffer(6.0)
+    out = level_tees(dem.copy(), T, [tee])
+    assert np.abs(out - dem).max() < 1e-9
+
+
+def test_oversized_tee_polygon_is_not_terraced():
+    """A tee polygon of hundreds of m2 across a slope is a digitising error (hole 17: 830 m2), not a deck: flattening it
+    would cut a terrace into the hillside. It is left for QA."""
+    from build_terrain_mesh import level_tees
+    dem, T, c = _plane(slope=0.08)
+    tee = Point(c, c).buffer(17.0)                          # ~900 m2
+    out = level_tees(dem.copy(), T, [tee])
+    assert np.abs(out - dem).max() < 1e-9
+
+
+def test_new_tee_on_a_hillside_gets_banks_not_a_cliff():
+    """Hole 11's new back tee sits on a 19 % slope: the synthetic deck (1.1 m of cut / fill at its edges) is feathered
+    over enough ground that its steepest bank is about 1:1.5, like a built tee bank. A fixed 1 m feather gave 1.8:1."""
+    from build_terrain_mesh import level_tees
+    dem, T, c = _plane(slope=0.19)
+    tee = Point(c, c).buffer(6.0)
+    out = level_tees(dem.copy(), T, [tee])
+    gy, gx = np.gradient(out, RES)
+    n = dem.shape[0]
+    yy, xx = np.mgrid[0:n, 0:n]
+    rad = np.hypot((xx + 0.5) * RES - c, (yy + 0.5) * RES - c)
+    ring = (rad > 6.2) & (rad < 12)
+    bank = np.hypot(gx, gy)[ring].max()
+    assert bank < 0.65, f"steepest bank {bank:.2f}"
+
+
+def test_two_real_decks_with_a_step_are_left_alone():
+    """QA round 2 (hole 8): the White / Red pad is the union of two OSM tees, separate 2018 decks 0.3 m apart in height.
+    The union fails the single-plane test but is not a deck-less new tee: its cells are locally flat."""
+    from build_terrain_mesh import level_tees
+    dem, T, c = _plane(slope=0.005)
+    n = dem.shape[0]
+    xx = (np.arange(n) + 0.5) * RES
+    dem = dem + np.where(xx > c, 0.3, 0.0)[None, :]                   # the step between the two decks
+    tee = Point(c, c).buffer(9.0)
+    out = level_tees(dem.copy(), T, [tee])
+    assert np.abs(out - dem).max() < 1e-9
+
+
+def test_synthetic_deck_does_not_feather_into_a_cart_path():
+    """QA round 2 (hole 8): the feather around the new Blue deck cut up to 1 m into the cart path beside it. Protected
+    surfaces (paths, roads, buildings, greens, bunkers, water) keep their height; the bank ends at their edge."""
+    from build_terrain_mesh import level_tees
+    from rasterio.features import rasterize
+    from shapely.geometry import box
+    dem, T, c = _plane(slope=0.12)
+    tee = Point(c, c).buffer(5.0)
+    path = box(c + 5.6, 0, c + 8.0, dem.shape[0] * RES)               # a 2.4 m path 0.6 m beside the tee
+    protect = rasterize([(path, 1)], out_shape=dem.shape, transform=T).astype(bool)
+    out = level_tees(dem.copy(), T, [tee], protect=protect)
+    assert np.abs(out - dem)[protect].max() < 1e-9
+    inside = rasterize([(tee.buffer(-0.3), 1)], out_shape=dem.shape, transform=T).astype(bool)
+    assert np.abs(out - dem)[inside].max() > 0.3, "the tee is still levelled"

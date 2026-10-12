@@ -220,7 +220,61 @@ def trees_csv(hmin):
     return len(trees)
 
 
+GKD_TEE_SLOT = {"blue": "Blue", "white": "White", "red": "Red", "gold": "Yellow"}   # GKD TeeType per card tee
+GKD_PIN_DAYS = (("Thursday", "middle"), ("Friday", "front"), ("Saturday", "back"))   # Sunday: the harder side pin
+
+
+def heights(X, Y):
+    """Terrain height at UTM points: the course DEM inside the build extent, the backdrop DEM outside."""
+    X = np.asarray(X, float); Y = np.asarray(Y, float)
+    z = sample(C.DATA / "dem/backdrop_dem.tif", X, Y) if (C.DATA / "dem/backdrop_dem.tif").exists() else np.zeros(len(X))
+    e = C.CORE
+    inside = (X > e["xmin"]) & (X < e["xmax"]) & (Y > e["ymin"]) & (Y < e["ymax"])
+    if inside.any():
+        z[inside] = sample(C.BUILD / "dem_final.tif", X[inside], Y[inside])
+    return z
+
+
+def ring3d(coords, hmin, step=6.0):
+    """[[x, y, z], ...] Unity coordinates along a UTM ring, resampled every `step` m, y on the ground."""
+    from shapely.geometry import LineString
+    line = LineString(coords).segmentize(step)
+    P = np.asarray(line.coords)
+    H = heights(P[:, 0], P[:, 1])
+    return [unity(x, y, h, hmin) for (x, y), h in zip(P, H)]
+
+
+def gkd_hole(h, hmin):
+    """GreenKeeper (GKD) view of one hole record: tee slots + computed distances, 4 day pins, aim points, hazards."""
+    import math
+    gc = h["green"]["centre_utm"][:2]
+    aims = [a["utm"][:2] for a in h["aim_points"]]
+    def gk_dist(p):
+        d0 = math.dist(p, gc)
+        pts = [p] + [a for a in aims if math.dist(a, gc) < d0] + [gc]
+        return sum(math.dist(a, b) for a, b in zip(pts[:-1], pts[1:]))
+    tees = [{"tee_type": GKD_TEE_SLOT.get(t["key"], t["name"]), "card_tee": t["name"], "position": unity(*t["utm"], hmin),
+             "distance_m": round(gk_dist(t["utm"][:2]), 2), "yards": t["yards"]} for t in h["tees"]]
+    pins = {p["name"]: p for p in h["pins"]}
+    bunkers = [np.asarray(z["polygon_utm"]) for z in h["hazards"] if z["type"] == "bunker"]
+    def bunker_gap(p):
+        if not bunkers:
+            return 1e9
+        q = np.asarray(p["utm"][:2])
+        return min(np.min(np.hypot(*(b - q).T)) for b in bunkers)
+    side = min((pins[k] for k in ("left", "right") if k in pins), key=bunker_gap)
+    day_pins = [{"day": d, "name": k, "position": unity(*pins[k]["utm"], hmin)} for d, k in GKD_PIN_DAYS if k in pins]
+    day_pins.append({"day": "Sunday", "name": side["name"], "position": unity(*side["utm"], hmin)})
+    hazards = [{"type": z["type"], "coords": ring3d(z["polygon_utm"], hmin)} for z in h["hazards"] if z["type"] != "bunker"]
+    return {"tees": tees, "pins": day_pins, "aim_points": [unity(*a["utm"], hmin) for a in h["aim_points"]][:2],
+            "green_center": unity(*h["green"]["centre_utm"], hmin), "hazards": hazards,
+            "bunkers": [{"coords": ring3d(z["polygon_utm"], hmin, 2.0)} for z in h["hazards"] if z["type"] == "bunker"]}
+
+
 def greenkeeper(hmin):
+    """greenkeeper.json: per hole tees / pins / aim points / hazards in Unity terrain coordinates, plus a 'gkd' view in
+    GreenKeeper's own vocabulary (tee slots, rating/slope strings, Thursday-Sunday pins, pOOB ring, 3D hazard rings)
+    to type into GreenKeeper (it has no documented import)."""
     data = json.load(open(C.OUTPUT / "holes.json"))
     def u(p):
         return unity(p[0], p[1], p[2], hmin)
@@ -235,10 +289,26 @@ def greenkeeper(hmin):
                       "aim_points": [{"name": a["name"], "position": u(a["utm"])} for a in h["aim_points"]],
                       "green_center": u(h["green"]["centre_utm"]),
                       "hazards": [{"type": z["type"], "polygon": [[round(x - TE["xmin"], 2), round(y - TE["ymin"], 2)] for x, y in z["polygon_utm"]]}
-                                  for z in h["hazards"]]})
+                                  for z in h["hazards"]],
+                      "gkd": gkd_hole(h, hmin)})
+    from surface_classify import osm_geoms
+    course = max((g for _, t, g in osm_geoms() if t.get("leisure") == "golf_course" and g.geom_type == "Polygon"),
+                 key=lambda g: g.area, default=None)
+    sr = {}
+    for k, slot in GKD_TEE_SLOT.items():
+        r = C.RATINGS.get(k)
+        if r:
+            sr[f"{slot}SR"] = f"{r[0]:.1f}/{r[1]}"
+            if r[2] is not None:
+                sr[f"{slot}SR_women"] = f"{r[2]:.1f}/{r[3]}"
     gk = {"course": C.COURSE_NAME, "layout": C.LAYOUT, "frame": "Unity terrain (x east, y up, z north) metres",
           "tee_sets": [{"key": k, "name": n, "colour": c} for k, n, c in C.TEES],
           "ratings": {k: dict(zip(("men_rating", "men_slope", "women_rating", "women_slope", "total_yards"), v)) for k, v in C.RATINGS.items()},
+          "gkd": {"note": "GreenKeeper (GKD) vocabulary: TeeType slot per card tee, one 'rating/slope' string per slot (GKD holds "
+                          "one value per slot: pick men's or women's), pOOB = the OSM property line on the ground (our OB "
+                          "line), hazards = water / native rings with ground heights. Distances follow GreenKeeper's rule.",
+                  "tee_slots": GKD_TEE_SLOT, "ratings": sr, "par": sum(h["par"] for h in holes),
+                  "pOOB": {"coords": ring3d(list(course.exterior.coords), hmin) if course is not None else []}},
           "terrain": "see terrain.json", "holes": holes}
     json.dump(gk, open(OUT / "greenkeeper.json", "w"), indent=1)
     for old in OUT.glob("hole01_greenkeeper.json"):

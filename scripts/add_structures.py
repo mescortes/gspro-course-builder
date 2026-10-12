@@ -119,8 +119,12 @@ def sphere(c, r, k=12):
     return np.array(P), np.array(N), np.array(UV), np.array(I)
 
 
-def roof_mesh(poly, dsm, dem, h_tag):
-    """Triangulate the footprint (1 m interior grid) and lift vertices to a de-noised LiDAR roof surface."""
+def roof_mesh(poly, dsm, dem, h_tag, tags=None):
+    """Triangulate the footprint (1 m interior grid) and lift vertices to a de-noised LiDAR roof surface.
+
+    roof:shape=hipped (with height and roof:height, OSM conventions) builds a synthetic pyramid / hip roof instead: for
+    shelters newer than the 2018 LiDAR, whose DSM is the tree canopy that stood there."""
+    tags = tags or {}
     ring = np.asarray(poly.exterior.coords)[:-1]
     n = len(ring)
     pts = [ring]
@@ -139,6 +143,12 @@ def roof_mesh(poly, dsm, dem, h_tag):
     tri = triangle.triangulate({"vertices": P2 - P2.mean(0), "segments": S}, "p")
     V2 = tri["vertices"] + P2.mean(0); F = tri["triangles"]
     ground = float(np.percentile(dem(ring[:, 0], ring[:, 1]), 10))
+    if tags.get("roof:shape") == "hipped" and h_tag:
+        import shapely
+        rise = float(tags.get("roof:height", 0.4 * h_tag))
+        d = shapely.distance(shapely.points(V2), poly.exterior)
+        z = ground + h_tag - rise + rise * d / max(d.max(), 1e-6)
+        return V2, F, z, ground
     # roof heights: DSM sampled slightly inside the edge, clipped to a plausible band, median-smoothed
     c = np.asarray(poly.centroid.coords[0])
     inset = V2 + (c - V2) * np.clip(0.8 / (np.linalg.norm(c - V2, axis=1, keepdims=True) + 1e-6), 0, 0.5)
@@ -176,7 +186,7 @@ def add_buildings(glb, root):
             h_tag = float(t.get("height", "0") or 0)
         except ValueError:
             h_tag = 0
-        V2, F, z, ground = roof_mesh(g, dsm, dem, h_tag)
+        V2, F, z, ground = roof_mesh(g, dsm, dem, h_tag, t)
         ring = np.asarray(g.exterior.coords)[:-1]; n = len(ring)
         # roof colour from imagery
         rows, cols = rasterio.transform.rowcol(img.transform, V2[:, 0], V2[:, 1])

@@ -33,7 +33,7 @@ MATS = {
     "native":    ("Pinestraw",   PH / "withered_grass/diffuse.jpg", PH / "withered_grass/nor_gl.jpg", PH / "withered_grass/arm.jpg", 3.0, 1.0, 0.6),
     "cartpath":  ("Concrete",    PH / "concrete_floor_worn_001/diffuse.jpg", PH / "concrete_floor_worn_001/nor_gl.jpg", PH / "concrete_floor_worn_001/arm.jpg", 4.0, 0.6, 0.4),
     "road":      ("Road",        PH / "asphalt_02/diffuse.jpg", PH / "asphalt_02/nor_gl.jpg", PH / "asphalt_02/arm.jpg", 6.0, 0.8, 0.6),
-    "building":  ("Concrete",    PH / "concrete_floor_worn_001/diffuse.jpg", PH / "concrete_floor_worn_001/nor_gl.jpg", PH / "concrete_floor_worn_001/arm.jpg", 4.0, 0.6, 0.6),
+    "building":  ("Building_Base", PH / "concrete_floor_worn_001/diffuse.jpg", PH / "concrete_floor_worn_001/nor_gl.jpg", PH / "concrete_floor_worn_001/arm.jpg", 4.0, 0.6, 0.6),
     "court":     ("Court",       PH / "concrete_floor_worn_001/diffuse.jpg", PH / "concrete_floor_worn_001/nor_gl.jpg", PH / "concrete_floor_worn_001/arm.jpg", 6.0, 0.3, 0.3),
     # the pond bed under the WaterPlane (OPCD Water_Base) and its 0.15 m edge band (Water_Edge, 2nd material slot)
     "water":     ("Water_Base",  PH / "brown_mud_leaves_01/diffuse.jpg", PH / "brown_mud_leaves_01/nor_gl.jpg", PH / "brown_mud_leaves_01/arm.jpg", 3.0, 1.0, 0.5),
@@ -42,8 +42,13 @@ MATS = {
     "bunkerlip": ("Bunker_Lip",  GEN / "rough/albedo.jpg",     GEN / "rough/normal.png",     GEN / "rough/orm.jpg",     2.5, 0.9, 0.60),
 }
 # OPCD object name for a surface, when it differs from "<Hole>_<material>": the water edge band is the 2nd material
-# slot of the Water_Base object (SetMeshMaterial.cs assigns sharedMaterials [Water_Base, Water_Edge])
-OBJECT = {"wateredge": "Water_Base"}
+# slot of the Water_Base object (SetMeshMaterial.cs assigns sharedMaterials [Water_Base, Water_Edge]); every object
+# name carries exactly one SetMeshMaterial token (roads -> concrete physics, courts -> Custom1, ground under
+# buildings -> concrete)
+OBJECT = {"wateredge": "Water_Base", "road": "Concrete_Road", "court": "Custom1_Court", "building": "Concrete_Building"}
+# course-wide (Hole99) grass surfaces are split into TILE x TILE m pieces: a single 900k-vertex Hole99_Rough is a
+# MeshCollider / 3DG cost and is never culled (research/GSPRO_COSMETICS.md 3.1)
+TILED = ("rough", "semirough", "deeprough", "native")
 TINT_FROM = {"bunkerlip": "rough"}   # photo colour source for surfaces with no polygons of their own
 SHADE = {"bunkerlip": 0.82}          # vertex-colour multiplier (the lip face is in shadow)
 TEX_SIZE = 2048
@@ -177,6 +182,13 @@ def tint_for_surface(s, gs, img, Y, openm, W, H, T):
     return res, stats
 
 
+def season_grade(tint, stats, target_srgb):
+    """Move a surface's median tint to target_srgb (0-255), keeping the photo's relative variation per channel."""
+    tgt = srgb_to_lin(np.asarray(target_srgb, np.float32) / 255.0)
+    k = (tgt / np.maximum(stats[0], 1e-4)).astype(np.float32)
+    return tint * k, stats * k
+
+
 STRIPES = {  # surface: (stripe width m, contrast, cross-cut contrast)
     "fairway": (4.2, 0.12, 0.0), "tee": (1.6, 0.07, 0.0), "green": (0.85, 0.06, 0.03), "semirough": (2.4, 0.03, 0.0)}
 _HOLE_LINES = None
@@ -288,6 +300,8 @@ def add_terrain(glb, root, feats_path=None):
         else:
             tint, stats = (tint_for_surface(tsrc, by_surface.get(tsrc, []), img, Y, openm, W, H, T)
                            if tsrc in by_surface and sname not in NO_TINT else (None, None))
+            if tint is not None and C.TURF_TINT and tsrc in C.TURF_TINT:
+                tint, stats = season_grade(tint, stats, C.TURF_TINT[tsrc])
             if tsrc in TINT_FROM.values():
                 tint_cache[tsrc] = (tint, stats)
         if alb is not None:
@@ -330,8 +344,19 @@ def add_terrain(glb, root, feats_path=None):
             uv0 -= np.floor(uv0.mean(0))  # keep numbers small
             name = f"Hole{int(h):02d}_{OBJECT.get(sname, opcd)}"
             col1 = masks[vid] if sname in grass_spec.GRASS3DG else np.zeros((len(vid), 3), np.float32)
+            idx = inv.reshape(-1, 3)
+            if int(h) == 99 and sname in TILED:
+                cen = P[idx].mean(1)
+                ti = ((cen[:, 0] - C.CORE["xmin"]) // C.TILE).astype(int); tj = ((cen[:, 1] - C.CORE["ymin"]) // C.TILE).astype(int)
+                for key in sorted(set(zip(ti.tolist(), tj.tolist()))):
+                    sel = (ti == key[0]) & (tj == key[1])
+                    v2, inv2 = np.unique(idx[sel], return_inverse=True)
+                    groups.setdefault(f"{name}_t{key[0]:02d}_{key[1]:02d}", []).append(dict(
+                        pos=pos[v2], nrm=nrm_m[v2], uv0=uv0[v2], col=col[v2], col1=col1[v2], idx=inv2.reshape(-1, 3),
+                        material=mat_index))
+                continue
             groups.setdefault(name, []).append(dict(pos=pos, nrm=nrm_m, uv0=uv0, col=col, col1=col1,
-                                                    idx=inv.reshape(-1, 3), material=mat_index))
+                                                    idx=idx, material=mat_index))
         del tint, interp
     terrain = glb.node("Terrain", parent=root)
     for name in sorted(groups):

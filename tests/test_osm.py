@@ -60,3 +60,31 @@ def test_split_bbox_tiles_cover_the_box():
     assert len(tiles) == 16
     assert min(t[0] for t in tiles) == -80.6 and max(t[2] for t in tiles) == -80.5
     assert min(t[1] for t in tiles) == 43.4 and max(t[3] for t in tiles) == 43.5
+
+
+def _fake_root(tmp_path, monkeypatch, calls):
+    monkeypatch.setattr(fetch_data.C, "ROOT", tmp_path)
+    def fake_overpass(query, path):
+        calls.append(path); Path(path).write_text('{"elements": []}'); return True
+    monkeypatch.setattr(fetch_data, "overpass", fake_overpass)
+    (tmp_path / "research").mkdir()
+
+
+def test_fetch_osm_keeps_the_committed_snapshot(tmp_path, monkeypatch):
+    """The model is built from the OSM snapshot in research/: `fetch_data.py osm` must not overwrite it (README:
+    delete the files to refresh)."""
+    calls = []
+    _fake_root(tmp_path, monkeypatch, calls)
+    for n in ("osm_all.json", "osm_golf.json"):
+        (tmp_path / "research" / n).write_text('{"elements": [{"type": "node", "id": 1}]}')
+    fetch_data.fetch_osm()
+    assert calls == []
+    assert (tmp_path / "research/osm_all.json").read_text() == '{"elements": [{"type": "node", "id": 1}]}'
+
+
+def test_fetch_osm_downloads_when_the_snapshot_is_missing(tmp_path, monkeypatch):
+    calls = []
+    _fake_root(tmp_path, monkeypatch, calls)
+    (tmp_path / "research/osm_golf.json").write_text('{"elements": []}')  # half a snapshot: refetch both
+    fetch_data.fetch_osm()
+    assert [Path(p).name for p in calls] == ["osm_all.json", "osm_golf.json"]
