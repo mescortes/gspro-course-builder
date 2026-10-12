@@ -119,8 +119,12 @@ def sphere(c, r, k=12):
     return np.array(P), np.array(N), np.array(UV), np.array(I)
 
 
-def roof_mesh(poly, dsm, dem, h_tag, tags=None):
-    """Triangulate the footprint (1 m interior grid) and lift vertices to a de-noised LiDAR roof surface.
+def roof_mesh(poly, dsm, dem, h_tag, tags=None, bdsm=None):
+    """Triangulate the footprint (1 m interior grid, 0.5 m with `bdsm`) and lift vertices to a de-noised LiDAR roof.
+
+    bdsm: building-class (LiDAR class 6) DSM, NaN where a cell has no building return. Preferred over the first-return
+    `dsm`, which carries the crowns of trees overhanging the roof: cells without building returns take the height of
+    the nearest roof vertex that has one, and only a light 0.8 m median is applied, so ridges and hips survive.
 
     roof:shape=hipped (with height and roof:height, OSM conventions) builds a synthetic pyramid / hip roof instead: for
     shelters newer than the 2018 LiDAR, whose DSM is the tree canopy that stood there."""
@@ -129,7 +133,8 @@ def roof_mesh(poly, dsm, dem, h_tag, tags=None):
     n = len(ring)
     pts = [ring]
     minx, miny, maxx, maxy = poly.bounds
-    gx, gy = np.meshgrid(np.arange(minx + 0.5, maxx, 1.0), np.arange(miny + 0.5, maxy, 1.0))
+    step = 0.5 if bdsm is not None else 1.0
+    gx, gy = np.meshgrid(np.arange(minx + step / 2, maxx, step), np.arange(miny + step / 2, maxy, step))
     inner = poly.buffer(-0.6)
     cand = np.c_[gx.ravel(), gy.ravel()]
     if not inner.is_empty:
@@ -152,11 +157,23 @@ def roof_mesh(poly, dsm, dem, h_tag, tags=None):
     # roof heights: DSM sampled slightly inside the edge, clipped to a plausible band, median-smoothed
     c = np.asarray(poly.centroid.coords[0])
     inset = V2 + (c - V2) * np.clip(0.8 / (np.linalg.norm(c - V2, axis=1, keepdims=True) + 1e-6), 0, 0.5)
+    from scipy.spatial import cKDTree
+    if bdsm is not None:
+        # building returns are clean up to the edge: a 0.3 m inset only keeps eave samples off the wall line
+        ins = V2 + (c - V2) * np.clip(0.3 / (np.linalg.norm(c - V2, axis=1, keepdims=True) + 1e-6), 0, 0.5)
+        zb = np.asarray(bdsm(ins[:, 0], ins[:, 1], order=0), float)
+        ok = np.isfinite(zb) & (zb > ground + 1.0)
+        if ok.sum() >= max(3, 0.25 * len(zb)):
+            if not ok.all():
+                _, j = cKDTree(V2[ok]).query(V2[~ok])
+                zb[~ok] = zb[ok][j]
+            zb = np.minimum(zb, np.percentile(zb, 99) + 0.2)   # stray returns (antennas, birds)
+            nb = cKDTree(V2).query_ball_point(V2, 0.8)
+            return V2, F, np.array([np.median(zb[i]) for i in nb]), ground
     z = dsm(inset[:, 0], inset[:, 1])
     top = ground + (h_tag if h_tag else float(np.median(z) - ground))
     # roofs are smooth planes at this scale: clamp to the tagged height band and low-pass along the mesh
     z = np.clip(z, top - 2.0, top + 0.6)
-    from scipy.spatial import cKDTree
     kd = cKDTree(V2)
     nb = kd.query_ball_point(V2, 2.5)
     z = np.array([np.median(z[i]) for i in nb])
@@ -166,6 +183,7 @@ def roof_mesh(poly, dsm, dem, h_tag, tags=None):
 def add_buildings(glb, root):
     G = osm_geoms()
     dsm = Raster(C.BUILD / "dsm.tif"); dem = Raster(C.BUILD / "dem.tif")
+    bdsm = Raster(C.BUILD / "bdsm.tif") if (C.BUILD / "bdsm.tif").exists() else None
     core = box(C.CORE["xmin"] + 1, C.CORE["ymin"] + 1, C.CORE["xmax"] - 1, C.CORE["ymax"] - 1)
     wall_m = glb.material("Wall_Stucco", base_color=_enc(PH / "white_stucco/diffuse.jpg", "albedo", 1024),
                           normal=_enc(PH / "white_stucco/nor_gl.jpg", "normal", 1024), orm=_enc(PH / "white_stucco/arm.jpg", "orm", 1024))
@@ -186,8 +204,10 @@ def add_buildings(glb, root):
             h_tag = float(t.get("height", "0") or 0)
         except ValueError:
             h_tag = 0
-        V2, F, z, ground = roof_mesh(g, dsm, dem, h_tag, t)
+        V2, F, z, ground = roof_mesh(g, dsm, dem, h_tag, t, bdsm=bdsm)
         ring = np.asarray(g.exterior.coords)[:-1]; n = len(ring)
+        # storeys with windows from the tagged height, else from the LiDAR eaves (the untagged clubhouse is 5-9 m)
+        tall = (h_tag if h_tag else float(np.median(z[:n])) - ground) >= 5
         # roof colour from imagery
         rows, cols = rasterio.transform.rowcol(img.transform, V2[:, 0], V2[:, 1])
         a = img.read([1, 2, 3], window=rasterio.windows.Window(min(cols), min(rows), max(cols) - min(cols) + 1, max(rows) - min(rows) + 1))
@@ -222,14 +242,14 @@ def add_buildings(glb, root):
             b = len(Pw)
             Pw += [[*p0, g0], [*p1, g1], [*p1, z1], [*p0, z0]]
             Nw += [nrm] * 4
-            if h_tag >= 5:  # facade tiles 4 m x 3.5 m (one storey of windows per 3.5 m)
+            if tall:  # facade tiles 4 m x 3.5 m (one storey of windows per 3.5 m)
                 gb = min(g0, g1)
                 UVw += [[0, -(g0 - gb) / 3.5], [L / 4, -(g1 - gb) / 3.5], [L / 4, -(z1 - gb) / 3.5], [0, -(z0 - gb) / 3.5]]
             else:
                 UVw += [[0, g0 / 3], [L / 3, g1 / 3], [L / 3, z1 / 3], [0, z0 / 3]]
             Iw += [[b, b + 1, b + 2], [b, b + 2, b + 3]] if ccw else [[b, b + 2, b + 1], [b, b + 3, b + 2]]
         prims.append(dict(pos=mm(np.array(Pw)), nrm=model_vec(np.array(Nw)), uv0=np.array(UVw), idx=np.array(Iw),
-                          material=facade_m if h_tag >= 5 else wall_m))
+                          material=facade_m if tall else wall_m))
         glb.node(f"Building_{oid}", mesh=glb.mesh(f"Building_{oid}", prims), parent=grp)
         nb += 1
     print("buildings", nb)
@@ -274,6 +294,96 @@ def add_bridges(glb, root):
     print("bridges", nbr)
 
 
+PATIOS = C.ROOT / "features" / "patios.geojson"
+
+
+def patio_tables(poly, spacing=3.2, margin=1.4):
+    """Dining-table centres (n, 2): a staggered grid of `spacing` aligned with the patio's long side, kept `margin` m
+    inside the paving (room for the chairs)."""
+    import shapely
+    inner = poly.buffer(-margin)
+    if inner.is_empty:
+        return np.zeros((0, 2))
+    r = np.asarray(poly.minimum_rotated_rectangle.exterior.coords)[:3]
+    e = [r[1] - r[0], r[2] - r[1]]
+    ax = max(e, key=np.linalg.norm); ax = ax / np.linalg.norm(ax); ay = np.array([-ax[1], ax[0]])
+    c = np.asarray(poly.centroid.coords[0]); R = np.linalg.norm(np.asarray(poly.bounds[2:]) - poly.bounds[:2])
+    dy = spacing * np.sqrt(3) / 2
+    best = np.zeros((0, 2))
+    for ox in np.linspace(0, spacing, 4, endpoint=False):           # pick the grid phase that seats the most tables
+        for oy in np.linspace(0, dy, 3, endpoint=False):
+            P = [c + ax * (i * spacing + (j % 2) * spacing / 2 + ox) + ay * (j * dy + oy)
+                 for j in range(-int(R / dy) - 1, int(R / dy) + 2) for i in range(-int(R / spacing) - 1, int(R / spacing) + 2)]
+            P = np.array(P); P = P[shapely.contains_xy(inner, P[:, 0], P[:, 1])]
+            if len(P) > len(best):
+                best = P
+    return best
+
+
+def add_patios(glb, root):
+    """Curated paved terraces (features/patios.geojson): a paving slab 10 cm proud of the terrain, and dining tables
+    with chairs and umbrellas where tables=yes."""
+    if not PATIOS.exists():
+        return
+    import shapely
+    from shapely.geometry import shape
+    dem = Raster(C.BUILD / "dem.tif")
+    pave = glb.material("Patio_Paving", base_color=_enc(PH / "concrete_floor_worn_001/diffuse.jpg", "albedo", 1024),
+                        normal=_enc(PH / "concrete_floor_worn_001/nor_gl.jpg", "normal", 1024),
+                        orm=_enc(PH / "concrete_floor_worn_001/arm.jpg", "orm", 1024))
+    metal = glb.material("Patio_Metal", base_factor=(0.08, 0.08, 0.08, 1), rough=0.5, metal=0.6)
+    top_m = glb.material("Patio_TableTop", base_factor=(0.55, 0.52, 0.47, 1), rough=0.6)
+    canvas = glb.material("Patio_Umbrella", base_factor=(0.86, 0.84, 0.78, 1), rough=0.9, double_sided=True)
+    grp = glb.node("Patios", parent=root)
+    for k, f in enumerate(json.load(open(PATIOS))["features"]):
+        g = shape(f["geometry"]).buffer(0)
+        g = Polygon(g.exterior.coords[::-1]) if not g.exterior.is_ccw else g
+        ring = np.asarray(g.exterior.coords)[:-1]; n = len(ring)
+        minx, miny, maxx, maxy = g.bounds
+        gx, gy = np.meshgrid(np.arange(minx + 0.5, maxx, 1.0), np.arange(miny + 0.5, maxy, 1.0))
+        cand = np.c_[gx.ravel(), gy.ravel()]; cand = cand[shapely.contains_xy(g.buffer(-0.3), cand[:, 0], cand[:, 1])]
+        P2 = np.concatenate([ring, cand])
+        tri = triangle.triangulate({"vertices": P2 - P2.mean(0), "segments": np.c_[np.arange(n), (np.arange(n) + 1) % n]}, "p")
+        V2 = tri["vertices"] + P2.mean(0); F = tri["triangles"]
+        # a level slab: the median ground plus 10 cm, never below the ground by more than the skirt shows
+        zg = dem(V2[:, 0], V2[:, 1]); top = float(np.percentile(zg, 70)) + 0.10
+        zs = np.maximum(top, zg + 0.03)
+        Pr = np.c_[V2, zs]
+        e1 = Pr[F[:, 1]] - Pr[F[:, 0]]; e2 = Pr[F[:, 2]] - Pr[F[:, 0]]
+        F = np.where(((e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0]) > 0)[:, None], F, F[:, [0, 2, 1]])
+        prims = [dict(pos=mm(Pr), nrm=model_vec(np.tile([0, 0, 1.0], (len(Pr), 1))), uv0=V2 / 2.0 - np.floor(V2.mean(0) / 2.0),
+                      idx=F, material=pave)]
+        Ps, Ns, Us, Is = [], [], [], []   # skirt down to the ground
+        for i in range(n):
+            p0, p1 = ring[i], ring[(i + 1) % n]; d = p1 - p0; L = np.linalg.norm(d)
+            if L < 1e-3:
+                continue
+            nr = np.array([d[1], -d[0], 0]) / L; b = len(Ps)
+            Ps += [[*p0, zg[i] - 0.2], [*p1, zg[(i + 1) % n] - 0.2], [*p1, zs[(i + 1) % n]], [*p0, zs[i]]]
+            Ns += [nr] * 4; Us += [[0, 0], [L / 2, 0], [L / 2, 0.15], [0, 0.15]]
+            Is += [[b, b + 1, b + 2], [b, b + 2, b + 3]]
+        prims.append(dict(pos=mm(np.array(Ps)), nrm=model_vec(np.array(Ns)), uv0=np.array(Us), idx=np.array(Is), material=pave))
+        if f["properties"].get("tables") == "yes":
+            def part(c0, c1, r0, r1, mat, kk=12, cap=True):
+                R = cylinder(np.asarray(c0, float), np.asarray(c1, float), r0, r1, kk, cap)
+                prims.append(dict(pos=mm(R[0]), nrm=model_vec(R[1]), uv0=R[2], idx=R[3], material=mat))
+            rng = np.random.default_rng(k)
+            for (x, y) in patio_tables(g):
+                z0 = float(np.maximum(top, dem(x, y)[0] + 0.03))
+                part((x, y, z0), (x, y, z0 + 0.72), 0.04, 0.04, metal, 6, False)
+                part((x, y, z0 + 0.72), (x, y, z0 + 0.75), 0.5, 0.5, top_m, 16)
+                part((x, y, z0 + 0.75), (x, y, z0 + 2.25), 0.025, 0.025, metal, 6, False)
+                part((x, y, z0 + 1.95), (x, y, z0 + 2.4), 1.25, 0.03, canvas, 12, False)
+                a0 = rng.uniform(0, np.pi / 2)
+                for a in a0 + np.arange(4) * np.pi / 2:          # four chairs round each table
+                    cx, cy = x + 0.8 * np.cos(a), y + 0.8 * np.sin(a)
+                    part((cx, cy, z0), (cx, cy, z0 + 0.45), 0.2, 0.2, metal, 8)
+                    bx, by = x + 1.0 * np.cos(a), y + 1.0 * np.sin(a)
+                    part((bx, by, z0 + 0.45), (bx, by, z0 + 0.9), 0.17, 0.17, metal, 4, False)
+        glb.node(f"Patio_{k}", mesh=glb.mesh(f"Patio_{k}", prims), parent=grp)
+    print("patios", k + 1)
+
+
 def _enc(path, kind, size):
     from export_course import encode
     return encode(path, kind, None, size)
@@ -285,4 +395,5 @@ def add(glb, root):
         if hole.get("pins") and hole.get("tees"):
             add_flag_and_markers(glb, root, hole)
     add_buildings(glb, root)
+    add_patios(glb, root)
     add_bridges(glb, root)
