@@ -31,8 +31,6 @@ Open items after QA round 2. Every hole scored 8/10 or more from its verifier; d
   the pads needs the new outlines and the deck heights (a site survey or newer LiDAR); the markers would then move,
   so the yardages (exact today) would need checking again.
 * **Hole 14:** a 9 x 12 m rectangle of new turf at about 537207, 4810908 (sod nursery or a new forward tee).
-* **Hole 15:** traced path 202 along the left fairway edge (537574-537632, 4810581-4810596) connects to nothing. It
-  may be stone dust or a drainage strip.
 
 ## Model polish
 
