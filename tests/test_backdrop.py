@@ -36,3 +36,9 @@ def test_summer_grade_leaves_pavement_and_roofs_alone():
     a, ndvi = _scene(np.random.default_rng(1))
     out = B.summer_grade(a, ndvi)
     assert np.abs(out[:, 40:].astype(int) - a[:, 40:].astype(int)).max() <= 1
+
+
+def test_summer_tif_sits_beside_the_backdrop_image():
+    """export_gspro's outer overlay and build_backdrop.imagery both locate the graded photo through summer_tif."""
+    p = B.NEAR_IMG
+    assert B.summer_tif(p) == p.with_name(p.stem + "_summer.tif")

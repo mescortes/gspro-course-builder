@@ -83,6 +83,11 @@ def summer_grade(a, ndvi, target=SUMMER_GREEN, keep_l=0.5):
     return out
 
 
+def summer_tif(path):
+    """<stem>_summer.tif: the graded RGB, georeferenced like <stem>.tif."""
+    return path.with_name(path.stem + "_summer.tif")
+
+
 def imagery(ext, res, path):
     """<stem>.tif: SWOOP RGB; <stem>_nir.tif: its NIR band (same grid); <stem>_summer.tif: RGB after summer_grade
     (read by the GSPro outer overlay); <stem>.jpg: the summer RGB with lift_shadows (viewer / glTF drape)."""
