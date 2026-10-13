@@ -257,6 +257,13 @@ def turf_patches(P, amp=0.06):
     return lum[:, None] * (1 + np.outer(t, [0.02, 0.008, -0.04]))
 
 
+def sand_shade(nz, depth=0.2):
+    """Vertex-colour factor for bunker sand from the surface normal's vertical component: steep faces (compacted,
+    raked less, often in their own shade) up to `depth` darker than the floor, rising smoothly to ~40 degrees."""
+    x = np.clip((1 - np.asarray(nz, float)) / 0.25, 0, 1)
+    return 1 - depth * x * x * (3 - 2 * x)
+
+
 def canopy_ao(P):
     """Sky-occlusion under/near tree crowns (direct shadows are rendered live; this is the ambient part)."""
     global _AO
@@ -357,6 +364,8 @@ def add_terrain(glb, root, feats_path=None):
                 col *= canopy_ao(P)[:, None] * SHADE.get(sname, 1.0)
                 if sname in GRASS:
                     col *= turf_patches(P)
+                elif sname == "bunker":
+                    col *= sand_shade(N[vid, 2])[:, None] * turf_patches(P, amp=0.04)
                 col = np.clip(col, 0, 1)
             else:
                 col = np.ones((len(P), 3)) * (canopy_ao(P)[:, None] * 0.9 if sname in NO_TINT else 1.0)
