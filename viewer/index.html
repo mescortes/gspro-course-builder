@@ -57,10 +57,11 @@ const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, logarithmicDepthBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
-// AgX, not ACES: ACES crushed the red channel of mid / dark greens, so summer turf rendered as a saturated Kelly
-// green and shade went near-black green. ?tone=aces restores the old look.
-renderer.toneMapping = params.get('tone') === 'aces' ? THREE.ACESFilmicToneMapping : THREE.AgXToneMapping;
-renderer.toneMappingExposure = parseFloat(params.get('exposure') || '1.15');
+// Khronos PBR Neutral, not ACES: ACES crushed the red channel of mid / dark greens, so summer turf rendered as a
+// saturated Kelly green and shade went near-black green; AgX washed it out to sage. ?tone=aces|agx to compare.
+const TONE = { aces: THREE.ACESFilmicToneMapping, agx: THREE.AgXToneMapping, neutral: THREE.NeutralToneMapping };
+renderer.toneMapping = TONE[params.get('tone')] ?? THREE.NeutralToneMapping;
+renderer.toneMappingExposure = parseFloat(params.get('exposure') || '1.5');
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
