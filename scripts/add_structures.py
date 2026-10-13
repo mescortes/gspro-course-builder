@@ -124,7 +124,7 @@ def roof_mesh(poly, dsm, dem, h_tag, tags=None, bdsm=None):
 
     bdsm: building-class (LiDAR class 6) DSM, NaN where a cell has no building return. Preferred over the first-return
     `dsm`, which carries the crowns of trees overhanging the roof: cells without building returns take the height of
-    the nearest roof vertex that has one, and a 2 m median (rooftop units, LiDAR noise) still leaves the ridges and hips.
+    the nearest roof vertex that has one, and the roof is rebuilt from planes (planar_roof).
 
     roof:shape=hipped (with height and roof:height, OSM conventions) builds a synthetic pyramid / hip roof instead: for
     shelters newer than the 2018 LiDAR, whose DSM is the tree canopy that stood there."""
@@ -168,8 +168,7 @@ def roof_mesh(poly, dsm, dem, h_tag, tags=None, bdsm=None):
                 _, j = cKDTree(V2[ok]).query(V2[~ok])
                 zb[~ok] = zb[ok][j]
             zb = np.minimum(zb, np.percentile(zb, 99) + 0.2)   # stray returns (antennas, birds)
-            nb = cKDTree(V2).query_ball_point(V2, 2.0)
-            return V2, F, np.array([np.median(zb[i]) for i in nb]), ground
+            return V2, F, planar_roof(V2, zb, poly, inset=0.3), ground
     z = dsm(inset[:, 0], inset[:, 1])
     top = ground + (h_tag if h_tag else float(np.median(z) - ground))
     # roofs are smooth planes at this scale: clamp to the tagged height band and low-pass along the mesh
@@ -178,6 +177,34 @@ def roof_mesh(poly, dsm, dem, h_tag, tags=None, bdsm=None):
     nb = kd.query_ball_point(V2, 2.5)
     z = np.array([np.median(z[i]) for i in nb])
     return V2, F, z, ground
+
+
+def planar_roof(V2, zb, poly, inset=0.0, fit_d=4.0):
+    """Roof heights at V2 made of planes: eave + pitch * (distance to the wall line), capped at the local LiDAR plateau.
+
+    zb are building-class LiDAR heights sampled `inset` m inside the wall line. The eave height and the pitch are a
+    robust line fit of zb against distance within `fit_d` m of the walls (rooftop units and noise trimmed), so every
+    roof face is an exact plane meeting its neighbours in straight ridges and hips (the clubhouse's hip roofs; gable
+    ends become hips). The cap, the 90th percentile of zb within 3 m plus 0.2 m, keeps flat roof sections flat."""
+    import shapely
+    from scipy.spatial import cKDTree
+    d = shapely.distance(shapely.points(V2), poly.exterior)
+    m = d <= fit_d
+    if m.sum() < 6:
+        return np.full(len(V2), float(np.median(zb)))
+    x, y = d[m] + inset, zb[m]
+    keep = np.ones(len(x), bool)
+    for _ in range(4):                                    # trimmed least squares: drop rooftop units / noise
+        A = np.c_[np.ones(keep.sum()), x[keep]]
+        (e, s), *_ = np.linalg.lstsq(A, y[keep], rcond=None)
+        r = y - (e + s * x)
+        mad = np.median(np.abs(r[keep])) + 1e-3
+        keep = np.abs(r) < 3 * 1.4826 * mad
+    s = float(np.clip(s, 0.0, 1.5))
+    if s < 0.05:                                          # flat roof: one plane at the median height
+        return np.full(len(V2), float(np.median(zb)))
+    cap = np.array([np.percentile(zb[i], 90) for i in cKDTree(V2).query_ball_point(V2, 3.0)]) + 0.2
+    return np.minimum(e + s * d, cap)
 
 
 def roof_uv(P, N, tile=3.0):
@@ -254,7 +281,7 @@ def add_buildings(glb, root):
         e1 = Pr[F[:, 1]] - Pr[F[:, 0]]; e2 = Pr[F[:, 2]] - Pr[F[:, 0]]
         up = (e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0]) > 0
         F = np.where(up[:, None], F, F[:, [0, 2, 1]])
-        Nr = roof_normals(V2, F, z)
+        Nr = roof_normals(V2, F, z, r=0.6)   # planar faces: little smoothing, crisp ridges
         prims = [dict(pos=mm(Pr), nrm=model_vec(Nr), uv0=roof_uv(Pr, Nr), idx=F, material=roof_m, col=tint)]
         # walls: from below ground to the roof edge
         Pw, Nw, UVw, Iw = [], [], [], []
