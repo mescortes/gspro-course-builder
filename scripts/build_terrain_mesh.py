@@ -209,7 +209,7 @@ def height_field():
 
 
 def level_tees(dem, T, tees, max_slope=0.01, deck_tol=0.06, deck_slope=0.035, max_area=500.0, bank=1 / 3,
-               max_feather=8.0, flat_frac=0.8, protect=None):
+               max_feather=8.0, flat_frac=0.8, protect=None, holes=None, neighbour_m=40.0, max_lift=2.5):
     """In place: tees that are not decks in the LiDAR (built after the survey, e.g. Westmount's 2023 / 2025 back tees on
     holes 5, 8 and 11) get a synthetic deck - a plane of at most `max_slope` at the tee's mean height - blended into the
     surrounding ground. The feather (up to `max_feather` m) is wide enough that the banks are at most `bank` (rise / run)
@@ -222,11 +222,30 @@ def level_tees(dem, T, tees, max_slope=0.01, deck_tol=0.06, deck_slope=0.035, ma
     * a tee whose cells are at least `flat_frac` locally flat (<= `deck_slope`): several real decks merged into one
       polygon, with a step between them (QA round 2, hole 8 White / Red);
     * a polygon over `max_area` m2 (a digitising error, not a deck; flattening it would terrace a hillside - QA fixes
-      the polygon instead)."""
+      the polygon instead).
+
+    With `holes` (the hole of each tee): a new tee whose deck at the slope's mean would be cut into the hill (ground
+    within 3 m of it more than 0.3 m higher) and that has a higher real deck of the same hole within `neighbour_m` m is
+    built up (at most `max_lift` m) to that deck's level. Hole 8's 2025 Blue tee otherwise sat 1.7 m below the White
+    deck beside it, in a hole. Decks are never lowered to a neighbour (hole 11's back tee would sink 2.2 m)."""
     from rasterio.features import rasterize
     from rasterio.windows import Window, transform as wtransform
     H, W = dem.shape; r = abs(T.a)
-    for p in tees:
+    holes = list(holes) if holes is not None else [None] * len(tees)
+    real = []   # (hole, polygon, deck height) of the tees that are real 2018 decks
+    for p, hn in zip(tees, holes):
+        if hn is None or p.area > max_area:
+            continue
+        x0, y0, x1, y1 = p.buffer(2).bounds
+        c0 = max(0, int((x0 - T.c) / T.a)); c1 = min(W, int((x1 - T.c) / T.a) + 1)
+        r0 = max(0, int((T.f - y1) / r)); r1 = min(H, int((T.f - y0) / r) + 1)
+        if c1 <= c0 or r1 <= r0:
+            continue
+        sub = dem[r0:r1, c0:c1]
+        m = rasterize([(p, 1)], out_shape=sub.shape, transform=wtransform(Window(c0, r0, c1 - c0, r1 - r0), T)).astype(bool)
+        if m.sum() >= 20 and _is_real_deck(sub, m, r, deck_tol, deck_slope, flat_frac):
+            real.append((hn, p, float(sub[m].mean())))
+    for p, hn in zip(tees, holes):
         if p.area > max_area:
             print(f"level_tees: {p.area:.0f} m2 tee polygon at {p.centroid.x:.0f},{p.centroid.y:.0f} left alone (too big)",
                   flush=True)
@@ -241,22 +260,27 @@ def level_tees(dem, T, tees, max_slope=0.01, deck_tol=0.06, deck_slope=0.035, ma
         if inside.sum() < 20:
             continue
         sub = dem[r0:r1, c0:c1]
+        if _is_real_deck(sub, inside, r, deck_tol, deck_slope, flat_frac):
+            continue  # a real deck (or real decks with a step between them)
         yy, xx = np.nonzero(inside)
         A = np.c_[xx * r, yy * r, np.ones(len(xx))]
         coef, *_ = np.linalg.lstsq(A, sub[inside], rcond=None)
-        if np.std(sub[inside] - A @ coef) < deck_tol and np.hypot(coef[0], coef[1]) <= deck_slope:
-            continue  # a real deck
-        core = ndimage.binary_erosion(inside, iterations=max(1, int(1.0 / r)))
-        if core.sum() >= 20:
-            gy, gx = np.gradient(ndimage.gaussian_filter(sub, 0.5 / r), r)
-            if np.mean(np.hypot(gx, gy)[core] <= deck_slope) >= flat_frac:
-                continue  # real decks with a step between them
         g = np.array([coef[0], coef[1]]); s = np.hypot(*g)
         if s > max_slope:
             g *= max_slope / s
         cy, cx = yy.mean(), xx.mean()
         YY, XX = np.mgrid[0:r1 - r0, 0:c1 - c0]
-        plane = sub[inside].mean() + g[0] * (XX - cx) * r + g[1] * (YY - cy) * r
+        level = sub[inside].mean()
+        near = [(p.distance(q), z) for h2, q, z in real if h2 == hn and hn is not None and q is not p and p.distance(q) <= neighbour_m]
+        rim = (ndimage.distance_transform_edt(~inside) * r <= 3.0) & ~inside
+        cut = float(sub[rim].max() - level) if rim.any() else 0.0      # how far the deck at the mean sits below the slope
+        if near and cut > 0.3:
+            z = min(near)[1]
+            if level < z <= level + max_lift:
+                print(f"level_tees: hole {hn} tee at {p.centroid.x:.0f},{p.centroid.y:.0f} cut {cut:.1f} m into the slope: "
+                      f"built up to its neighbouring deck ({level:.2f} -> {z:.2f} m)", flush=True)
+                level = z
+        plane = level + g[0] * (XX - cx) * r + g[1] * (YY - cy) * r
         feather = float(np.clip(1.5 * np.abs(plane - sub)[inside].max() / bank, 1.0, max_feather))
         d = ndimage.distance_transform_edt(~inside) * r
         w = np.clip(1 - d / feather, 0, 1); w = w * w * (3 - 2 * w)   # smoothstep feather
@@ -265,6 +289,21 @@ def level_tees(dem, T, tees, max_slope=0.01, deck_tol=0.06, deck_slope=0.035, ma
             w[protect[r0:r1, c0:c1] & ~inside] = 0.0
         dem[r0:r1, c0:c1] = sub * (1 - w) + plane * w
     return dem
+
+
+def _is_real_deck(sub, m, r, deck_tol, deck_slope, flat_frac):
+    """level_tees' test for a tee (mask m on the DEM window sub) that already is a deck in the LiDAR: one plane within
+    deck_tol and deck_slope, or locally flat cells (real decks with a step between them)."""
+    yy, xx = np.nonzero(m)
+    A = np.c_[xx * r, yy * r, np.ones(len(xx))]
+    coef, *_ = np.linalg.lstsq(A, sub[m], rcond=None)
+    if np.std(sub[m] - A @ coef) < deck_tol and np.hypot(coef[0], coef[1]) <= deck_slope:
+        return True
+    core = ndimage.binary_erosion(m, iterations=max(1, int(1.0 / r)))
+    if core.sum() >= 20:
+        gy, gx = np.gradient(ndimage.gaussian_filter(sub, 0.5 / r), r)
+        return bool(np.mean(np.hypot(gx, gy)[core] <= deck_slope) >= flat_frac)
+    return False
 
 
 def blended_dem(dem, T, feats):
@@ -300,7 +339,7 @@ def blended_dem(dem, T, feats):
         out = out * (1 - w) + (dem + corr) * w
         del den, delta, gm, ext, corr, w
     # tees with no LiDAR deck (built after the 2018 survey) get a synthetic one
-    out = level_tees(out, T, [g for g, s, _ in feats if s == "tee"],
+    out = level_tees(out, T, [g for g, s, _ in feats if s == "tee"], holes=[h for g, s, h in feats if s == "tee"],
                      protect=mask(("cartpath", "road", "building", "green", "fringe", "bunker", "water")) > 0)
     # water: a flat water level per body (lowest ~20 % of the shoreline); under it a shelving bed (OPCD Water_Base),
     # and the banks inside the WaterPlane's outset kept above the water
