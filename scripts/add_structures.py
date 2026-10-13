@@ -185,9 +185,9 @@ def planar_roof(V2, zb, poly, inset=0.0, fit_d=4.0):
     zb are building-class LiDAR heights sampled `inset` m inside the wall line. The eave height and the pitch are a
     robust line fit of zb against distance within `fit_d` m of the walls (rooftop units and noise trimmed), so every
     roof face is an exact plane meeting its neighbours in straight ridges and hips (the clubhouse's hip roofs; gable
-    ends become hips). The cap, the 90th percentile of zb within 3 m plus 0.2 m, keeps flat roof sections flat."""
+    ends become hips). One cap per building, the 95th percentile of zb, gives large roofs a flat top: a local cap
+    followed rooftop units and tree-filled cells and left the clubhouse's patio wing lumpy."""
     import shapely
-    from scipy.spatial import cKDTree
     d = shapely.distance(shapely.points(V2), poly.exterior)
     m = d <= fit_d
     if m.sum() < 6:
@@ -203,8 +203,7 @@ def planar_roof(V2, zb, poly, inset=0.0, fit_d=4.0):
     s = float(np.clip(s, 0.0, 1.5))
     if s < 0.05:                                          # flat roof: one plane at the median height
         return np.full(len(V2), float(np.median(zb)))
-    cap = np.array([np.percentile(zb[i], 90) for i in cKDTree(V2).query_ball_point(V2, 3.0)]) + 0.2
-    return np.minimum(e + s * d, cap)
+    return np.minimum(e + s * d, float(np.percentile(zb, 95)) + 0.1)
 
 
 def roof_uv(P, N, tile=3.0):

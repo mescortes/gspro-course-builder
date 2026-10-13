@@ -149,3 +149,23 @@ def test_roof_is_planar_hips_from_the_eaves():
     assert np.sqrt(np.mean(err ** 2)) < 0.15 and np.abs(err).max() < 0.6
     edge = np.array([poly.exterior.distance(shapely.geometry.Point(p)) < 1e-6 for p in V2])
     assert np.abs(z[edge] - 344.0).max() < 0.15                      # one clean eave line
+
+
+def test_large_roof_has_one_flat_top_over_a_lumpy_plateau():
+    """On the clubhouse's patio wing a local cap followed rooftop units and tree-filled cells: the top of a big hipped
+    roof must be one level plane even when the LiDAR plateau is lumpy."""
+    import shapely
+    from add_structures import roof_mesh
+    poly = box(0, 0, 40, 30)
+    rng = np.random.default_rng(2)
+    bumps = rng.uniform(0, 40, (12, 2))
+    def lidar(e, n, order=1):
+        e = np.atleast_1d(e); n = np.atleast_1d(n)
+        d = shapely.distance(shapely.points(np.c_[e, n]), poly.exterior)
+        z = 344.0 + np.minimum(0.6 * d, 3.0)
+        for bx, by in bumps:
+            z = np.where(np.hypot(e - bx, n - by * 0.75) < 2.0, z + 1.2 * (d > 6), z)
+        return z + rng.normal(0, 0.05, e.shape)
+    V2, F, z, ground = roof_mesh(poly, _flat(355.0), _flat(340.0), 0, bdsm=lidar)
+    d = shapely.distance(shapely.points(V2), poly.exterior)
+    assert np.ptp(z[d > 7]) < 0.05
