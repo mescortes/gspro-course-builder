@@ -51,7 +51,7 @@ def lift_shadows(a, knee=40.0, keep=0.6, chroma=1.25):
     return out
 
 
-SUMMER_GREEN = (86, 106, 56)   # sRGB target for the median vegetated backdrop pixel (= config.TURF_TINT rough)
+SUMMER_GREEN = (86, 106, 56)   # sRGB target for the median vegetated backdrop pixel (cf. config.TURF_TINT rough)
 NDVI_LO, NDVI_HI = 0.08, 0.22   # NDVI ramp: below LO untouched (roads, roofs, water), above HI fully graded
 
 
