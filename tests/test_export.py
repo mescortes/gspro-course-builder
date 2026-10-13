@@ -19,3 +19,18 @@ def test_season_grade_moves_the_median_and_keeps_variation():
     ratio = out / tint
     assert ratio.reshape(-1, 3).std(0).max() < 1e-4                     # one gain per channel: relative detail kept
     assert np.allclose(st[0], np.median(out.reshape(-1, 3), 0), rtol=1e-4)
+
+
+def test_turf_patches_vary_slowly_and_gently():
+    """Course turf read as one flat colour (brightness std ~4 % across a fairway): moisture and wear patches add a
+    slow brightness / hue variation, a few percent, coherent over metres (not per-vertex noise), mean neutral."""
+    import export_course as X
+    x = np.arange(0, 400, 1.0)
+    P = np.c_[537000 + x, np.full_like(x, 4810800.0), np.zeros_like(x)]
+    f = X.turf_patches(P)
+    assert f.shape == (len(x), 3)
+    lum = f.mean(1)
+    assert abs(lum.mean() - 1) < 0.02 and 0.03 < lum.std() < 0.09
+    assert np.corrcoef(lum[:-1], lum[1:])[0, 1] > 0.95                 # 1 m apart: nearly the same
+    assert abs(np.corrcoef(lum[:-60], lum[60:])[0, 1]) < 0.6           # 60 m apart: different patches
+    assert np.all((f[:, 2] - f[:, 1]) * np.sign(lum - 1) <= 1e-9)      # brighter patches are yellower (less blue)
