@@ -34,3 +34,22 @@ def test_turf_patches_vary_slowly_and_gently():
     assert np.corrcoef(lum[:-1], lum[1:])[0, 1] > 0.95                 # 1 m apart: nearly the same
     assert abs(np.corrcoef(lum[:-60], lum[60:])[0, 1]) < 0.6           # 60 m apart: different patches
     assert np.all((f[:, 2] - f[:, 1]) * np.sign(lum - 1) <= 1e-9)      # brighter patches are yellower (less blue)
+
+
+def test_sand_faces_are_darker_than_bunker_floors():
+    """Bunker sand rendered as one flat bright white: steep faces (compacted, shaded) read darker than the floor,
+    smoothly with slope; the floor keeps its colour."""
+    nz = np.cos(np.radians([0, 10, 20, 30, 40]))
+    f = E.sand_shade(nz)
+    assert abs(f[0] - 1) < 1e-9 and np.all(np.diff(f) < 0)
+    assert 0.75 <= f[-1] <= 0.88 and f[1] > 0.97
+
+
+def test_mown_grass_tips_stay_green():
+    """3D blades of the mown rough had yellow tips (tip factor G = R, B low): a mown sward's tips are lighter green,
+    not straw (dry and pinestraw surfaces keep their yellow)."""
+    import grass_spec
+    s = grass_spec.SPEC["viewer"]["surfaces"]
+    for k in ("SemiRough", "Rough"):
+        r, g, b = s[k]["colour_tip"]
+        assert g / r >= 1.03 and b / g >= 0.9, k

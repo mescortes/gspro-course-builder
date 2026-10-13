@@ -2,7 +2,8 @@
 HTTP range requests and reprojected on the fly (the mosaics are in EPSG:3979, Canada Atlas Lambert) to config.CRS.
 
 ON-Lake_Erie_2018 is the HRDEM built from the same OMAFRA 2018 point cloud as the course DEM; the City of Waterloo
-2014 DTM fills any gaps. Licence: Open Government Licence - Canada. Output: data/dem/backdrop_dem.tif
+2014 DTM fills any gaps. Licence: Open Government Licence - Canada. Output: data/dem/backdrop_dem.tif, and the matching
+surface model (DSM: trees, roofs) data/dem/backdrop_dsm.tif for the backdrop trees and buildings (backdrop_objects.py).
 """
 import sys
 from pathlib import Path
@@ -19,15 +20,21 @@ URLS = ["https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/ON-L
 RES = 2.0
 
 
-def main():
+def main(kind="dtm", out_name="backdrop_dem.tif"):
+    urls = [u.replace("-1m-dtm.tif", f"-1m-{kind}.tif") for u in URLS]
     W = int((B["xmax"] - B["xmin"]) / RES); H = int((B["ymax"] - B["ymin"]) / RES)
     T = from_origin(B["xmin"], B["ymax"], RES, RES)
     out = np.full((H, W), np.nan, np.float32)
     with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR', CPL_VSIL_CURL_ALLOWED_EXTENSIONS='.tif',
                       GDAL_HTTP_MULTIRANGE='YES', GDAL_HTTP_MERGE_CONSECUTIVE_RANGES='YES', VSI_CACHE='TRUE'):
-        for url in URLS:
+        for url in urls:
             if np.isfinite(out).all():
                 break
+            try:
+                rasterio.open('/vsicurl/' + url).close()
+            except rasterio.errors.RasterioIOError:      # e.g. no DSM published for a gap-filling project
+                print(url.split('/')[-1], 'not available', flush=True)
+                continue
             with rasterio.open('/vsicurl/' + url) as ds:
                 # average onto the 2 m grid: read through an overview level close to 2 m, warped into the course CRS
                 with WarpedVRT(ds, crs=C.CRS, transform=T, width=W, height=H, resampling=Resampling.average,
@@ -39,10 +46,11 @@ def main():
             print(url.split('/')[-1], 'valid', np.isfinite(a).mean().round(3), flush=True)
     print('missing', np.isnan(out).mean())
     (C.DATA / 'dem').mkdir(parents=True, exist_ok=True)
-    with rasterio.open(C.DATA / 'dem/backdrop_dem.tif', 'w', driver='GTiff', width=W, height=H, count=1, dtype='float32', crs=C.CRS,
+    with rasterio.open(C.DATA / 'dem' / out_name, 'w', driver='GTiff', width=W, height=H, count=1, dtype='float32', crs=C.CRS,
                        transform=T, nodata=np.nan, compress='deflate', predictor=3) as d:
         d.write(out, 1)
 
 
 if __name__ == "__main__":
     main()
+    main("dsm", "backdrop_dsm.tif")
