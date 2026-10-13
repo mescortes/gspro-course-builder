@@ -237,6 +237,26 @@ def stripe_factor(P, surface, hole):
 _AO = None
 
 
+PATCH_WAVES = None
+
+
+def turf_patches(P, amp=0.06):
+    """Moisture / wear patches on turf: a smooth random field (plane waves of 24-55 m wavelength in random directions,
+    fixed seed so every build agrees) as a per-vertex colour factor (n, 3). Brightness varies about +/- amp; brighter
+    patches are a little yellower, darker ones a little bluer, like drier and lusher grass."""
+    global PATCH_WAVES
+    if PATCH_WAVES is None:
+        rng = np.random.default_rng(1931)
+        lam = np.repeat([24.0, 36.0, 55.0], 6)
+        th = rng.uniform(0, np.pi, len(lam))
+        PATCH_WAVES = (np.c_[np.cos(th), np.sin(th)] * (2 * np.pi / lam)[:, None], rng.uniform(0, 2 * np.pi, len(lam)))
+    k, ph = PATCH_WAVES
+    n = np.sin(P[:, :2] @ k.T + ph).sum(1) / np.sqrt(len(ph) / 2)      # ~ unit variance
+    t = np.clip(n, -2.5, 2.5)
+    lum = 1 + amp * t
+    return lum[:, None] * (1 + np.outer(t, [0.02, 0.008, -0.04]))
+
+
 def canopy_ao(P):
     """Sky-occlusion under/near tree crowns (direct shadows are rendered live; this is the ambient part)."""
     global _AO
@@ -335,6 +355,8 @@ def add_terrain(glb, root, feats_path=None):
                 col = np.stack([f(np.c_[P[:, 1], P[:, 0]]) for f in interp], 1) / tex_mean
                 col *= stripe_factor(P, sname, h)[:, None] / (1 + STRIPES.get(sname, (1, 0, 0))[1])
                 col *= canopy_ao(P)[:, None] * SHADE.get(sname, 1.0)
+                if sname in GRASS:
+                    col *= turf_patches(P)
                 col = np.clip(col, 0, 1)
             else:
                 col = np.ones((len(P), 3)) * (canopy_ao(P)[:, None] * 0.9 if sname in NO_TINT else 1.0)
