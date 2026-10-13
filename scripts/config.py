@@ -64,7 +64,9 @@ IMAGERY_CREDIT = "Contains information licensed under the Open Government Licenc
 # render as summer bentgrass / bluegrass in sun (fairway a* ~-20, b* ~+32). The first targets (a* -25..-28) rendered as
 # a saturated "Kelly green".
 TURF_TINT = {"green": (105, 130, 78), "fringe": (101, 124, 74), "fairway": (106, 124, 74), "tee": (105, 126, 76),
-             "semirough": (96, 113, 68), "rough": (89, 105, 65)}
+             "semirough": (96, 113, 68), "rough": (89, 105, 65),
+             # bunker sand: the photo's sand rendered near-white (235, 226, 189); a warm tan reads as wet-raked silica
+             "bunker": (196, 180, 146)}
 
 YARDS_PER_M = 1.0 / 0.9144
 

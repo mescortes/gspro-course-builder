@@ -34,6 +34,30 @@ ARCH = {
 }
 
 
+N_VARIANTS = 5   # model variants per archetype (add_vegetation picks one per tree from its id)
+
+
+def variant_params(name, v):
+    """Archetype parameters for variant v: variant 0 is the reference shape, the others jitter the crown proportions
+    (height +/- 12 %, radius +/- 15 %), crown base, lean, card size and clumping, so trees of one species are not
+    clones (three seed-only variants looked copy-pasted along the fairways)."""
+    a = dict(ARCH[name])
+    if v == 0:
+        return a
+    r = np.random.default_rng(7919 * v + sum(map(ord, name))).uniform(-1, 1, 6)
+    a["H"] = a["H"] * (1 + 0.12 * r[0])
+    a["R"] = a["R"] * (1 + 0.15 * r[1])
+    kind, z0, z1 = a["crown"]
+    a["crown"] = (kind, float(np.clip(z0 + 0.06 * r[2], 0.02, 0.6)), z1)
+    a["trunk"] = float(np.clip(a["trunk"] + 0.06 * r[2], 0.02, 0.6))
+    a["lean"] = a["lean"] + 0.05 * abs(r[3])
+    k = 1 + 0.12 * r[4]
+    a["card"] = (a["card"][0] * k, a["card"][1] * k)
+    if a.get("clumps"):
+        a["clumps"] = max(4, int(round(a["clumps"] * (1 + 0.3 * r[5]))))
+    return a
+
+
 def sample_envelope(a, rng):
     H, R = a["H"], a["R"]
     kind, z0, z1 = a["crown"]
@@ -229,6 +253,9 @@ def cards(nodes, parent, r, children, a, rng, lod):
         quad = [o - t * s / 2 - bvec * s / 2, o + t * s / 2 - bvec * s / 2, o + t * s / 2 + bvec * s / 2, o - t * s / 2 + bvec * s / 2]
         cell = rng.integers(4); cu, cv = (cell % 2) * 0.5, (cell // 2) * 0.5
         uvs = [[cu, cv + 0.5], [cu + 0.5, cv + 0.5], [cu + 0.5, cv], [cu, cv]]
+        # per-card hue: sun-bleached (yellower) or shaded (blue-green) leaf masses, about +/- 8 %
+        hue = rng.normal(0, 1)
+        tint = np.array([1 + 0.07 * hue, 1 + 0.02 * hue, 1 - 0.09 * hue]) * rng.uniform(0.9, 1.08)
         b = len(P)
         for q, tt in zip(quad, uvs):
             rel = (q - centre) / np.array([R, half_h, R])
@@ -236,7 +263,7 @@ def cards(nodes, parent, r, children, a, rng, lod):
             ao = 0.38 + 0.62 * d ** 1.4
             ao *= 0.8 + 0.2 * np.clip((q[1] - H * z0) / max(H * (z1 - z0), 1e-3), 0, 1)  # underside darker
             nq = q - centre; nq[1] *= 0.6; nq /= (np.linalg.norm(nq) + 1e-6)
-            P.append(q); Nn.append(0.7 * nq + 0.3 * np.array([0, 1, 0])); UV.append(tt); COL.append([ao, ao, ao])
+            P.append(q); Nn.append(0.7 * nq + 0.3 * np.array([0, 1, 0])); UV.append(tt); COL.append(np.clip(ao * tint, 0, 1))
         I += [[b, b + 1, b + 2], [b, b + 2, b + 3]]
     Nn = np.array(Nn, np.float32); Nn /= np.linalg.norm(Nn, axis=1, keepdims=True)
     return np.array(P, np.float32), Nn, np.array(UV, np.float32), np.array(I, np.uint32), np.array(COL, np.float32)
@@ -273,7 +300,7 @@ def billboard(a, rng):
 
 
 def build(name, variant, lod):
-    a = ARCH[name]
+    a = variant_params(name, variant)
     rng = np.random.default_rng(1000 * variant + sum(map(ord, name)))
     if lod == "bb":
         bark, leaf = billboard(a, rng)
@@ -304,7 +331,7 @@ def build(name, variant, lod):
 
 if __name__ == "__main__":
     for name in (sys.argv[1:] or ARCH):
-        for v in range(3):
+        for v in range(N_VARIANTS):
             for lod in ("hi", "lo", "bb"):
                 tris, nn = build(name, v, lod)
                 print(name, v, lod, "nodes", nn, "tris", tris, flush=True)

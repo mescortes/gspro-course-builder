@@ -26,3 +26,5 @@ def add(glb, root):
     mesh = glb.mesh("Backdrop_Terrain", prims)
     glb.node("Backdrop_Terrain", mesh=mesh, parent=root)
     print("backdrop triangles", len(F))
+    import backdrop_objects
+    backdrop_objects.add(glb, root)

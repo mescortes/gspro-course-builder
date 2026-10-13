@@ -1,0 +1,18 @@
+# Python dependencies of the pipeline and its tests (the headless viewer shots also need `playwright install chromium`;
+# the FBX step needs Blender 4.2, see README)
+numpy
+scipy
+rasterio
+shapely>=2
+pyproj
+pillow
+scikit-image
+scikit-learn
+triangle
+matplotlib
+laspy[lazrs]
+requests
+pytest
+tree-sitter
+tree-sitter-c-sharp
+playwright

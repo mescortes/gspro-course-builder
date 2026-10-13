@@ -169,3 +169,138 @@ def test_large_roof_has_one_flat_top_over_a_lumpy_plateau():
     V2, F, z, ground = roof_mesh(poly, _flat(355.0), _flat(340.0), 0, bdsm=lidar)
     d = shapely.distance(shapely.points(V2), poly.exterior)
     assert np.ptp(z[d > 7]) < 0.05
+
+
+def test_gable_roof_keeps_its_gable_ends():
+    """Houses with gable roofs came out hipped. A rectangular footprint whose LiDAR fits a gable better than a hip
+    gets a ridge along its full length and triangular gable-end walls (wall-line vertices rise to the ridge)."""
+    import shapely
+    from add_structures import roof_mesh
+    poly = box(0, 0, 20, 10).segmentize(1.0)
+    rng = np.random.default_rng(4)
+    gable = lambda e, n, order=1: 344.0 + 0.8 * (5 - np.abs(np.atleast_1d(n) - 5)) + rng.normal(0, 0.05, np.shape(e))
+    V2, F, z, ground = roof_mesh(poly, _flat(355.0), _flat(340.0), 0, bdsm=gable)
+    ridge = np.abs(V2[:, 1] - 5) < 0.3
+    assert np.median(z[ridge]) > 347.6 and np.percentile(z[ridge & ((V2[:, 0] < 1) | (V2[:, 0] > 19))], 50) > 347.4
+    end = (V2[:, 0] < 1e-6) & (np.abs(V2[:, 1] - 5) < 0.6)              # wall-line vertex at the gable apex
+    assert end.any() and z[end].max() > 347.4
+
+
+def test_hipped_rectangle_stays_hipped():
+    from add_structures import roof_mesh
+    import shapely
+    poly = box(0, 0, 20, 10).segmentize(1.0)
+    hip = lambda e, n, order=1: 344.0 + 0.8 * shapely.distance(shapely.points(np.c_[np.atleast_1d(e), np.atleast_1d(n)]), poly.exterior)
+    V2, F, z, ground = roof_mesh(poly, _flat(355.0), _flat(340.0), 0, bdsm=hip)
+    end = (V2[:, 0] < 1e-6) & (np.abs(V2[:, 1] - 5) < 0.6)
+    assert z[end].max() < 344.6                                          # end walls stay at the eaves
+
+
+def test_wall_colours_vary_between_houses():
+    """Every house had the same white walls: a per-building wall colour (white, cream, beige siding, grey, brick)
+    picked deterministically from the building id."""
+    from add_structures import wall_colour
+    cols = np.array([wall_colour(i) for i in range(40)])
+    assert len({tuple(np.round(c, 3)) for c in cols}) >= 4
+    assert np.all((cols > 0.2) & (cols <= 1.0))
+    assert np.allclose(wall_colour(7), wall_colour(7))
+
+
+def test_fountain_rises_from_the_water_level():
+    """Hole 3's aerating fountain: a spray column from the water surface to about its height, and a foam ring on the
+    water no wider than the spray falls (it must stay inside the 10 m clearance of the pond)."""
+    from add_structures import fountain_parts
+    parts = fountain_parts((100.0, 200.0), 330.0, height=2.5)
+    P = np.concatenate([p[0] for p in parts.values()])
+    assert {"spray", "foam"} <= set(parts)
+    assert abs(P[:, 2].min() - 330.0) < 0.05 and 2.2 <= P[:, 2].max() - 330.0 <= 2.8
+    r = np.hypot(P[:, 0] - 100, P[:, 1] - 200)
+    assert r.max() <= 4.0
+    foam = parts["foam"][0]
+    assert np.allclose(foam[:, 2], foam[0, 2]) and 0 < foam[0, 2] - 330.0 <= 0.05
+
+
+def test_fountain_level_comes_from_the_pond_it_sits_in():
+    from add_structures import water_level_at
+    planes = [{"hole": 3, "level": 331.2, "polygon_utm": [[0, 0], [20, 0], [20, 20], [0, 20], [0, 0]]},
+              {"hole": 5, "level": 320.0, "polygon_utm": [[50, 0], [70, 0], [70, 20], [50, 20], [50, 0]]}]
+    assert water_level_at((10, 10), planes) == 331.2
+    assert water_level_at((60, 5), planes) == 320.0
+    assert water_level_at((40, 40), planes) is None
+
+
+def test_parking_slots_fill_the_lot_in_rows_without_overlap():
+    """Stalls of 2.6 x 5.5 m in back-to-back rows along the lot's long side, with 6.5 m aisles: inside the lot, apart,
+    and aligned with the long axis."""
+    import shapely
+    from shapely.affinity import rotate
+    from add_structures import parking_slots, SLOT_W, SLOT_L
+    lot = rotate(box(0, 0, 60, 30), 20, origin=(0, 0))
+    S = parking_slots(lot)
+    assert len(S) >= 0.6 * lot.area / (SLOT_W * SLOT_L * 2.2)
+    rects = [shapely.affinity.rotate(box(x - SLOT_W / 2, y - SLOT_L / 2, x + SLOT_W / 2, y + SLOT_L / 2),
+                                     np.degrees(yaw), origin=(x, y)) for x, y, yaw in S]
+    assert all(lot.buffer(0.01).contains(r) for r in rects)
+    for i in range(len(rects)):
+        for j in range(i + 1, len(rects)):
+            assert rects[i].intersection(rects[j]).area < 0.05
+    # a car's length runs across the rows, i.e. perpendicular to the long side (20 degrees)
+    ang = np.degrees(S[:, 2]) % 180
+    assert np.all(np.minimum(abs(ang - 20), 180 - abs(ang - 20)) < 1) or np.all(np.minimum(abs(ang - 110), 180 - abs(ang - 110)) < 1)
+
+
+def test_cars_are_car_sized_and_parked_on_the_ground():
+    from add_structures import car_parts
+    parts = car_parts(10.0, 20.0, 300.0, 0.3, seed=4)
+    P = np.concatenate([p[0] for p in parts])
+    assert abs(P[:, 2].min() - 300.0) < 0.05
+    assert 1.35 <= P[:, 2].max() - 300.0 <= 1.9
+    # footprint in the car's own frame
+    c, s = np.cos(-0.3), np.sin(-0.3)
+    u = c * (P[:, 0] - 10) - s * (P[:, 1] - 20); v = s * (P[:, 0] - 10) + c * (P[:, 1] - 20)
+    w, l = np.ptp(u), np.ptp(v)
+    assert 1.6 <= w <= 2.0 and 4.2 <= l <= 5.2
+
+
+def test_clubhouse_mulch_beds_are_valid_and_clear_of_the_buildings_and_patio():
+    from shapely.ops import unary_union
+    beds = [shape(f["geometry"]) for f in json.load(open(ROOT / "features/overrides/clubhouse_mulch.geojson"))["features"]]
+    props = [f["properties"] for f in json.load(open(ROOT / "features/overrides/clubhouse_mulch.geojson"))["features"]]
+    assert beds and all(g.is_valid and 5 < g.area < 300 for g in beds)
+    assert all(p["surface"] == "native" and p["hole"] == 99 for p in props)
+    patio = unary_union([shape(f["geometry"]) for f in json.load(open(ROOT / "features/patios.geojson"))["features"]])
+    assert all(g.intersection(patio).area < 0.15 * g.area for g in beds)
+
+
+def test_curated_fountains_sit_well_inside_a_pond():
+    from surface_classify import osm_geoms
+    from shapely.geometry import Point
+    ponds = [g for oid, t, g in osm_geoms() if ("water" in str(t)) and g.geom_type == "Polygon"]
+    for f in json.load(open(ROOT / "features/fountains.geojson"))["features"]:
+        pt = Point(f["geometry"]["coordinates"])
+        inside = [g for g in ponds if g.contains(pt)]
+        assert inside and inside[0].exterior.distance(pt) > 4.0
+
+
+def test_parking_slots_keep_clear_of_buildings_in_the_lot():
+    """The clubhouse lot polygon overlaps a building: cars were parked through its walls. Stalls touching an
+    excluded footprint (buffered 1 m) are dropped."""
+    from add_structures import parking_slots, SLOT_W, SLOT_L
+    lot = box(0, 0, 60, 30)
+    bld = box(20, 5, 35, 20)
+    S = parking_slots(lot, exclude=bld)
+    rects = [box(x - SLOT_W / 2, y - SLOT_L / 2, x + SLOT_W / 2, y + SLOT_L / 2) for x, y, _ in S]
+    assert len(S) > 20 and all(r.distance(bld) >= 0.99 for r in rects)
+
+
+def test_fountain_spray_is_separate_jets_not_a_dome():
+    """A closed spray umbrella read as a glass dome: the spray is thin arcing jets, so at mid height the spray
+    covers only a small part of its circle."""
+    from add_structures import fountain_parts
+    P, N, UV, I = fountain_parts((0.0, 0.0), 0.0, height=2.5)["spray"]
+    w = np.random.default_rng(0).dirichlet((1, 1, 1), 40)                  # points spread over each triangle
+    pts = np.einsum("kj,tjc->tkc", w, P[I]).reshape(-1, 3)
+    pts = pts[(np.abs(pts[:, 2] - 1.2) < 0.4) & (np.hypot(pts[:, 0], pts[:, 1]) > 0.6)]
+    ang = np.degrees(np.arctan2(pts[:, 1], pts[:, 0]))
+    covered = len(np.unique(np.floor((ang + 180) / 2))) / 180          # fraction of 2-degree sectors with spray
+    assert 0.05 < covered < 0.6

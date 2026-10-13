@@ -29,9 +29,9 @@ Open items after QA round 2. Every hole scored 8/10 or more from its verifier; d
 
 ## Model polish
 
-* Mulch beds around the clubhouse and parking islands read as rough. The classifier rarely calls them native (its
-  colour seeds need open ground, and every bed is under a tree), and no rule can pick them out of this photo: the
-  dormant spring lawns beside them have the same Lab colour and NDVI (L* 29-44, a* -5 to +6, NDVI 0 to 0.3 for both).
-  A summer photo, or hand-drawn overrides, would fix it. Cosmetic and off the line of play.
+* Mulch beds away from the clubhouse (shrub beds under the trees elsewhere) still read as rough: the classifier
+  cannot tell them from the dormant spring lawns (same Lab colour and NDVI). The clubhouse beds are hand-picked
+  overrides; a summer photo would let the rest be classified.
+* The hole 3 fountain position is assumed (the middle of the pond), not surveyed.
 * **Shelters:** footprints are from LiDAR building returns where they exist. The #4 / #13 shelter postdates the
   LiDAR, so its footprint is +/- 1 m from the photo.

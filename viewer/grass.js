@@ -12,8 +12,8 @@ export const DEFAULT_SPEC = {
   max_instances: 400000,
   wind: { strength: 0.35, speed: 1.0 },
   surfaces: {               // object-name suffix -> blade settings (height m, width m, clumps per m2, blades per clump)
-    SemiRough: { height: [0.03, 0.05], width: 0.008, density: 45, blades: 8,  colour_tip: [1.12, 1.14, 1.0], dry: 0.0 },
-    Rough:     { height: [0.05, 0.09], width: 0.009, density: 40, blades: 9,  colour_tip: [1.15, 1.15, 0.98], dry: 0.05 },
+    SemiRough: { height: [0.03, 0.05], width: 0.008, density: 45, blades: 8,  colour_tip: [1.06, 1.10, 1.02], dry: 0.0 },
+    Rough:     { height: [0.05, 0.09], width: 0.009, density: 40, blades: 9,  colour_tip: [1.07, 1.12, 1.02], dry: 0.05 },
     DeepRough: { height: [0.14, 0.32], width: 0.010, density: 14, blades: 9,  colour_tip: [1.14, 1.10, 0.88], dry: 0.25 },
     Pinestraw: { height: [0.22, 0.45], width: 0.008, density: 7,  blades: 10, colour_tip: [1.22, 1.12, 0.82], dry: 0.6 },
   },

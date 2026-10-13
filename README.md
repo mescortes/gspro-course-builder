@@ -76,7 +76,7 @@ green centre), with the card yards in brackets where they differ by more than 6 
 |---|---|---|
 | Terrain, trees | OMAFRA Lidar 2016-18 (Lake Erie package), flown March 2018 leaf-off, 14-20 pts/m2; NRCan CanElevation COPC tiles | Open Government Licence – Ontario / – Canada |
 | Imagery | SWOOP 2025 (Geospatial Ontario), 16 cm, R G B + near-infrared, spring 2025 | Open Government Licence – Ontario |
-| Backdrop terrain | NRCan HRDEM 1 m DTM (same 2018 survey) | Open Government Licence – Canada |
+| Backdrop terrain, trees | NRCan HRDEM 1 m DTM and DSM (same 2018 survey) | Open Government Licence – Canada |
 | Course features | OpenStreetMap (holes, greens, fairways, tees, bunkers, water, buildings, roads) | ODbL |
 | Scorecard | Golf Canada Score Centre | facts |
 
@@ -102,15 +102,21 @@ The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the Mountain
    if it is a flat deck.
 6. **Trees** (`detect_trees.py`): about 10,700 LiDAR trees. The leaf-off canopy is closed before segmentation. Conifers
    are told apart from bare hardwoods by pulse penetration and crown NDVI. Archetypes: maple, oak, white pine, spruce,
-   shrub.
+   shrub, each in five shape variants (height, spread, crown base, lean, clumping) with per-card leaf hue.
 7. **Structures**: OSM buildings, plus five shelters and service buildings OSM lacks
    (`features/structures.geojson`, footprints from LiDAR building returns or the 2025 photo). Roofs follow the
    building-class LiDAR returns (`bdsm.tif`), so the clubhouse keeps its ridges and hips without the crowns of the
-   trees that overhang it. The clubhouse restaurant patio beside the hole 3 tee (`features/patios.geojson`) is a
-   paved terrace with tables, chairs and umbrellas.
+   trees that overhang it. A rectangular roof is a gable when a ridge fits its returns better than hips. House walls
+   vary between seven colours (white, cream, beige, grey, buff, red and brown brick). The clubhouse restaurant patio
+   beside the hole 3 tee (`features/patios.geojson`) is a paved terrace with tables, chairs and umbrellas. The
+   clubhouse lots have parked cars (about 60 % of the stalls), the hole 3 pond has an aerating fountain
+   (`features/fountains.geojson`), and the mulch beds round the clubhouse are traced from the photo
+   (`features/overrides/clubhouse_mulch.geojson`).
 8. **Mesh**: one conforming constrained Delaunay triangulation with fine triangles in the playing corridors, OPCD
-   bunker lips (10 cm) and water objects. It joins a 5 km imagery-draped backdrop without seams. Tees built after the
-   2018 survey (holes 5, 8, 11 and 17, and the new hole 14 Gold box) get a synthetic level deck with graded banks.
+   bunker lips (10 cm) and water objects. It joins a 5 km imagery-draped backdrop without seams. Within 640 m of the
+   course the backdrop carries billboard trees at the HRDEM canopy peaks and the OSM buildings at their LiDAR heights
+   (`backdrop_objects.py`; viewer and glTF only). Tees built after the 2018 survey (holes 5, 8, 11 and 17, and the new
+   hole 14 Gold box) get a synthetic level deck with graded banks.
 9. **Hole data**: tee markers are slid along the real tee decks to the card yardages. Pins come from a green-slope
    analysis (<= 3 %, relaxed to <= 5 % on Westmount's steepest greens). Aim points come from the line of play.
 10. **QA** (multi-agent, `workflows/hole_qa_round1.js`, `hole_qa_round2.js`; 24 agents in two rounds). Per-hole
@@ -138,13 +144,13 @@ Measured on this build:
 
 ```bash
 uv venv --python 3.12 .venv
-uv pip install --python .venv/bin/python numpy scipy rasterio shapely pyproj pillow scikit-image scikit-learn \
-    triangle matplotlib "laspy[lazrs]" requests pytest tree-sitter tree-sitter-c-sharp
+uv pip install --python .venv/bin/python -r requirements.txt
 .venv/bin/python scripts/fetch_data.py lidar osm imagery   # 590 MB LiDAR + 250 MB imagery
 .venv/bin/python scripts/fetch_textures.py
 .venv/bin/python scripts/fetch_backdrop.py
 BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py      # all steps (about 25 min on 96 cores)
 .venv/bin/python -m pytest -q tests                                  # unit + built-course tests
+# CI (.github/workflows/tests.yml) runs the unit tests only: pytest tests --ignore=tests/test_course.py
 python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?v=1#h1-tee
 ```
 
