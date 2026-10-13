@@ -60,10 +60,11 @@ IMAGERY_CREDIT = "Contains information licensed under the Open Government Licenc
 # Turf colour of the glTF / viewer textures: the spring photo shows dormant, hazy turf (greens straw-coloured), so the
 # median colour of each turf surface is moved to a summer target (sRGB) and the photo only contributes the local
 # variation (mowing, wear, shade). None = use the photo's own colours. GSPro assigns its own turf materials by name.
-# Targets are Lab a* -17..-23, b* +26..+32: summer bentgrass / bluegrass in sun. The first targets (a* -25..-28) rendered
-# as a saturated "Kelly green" once the viewer's lighting was applied.
-TURF_TINT = {"green": (100, 132, 66), "fringe": (96, 126, 62), "fairway": (102, 126, 62), "tee": (100, 128, 64),
-             "semirough": (92, 114, 58), "rough": (86, 106, 56)}
+# Targets are Lab a* -13..-19, b* +20..+26: with the viewer's sunlight and tone mapping (Neutral, exposure 1.5) they
+# render as summer bentgrass / bluegrass in sun (fairway a* ~-20, b* ~+32). The first targets (a* -25..-28) rendered as
+# a saturated "Kelly green".
+TURF_TINT = {"green": (105, 130, 78), "fringe": (101, 124, 74), "fairway": (106, 124, 74), "tee": (105, 126, 76),
+             "semirough": (96, 113, 68), "rough": (89, 105, 65)}
 
 YARDS_PER_M = 1.0 / 0.9144
 
