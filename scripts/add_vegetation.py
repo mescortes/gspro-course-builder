@@ -10,6 +10,7 @@ import rasterio
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
+from make_trees import N_VARIANTS
 
 TREES = C.DATA / "trees"
 PH = C.DATA / "textures"; GEN = C.DATA / "textures_gen"
@@ -37,7 +38,7 @@ def instance_params(trees):
     out = []
     for i, t in enumerate(trees):
         p = t["properties"]; arch = p["archetype"]
-        var = zlib.crc32(str(p["id"]).encode()) % 3
+        var = zlib.crc32(str(p["id"]).encode()) % N_VARIANTS
         if (arch, var) not in ref:
             f = TREES / f"{arch}_v{var}_hi.npz"
             d = np.load(f) if f.exists() else None

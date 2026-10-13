@@ -11,7 +11,7 @@ import numpy as np
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
 from gltf_builder import GLB
-from add_vegetation import TREES, BARK, PH, GEN
+from add_vegetation import TREES, BARK, PH, GEN, N_VARIANTS
 
 OUT = C.OUTPUT / "gspro"
 ARCHES = C.TREE_ARCHETYPES
@@ -35,7 +35,7 @@ def main():
                               normal=encode(b / "nor_gl.jpg", "normal", None, 1024), orm=encode(b / "arm.jpg", "orm", None, 1024))
         leaf_m = glb.material(f"Foliage_{arch}", base_color=str(GEN / f"foliage_{arch}.png"), alpha_mode="MASK",
                               alpha_cutoff=0.45, double_sided=True, rough=0.75, specular=0.35)
-        for var in range(3):
+        for var in range(N_VARIANTS):
             if not (TREES / f"{arch}_v{var}_hi.npz").exists():
                 continue
             name = f"Tree_{arch}_v{var}"
