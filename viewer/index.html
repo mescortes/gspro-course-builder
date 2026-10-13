@@ -57,8 +57,11 @@ const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, logarithmicDepthBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = parseFloat(params.get('exposure') || '1.0');
+// Khronos PBR Neutral, not ACES: ACES crushed the red channel of mid / dark greens, so summer turf rendered as a
+// saturated Kelly green and shade went near-black green; AgX washed it out to sage. ?tone=aces|agx to compare.
+const TONE = { aces: THREE.ACESFilmicToneMapping, agx: THREE.AgXToneMapping, neutral: THREE.NeutralToneMapping };
+renderer.toneMapping = TONE[params.get('tone')] ?? THREE.NeutralToneMapping;
+renderer.toneMappingExposure = parseFloat(params.get('exposure') || '1.5');
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
@@ -111,7 +114,7 @@ scene.environment = pmrem.fromEquirectangular(skyTex).texture;
 scene.environmentIntensity = parseFloat(params.get('env') || '0.6');
 scene.fog = new THREE.FogExp2(0xc8d7e4, parseFloat(params.get('fog') || '0.00030'));
 
-const hemi = new THREE.HemisphereLight(0xcfe3ff, 0x4a5a32, 0.35); scene.add(hemi);
+const hemi = new THREE.HemisphereLight(0xcfe3ff, 0x6b6656, 0.45); scene.add(hemi);   // neutral earth bounce: no green shade
 const sun = new THREE.DirectionalLight(0xfff1dc, 2.6);
 sun.position.copy(sunDir).multiplyScalar(600);
 sun.castShadow = true;
