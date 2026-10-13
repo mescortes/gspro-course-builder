@@ -21,7 +21,8 @@ Open items after QA round 2. Every hole scored 8/10 or more from its verifier; d
 ## Course data to confirm on site or with the club
 
 * **Holes 5, 8, 11, 14 (Gold) and 17:** the tee decks built after the 2018 LiDAR are synthetic planes, each at the
-  polygon's mean 2018 height. A newer LiDAR or a site survey would replace them.
+  polygon's mean 2018 height, or built up to a neighbouring deck of the same hole where that would cut it into the
+  slope (hole 8 Blue is level with White). A newer LiDAR or a site survey would replace them.
 * **Hole 12 tees were rebuilt after the 2018 LiDAR.** The LiDAR has four small separate decks (the model's pads); the
   2025 photo shows one long, straight-edged box in two terraces, about 537373-537419 E, 4810467-4810522 N. Replacing
   the pads needs the new outlines and the deck heights (a site survey or newer LiDAR); the markers would then move,
