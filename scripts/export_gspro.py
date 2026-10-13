@@ -109,8 +109,9 @@ def outer_terrain(n=4097, px=8192):
     q.tofile(OUT / f"outer_heightmap_{n}.raw")
     Image.fromarray(q.astype(np.uint16)).save(OUT / f"outer_heightmap_{n}.png")
     out = np.zeros((px, px, 3), np.uint8)
-    from build_backdrop import NEAR_IMG, FAR_IMG
-    for src in (FAR_IMG.with_suffix(".tif"), NEAR_IMG.with_suffix(".tif"), C.IMAGERY):   # finer sources on top
+    from build_backdrop import NEAR_IMG, FAR_IMG, summer_tif
+    # the summer-graded backdrop photos (build_backdrop.summer_grade) where built; finer sources on top
+    for src in (*(summer_tif(p) if summer_tif(p).exists() else p.with_suffix(".tif") for p in (FAR_IMG, NEAR_IMG)), C.IMAGERY):
         if not src.exists():
             continue
         with rasterio.open(src) as ds:

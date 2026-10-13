@@ -106,7 +106,7 @@ print("textures written", save_images(out_dir))
 n1 = export(descendants({"Terrain"}), f"{out_dir}/course_meshes.fbx")
 # flagsticks / cups and tee markers (Hole##_Furniture) stay out: GSPro draws the pin at runtime and places tee markers
 # from the GreenKeeper data (research/GSPRO_COSMETICS.md); they are only for our own viewer
-n2 = export(descendants({"Structures", "Bridges"}), f"{out_dir}/structures.fbx")
+n2 = export(descendants({"Structures", "Patios", "Bridges"}), f"{out_dir}/structures.fbx")
 n3 = export(descendants({"Backdrop_Terrain"}), f"{out_dir}/backdrop.fbx")
 print(f"FBX: course meshes {n1}, structures {n2}, backdrop {n3}")
 import json
