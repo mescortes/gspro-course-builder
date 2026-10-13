@@ -490,24 +490,24 @@ def water_level_at(pt, planes):
 
 
 def fountain_parts(c, level, height=2.5):
-    """Aerating fountain: a tapering jet from the water to `height`, a spray umbrella falling back from its top, a
-    foam disc on the water. {kind: (P, N, UV, I)} in UTM."""
+    """Aerating fountain: a tapering jet from the water to `height`, 20 thin jets arcing back from its top, and a
+    foam disc on the water as wide as the disturbed ring in the photo. {kind: (P, N, UV, I)} in UTM."""
     x, y = c
     parts = {}
     pieces = [cylinder(np.array([x, y, level]), np.array([x, y, level + height]), 0.2, 0.06, 10, False)]
     # the spray falls back as separate arcing jets (a closed umbrella read as a glass dome)
-    for j in range(12):
-        a = 2 * np.pi * (j + 0.5) / 12
+    for j in range(20):
+        a = 2 * np.pi * (j + 0.5) / 20
         t = np.linspace(0, 1, 7)
-        r = 0.1 + 2.1 * t
+        r = 0.1 + 2.5 * t
         pts = np.c_[x + r * np.cos(a), y + r * np.sin(a), level + 0.05 + (height - 0.05) * (1 - t ** 2)]
         for i in range(6):
-            pieces.append(cylinder(pts[i], pts[i + 1], 0.04 + 0.08 * t[i], 0.04 + 0.08 * t[i + 1], 5, False))
+            pieces.append(cylinder(pts[i], pts[i + 1], 0.025 + 0.06 * t[i], 0.025 + 0.06 * t[i + 1], 5, False))
     off = np.cumsum([0] + [len(p[0]) for p in pieces[:-1]])
     parts["spray"] = tuple(np.concatenate([p[k] for p in pieces]) for k in range(3)) + (
         np.concatenate([p[3] + o for p, o in zip(pieces, off)]),)
     a = np.linspace(0, 2 * np.pi, 33)[:-1]
-    Pf = np.r_[[[x, y, level + 0.03]], np.c_[x + 2.8 * np.cos(a), y + 2.8 * np.sin(a), np.full(32, level + 0.03)]]
+    Pf = np.r_[[[x, y, level + 0.03]], np.c_[x + 3.8 * np.cos(a), y + 3.8 * np.sin(a), np.full(32, level + 0.03)]]
     If = np.array([[0, 1 + j, 1 + (j + 1) % 32] for j in range(32)])
     parts["foam"] = (Pf, np.tile([0, 0, 1.0], (33, 1)), np.r_[[[0.5, 0.5]], np.c_[0.5 + 0.5 * np.cos(a), 0.5 + 0.5 * np.sin(a)]], If)
     return parts
@@ -519,8 +519,8 @@ def add_fountains(glb, root):
     if not (FOUNTAINS.exists() and wp.exists()):
         return
     planes = json.load(open(wp))
-    spray = glb.material("Fountain_Spray", base_factor=(0.93, 0.95, 0.97, 0.6), rough=0.3, alpha_mode="BLEND", double_sided=True)
-    foam = glb.material("Fountain_Foam", base_factor=(0.88, 0.9, 0.9, 0.55), rough=0.6, alpha_mode="BLEND")
+    spray = glb.material("Fountain_Spray", base_factor=(0.93, 0.95, 0.97, 0.45), rough=0.3, alpha_mode="BLEND", double_sided=True)
+    foam = glb.material("Fountain_Foam", base_factor=(0.88, 0.9, 0.9, 0.3), rough=0.6, alpha_mode="BLEND")
     grp = glb.node("Fountains", parent=root)
     n = 0
     for k, f in enumerate(json.load(open(FOUNTAINS))["features"]):
@@ -588,9 +588,31 @@ def _hexa(C8):
     return np.array(P), np.array(N), np.array(UV), np.array(I)
 
 
+def _loft(bot, top):
+    """Flat-shaded prism between two rings of equal length (ccw from above): sides and a top cap (no bottom)."""
+    bot = np.asarray(bot, float); top = np.asarray(top, float); m = len(bot)
+    P, N, UV, I = [], [], [], []
+    for i in range(m):
+        q = np.array([bot[i], bot[(i + 1) % m], top[(i + 1) % m], top[i]])
+        nr = np.cross(q[1] - q[0], q[2] - q[0]); nr /= np.linalg.norm(nr) + 1e-12
+        k = len(P); P += list(q); N += [nr] * 4; UV += [[0, 0], [1, 0], [1, 1], [0, 1]]
+        I += [[k, k + 1, k + 2], [k, k + 2, k + 3]]
+    c = top.mean(0); k = len(P)
+    P += [c] + list(top); N += [[0, 0, 1.0]] * (m + 1); UV += [[0.5, 0.5]] * (m + 1)
+    I += [[k, k + 1 + i, k + 1 + (i + 1) % m] for i in range(m)]
+    return np.array(P), np.array(N), np.array(UV), np.array(I)
+
+
+def _chamfered(x0, x1, y0, y1, c, z):
+    """Rectangle with 45-degree corner chamfers of `c` m, ccw from above, at height z."""
+    return [[x0 + c, y0, z], [x1 - c, y0, z], [x1, y0 + c, z], [x1, y1 - c, z],
+            [x1 - c, y1, z], [x0 + c, y1, z], [x0, y1 - c, z], [x0, y0 + c, z]]
+
+
 def car_parts(x, y, z, yaw, seed=0):
-    """A low-detail parked car: body, glazed cabin (sedan or SUV), four tyres. [(P, N, UV, I, kind)] in UTM, length
-    along the yaw-turned +y axis, standing on z."""
+    """A low-detail parked car: a body with chamfered corners that tucks in above the belt line, a glazed cabin
+    (sedan or SUV), four tyres, head and tail lights. [(P, N, UV, I, kind)] in UTM, length along the yaw-turned
+    +y axis (the bonnet at +y), standing on z."""
     rng = np.random.default_rng(seed)
     suv = rng.random() < 0.4
     W = rng.uniform(1.75, 1.9); L = rng.uniform(4.4, 4.9) if not suv else rng.uniform(4.5, 4.95)
@@ -600,34 +622,45 @@ def car_parts(x, y, z, yaw, seed=0):
     def place(uvz):
         uvz = np.asarray(uvz, float)
         return np.c_[x + c * uvz[:, 0] - s * uvz[:, 1], y + s * uvz[:, 0] + c * uvz[:, 1], uvz[:, 2]]
+    def rot(N):
+        return np.c_[c * N[:, 0] - s * N[:, 1], s * N[:, 0] + c * N[:, 1], N[:, 2]]
     hw, hl = W / 2, L / 2
-    body = [[-hw, -hl, zb0], [hw, -hl, zb0], [hw, hl, zb0], [-hw, hl, zb0],
-            [-hw, -hl, zb1], [hw, -hl, zb1], [hw, hl, zb1], [-hw, hl, zb1]]
-    cb0, cb1 = (-hl + 0.35, hl - 0.75) if suv else (-hl + 0.8, hl - 1.3)   # the bonnet is at +y
-    ct0, ct1 = (cb0 + 0.15, cb1 - 0.35) if suv else (cb0 + 0.45, cb1 - 0.5)
-    cw = hw - 0.08; tw = hw - (0.12 if suv else 0.22)
-    cabin = [[-cw, cb0, zb1], [cw, cb0, zb1], [cw, cb1, zb1], [-cw, cb1, zb1],
-             [-tw, ct0, zc1], [tw, ct0, zc1], [tw, ct1, zc1], [-tw, ct1, zc1]]
     out = []
-    for pts, kind in ((body, "paint"), (cabin, "glass")):
-        P, N, UV, I = _hexa(place(pts))
-        out.append((P, N, UV, I, kind))
+    P, N, UV, I = _loft(_chamfered(-hw, hw, -hl, hl, 0.3, zb0), _chamfered(-hw + 0.07, hw - 0.07, -hl + 0.12, hl - 0.12, 0.35, zb1))
+    out.append((place(P), rot(N), UV, I, "paint"))
+    cb0, cb1 = (-hl + 0.35, hl - 0.75) if suv else (-hl + 0.8, hl - 1.3)
+    ct0, ct1 = (cb0 + 0.15, cb1 - 0.35) if suv else (cb0 + 0.45, cb1 - 0.5)
+    cw = hw - 0.1; tw = hw - (0.14 if suv else 0.24)
+    P, N, UV, I = _loft(_chamfered(-cw, cw, cb0, cb1, 0.12, zb1), _chamfered(-tw, tw, ct0, ct1, 0.1, zc1))
+    out.append((place(P), rot(N), UV, I, "glass"))
     for sx in (-1, 1):
         for sy in (-1, 1):
             wy = sy * (hl - 0.85); wx = sx * (hw - 0.17)
             a, b = place([[wx - 0.12, wy, z + 0.33], [wx + 0.12, wy, z + 0.33]])
             P, N, UV, I = cylinder(a, b, 0.33, 0.33, 10, True)
             out.append((P, N, UV, I, "tyre"))
+        for end, kind in ((1, "headlight"), (-1, "taillight")):    # one lamp per corner, on the body's end face
+            xa, xb = sorted((sx * (hw - 0.48), sx * (hw - 0.16)))
+            ya, yb = sorted((end * (hl - 0.1), end * (hl - 0.01)))
+            za, zc = zb1 - 0.2, zb1 - 0.07
+            box8 = np.array([[xa, ya, za], [xb, ya, za], [xb, yb, za], [xa, yb, za],
+                             [xa, ya, zc], [xb, ya, zc], [xb, yb, zc], [xa, yb, zc]])
+            P, N, UV, I = _hexa(box8)
+            out.append((place(P), rot(N), UV, I, kind))
     return out
 
 
 def add_cars(glb, root, fill=0.6):
-    """Parked cars in the clubhouse lots (OSM amenity=parking, PARKING): `fill` of the stalls, clear of trees."""
+    """Parked cars in the clubhouse lots (OSM amenity=parking, PARKING): `fill` of the stalls, clear of trees,
+    planted beds and the lanes round buildings."""
     import shapely
     from shapely.ops import unary_union
     G = osm_geoms()
     lots = {oid: g for oid, t, g in G if oid in PARKING and g.geom_type == "Polygon"}
     blds = [g for oid, t, g in G if "building" in t and g.geom_type in ("Polygon", "MultiPolygon")]
+    from shapely.geometry import shape
+    beds = [shape(f["geometry"]) for f in json.load(open(C.FEATURES / "course_surfaces.geojson"))["features"]
+            if f["properties"]["surface"] == "native"] if (C.FEATURES / "course_surfaces.geojson").exists() else []
     if not lots:
         return
     dem = Raster(C.BUILD / "dem.tif")
@@ -638,12 +671,16 @@ def add_cars(glb, root, fill=0.6):
     paint = glb.material("Car_Paint", base_factor=(1, 1, 1, 1), rough=0.3, metal=0.5)
     glass = glb.material("Car_Glass", base_factor=(0.04, 0.05, 0.06, 1), rough=0.08, metal=0.2)
     tyre = glb.material("Car_Tyre", base_factor=(0.03, 0.03, 0.03, 1), rough=0.9)
-    mats = {"paint": paint, "glass": glass, "tyre": tyre}
+    head = glb.material("Car_Headlight", base_factor=(0.92, 0.92, 0.88, 1), rough=0.1)
+    tail = glb.material("Car_Taillight", base_factor=(0.55, 0.03, 0.03, 1), rough=0.2)
+    mats = {"paint": paint, "glass": glass, "tyre": tyre, "headlight": head, "taillight": tail}
     grp = glb.node("Parked_Cars", parent=root)
     rng = np.random.default_rng(11)
     n = 0
     for oid, lot in sorted(lots.items()):
-        S = parking_slots(lot, exclude=unary_union([b for b in blds if b.intersects(lot)]))
+        # keep a 5 m drop-off lane round buildings standing in the lot, and off the planted beds and islands
+        S = parking_slots(lot, exclude=unary_union([b.buffer(4.0) for b in blds if b.buffer(5).intersects(lot)] +
+                                                   [g for g in beds if g.intersects(lot)]))
         if not len(S):
             continue
         keep = rng.random(len(S)) < fill
