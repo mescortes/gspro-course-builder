@@ -208,7 +208,7 @@ def test_wall_colours_vary_between_houses():
 
 def test_fountain_rises_from_the_water_level():
     """Hole 3's aerating fountain: a spray column from the water surface to about its height, and a foam ring on the
-    water no wider than the spray falls (it must stay inside the 10 m clearance of the pond)."""
+    water as wide as the disturbed ring in the 2025 photo (about 4 m; it must stay inside the pond)."""
     from add_structures import fountain_parts
     parts = fountain_parts((100.0, 200.0), 330.0, height=2.5)
     P = np.concatenate([p[0] for p in parts.values()])
@@ -264,8 +264,9 @@ def test_cars_are_car_sized_and_parked_on_the_ground():
 
 def test_clubhouse_mulch_beds_are_valid_and_clear_of_the_buildings_and_patio():
     from shapely.ops import unary_union
-    beds = [shape(f["geometry"]) for f in json.load(open(ROOT / "features/overrides/clubhouse_mulch.geojson"))["features"]]
-    props = [f["properties"] for f in json.load(open(ROOT / "features/overrides/clubhouse_mulch.geojson"))["features"]]
+    feats = [f for n in ("clubhouse_mulch", "grounds_mulch") for f in json.load(open(ROOT / f"features/overrides/{n}.geojson"))["features"]]
+    beds = [shape(f["geometry"]) for f in feats]
+    props = [f["properties"] for f in feats]
     assert beds and all(g.is_valid and 5 < g.area < 300 for g in beds)
     assert all(p["surface"] == "native" and p["hole"] == 99 for p in props)
     patio = unary_union([shape(f["geometry"]) for f in json.load(open(ROOT / "features/patios.geojson"))["features"]])
@@ -304,3 +305,20 @@ def test_fountain_spray_is_separate_jets_not_a_dome():
     ang = np.degrees(np.arctan2(pts[:, 1], pts[:, 0]))
     covered = len(np.unique(np.floor((ang + 180) / 2))) / 180          # fraction of 2-degree sectors with spray
     assert 0.05 < covered < 0.6
+
+
+def test_cars_have_rounded_bodies_and_lights():
+    """Box cars looked like crates up close: the body has chamfered corners in plan and tucks in above the belt
+    line, the cabin sits on it, and each car has head and tail lights at its ends."""
+    from add_structures import car_parts
+    parts = car_parts(0.0, 0.0, 0.0, 0.0, seed=2)
+    kinds = [p[4] for p in parts]
+    assert {"paint", "glass", "tyre", "headlight", "taillight"} <= set(kinds)
+    body = next(p[0] for p in parts if p[4] == "paint")
+    low = body[body[:, 2] < body[:, 2].min() + 0.01]
+    assert len(np.unique(np.round(low[:, :2], 3), axis=0)) >= 8                 # chamfered plan, not 4 corners
+    top = body[body[:, 2] > body[:, 2].max() - 0.01]
+    assert np.abs(top[:, 0]).max() < np.abs(low[:, 0]).max() - 0.03            # tumblehome
+    head = np.concatenate([p[0] for p in parts if p[4] == "headlight"])
+    tail = np.concatenate([p[0] for p in parts if p[4] == "taillight"])
+    assert head[:, 1].min() > 1.8 and tail[:, 1].max() < -1.8                  # front at +y, rear at -y

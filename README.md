@@ -110,8 +110,9 @@ The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the Mountain
    vary between seven colours (white, cream, beige, grey, buff, red and brown brick). The clubhouse restaurant patio
    beside the hole 3 tee (`features/patios.geojson`) is a paved terrace with tables, chairs and umbrellas. The
    clubhouse lots have parked cars (about 60 % of the stalls), the hole 3 pond has an aerating fountain
-   (`features/fountains.geojson`), and the mulch beds round the clubhouse are traced from the photo
-   (`features/overrides/clubhouse_mulch.geojson`).
+   (`features/fountains.geojson`, placed at the spray visible in the 2025 photo), and the mulch beds round the
+   clubhouse and pro shop are traced from the photo (`features/overrides/clubhouse_mulch.geojson`,
+   `grounds_mulch.geojson`).
 8. **Mesh**: one conforming constrained Delaunay triangulation with fine triangles in the playing corridors, OPCD
    bunker lips (10 cm) and water objects. It joins a 5 km imagery-draped backdrop without seams. Within 640 m of the
    course the backdrop carries billboard trees at the HRDEM canopy peaks and the OSM buildings at their LiDAR heights
