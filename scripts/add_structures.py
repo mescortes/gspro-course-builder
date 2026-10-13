@@ -232,7 +232,7 @@ def planar_roof(V2, zb, poly, inset=0.0, fit_d=4.0):
 
 WALL_PALETTE = (   # linear-ish multipliers on the white stucco texture: white, cream, beige siding, warm grey, buff
     (1.0, 1.0, 1.0), (0.97, 0.93, 0.82), (0.86, 0.80, 0.68), (0.74, 0.74, 0.72), (0.90, 0.84, 0.72),
-    (0.72, 0.52, 0.42), (0.62, 0.42, 0.34))   # last two: red / brown brick tones
+    (0.62, 0.40, 0.31), (0.50, 0.35, 0.28))   # last two: red / brown brick tones
 
 
 def wall_colour(oid):
@@ -494,21 +494,18 @@ def fountain_parts(c, level, height=2.5):
     foam disc on the water. {kind: (P, N, UV, I)} in UTM."""
     x, y = c
     parts = {}
-    jet = cylinder(np.array([x, y, level]), np.array([x, y, level + height]), 0.22, 0.06, 12, False)
-    k = 24; P, N, UV, I = [], [], [], []
-    for ring, (r, z) in enumerate(((0.08, level + height - 0.05), (1.1, level + height - 0.45), (2.0, level + 1.0),
-                                   (2.4, level + 0.12))):
-        for j in range(k + 1):
-            a = 2 * np.pi * j / k
-            P.append([x + r * np.cos(a), y + r * np.sin(a), z]); N.append([np.cos(a) * 0.6, np.sin(a) * 0.6, 0.8])
-            UV.append([j / k, ring / 3])
-    for ring in range(3):
-        for j in range(k):
-            a, b = ring * (k + 1) + j, (ring + 1) * (k + 1) + j
-            I += [[a, b, a + 1], [a + 1, b, b + 1]]
-    sp = (np.array(P), np.array(N) / np.linalg.norm(N, axis=1, keepdims=True), np.array(UV), np.array(I))
-    off = len(jet[0])
-    parts["spray"] = (np.r_[jet[0], sp[0]], np.r_[jet[1], sp[1]], np.r_[jet[2], sp[2]], np.r_[jet[3], sp[3] + off])
+    pieces = [cylinder(np.array([x, y, level]), np.array([x, y, level + height]), 0.2, 0.06, 10, False)]
+    # the spray falls back as separate arcing jets (a closed umbrella read as a glass dome)
+    for j in range(12):
+        a = 2 * np.pi * (j + 0.5) / 12
+        t = np.linspace(0, 1, 7)
+        r = 0.1 + 2.1 * t
+        pts = np.c_[x + r * np.cos(a), y + r * np.sin(a), level + 0.05 + (height - 0.05) * (1 - t ** 2)]
+        for i in range(6):
+            pieces.append(cylinder(pts[i], pts[i + 1], 0.04 + 0.08 * t[i], 0.04 + 0.08 * t[i + 1], 5, False))
+    off = np.cumsum([0] + [len(p[0]) for p in pieces[:-1]])
+    parts["spray"] = tuple(np.concatenate([p[k] for p in pieces]) for k in range(3)) + (
+        np.concatenate([p[3] + o for p, o in zip(pieces, off)]),)
     a = np.linspace(0, 2 * np.pi, 33)[:-1]
     Pf = np.r_[[[x, y, level + 0.03]], np.c_[x + 2.8 * np.cos(a), y + 2.8 * np.sin(a), np.full(32, level + 0.03)]]
     If = np.array([[0, 1 + j, 1 + (j + 1) % 32] for j in range(32)])
@@ -522,7 +519,7 @@ def add_fountains(glb, root):
     if not (FOUNTAINS.exists() and wp.exists()):
         return
     planes = json.load(open(wp))
-    spray = glb.material("Fountain_Spray", base_factor=(0.93, 0.95, 0.97, 0.42), rough=0.3, alpha_mode="BLEND", double_sided=True)
+    spray = glb.material("Fountain_Spray", base_factor=(0.93, 0.95, 0.97, 0.6), rough=0.3, alpha_mode="BLEND", double_sided=True)
     foam = glb.material("Fountain_Foam", base_factor=(0.88, 0.9, 0.9, 0.55), rough=0.6, alpha_mode="BLEND")
     grp = glb.node("Fountains", parent=root)
     n = 0
@@ -545,11 +542,13 @@ CAR_PAINT = ((0.85, 0.85, 0.84), (0.05, 0.05, 0.06), (0.55, 0.56, 0.57), (0.3, 0
 PARKING = (824691380, 485368326, 184857598)    # OSM amenity=parking lots by the clubhouse
 
 
-def parking_slots(lot, w=SLOT_W, l=SLOT_L, aisle=AISLE):
+def parking_slots(lot, w=SLOT_W, l=SLOT_L, aisle=AISLE, exclude=None):
     """Stall centres and yaws (n, 3): back-to-back rows of w x l stalls along the lot's long side, aisles between
-    the double rows; yaw turns a car whose length is along +y into its stall."""
+    the double rows; yaw turns a car whose length is along +y into its stall. Stalls within 1 m of `exclude`
+    (buildings standing in the mapped lot) are dropped."""
     import shapely
     inner = lot.buffer(-0.1)
+    ex = exclude.buffer(1.0) if exclude is not None and not exclude.is_empty else None
     if inner.is_empty:
         return np.zeros((0, 3))
     r = np.asarray(lot.minimum_rotated_rectangle.exterior.coords)[:3]
@@ -569,7 +568,8 @@ def parking_slots(lot, w=SLOT_W, l=SLOT_L, aisle=AISLE):
                 for vm in (v + hl, v + l + hl):
                     for um in np.arange(u0 + hw + ou, u1, w):
                         q = np.outer(corners[:, 0] + um, ax) + np.outer(corners[:, 1] + vm, ay)   # stall corners
-                        if np.all(shapely.contains_xy(inner, q[:, 0], q[:, 1])) and inner.contains(Polygon(q)):
+                        if np.all(shapely.contains_xy(inner, q[:, 0], q[:, 1])) and inner.contains(Polygon(q)) and \
+                                (ex is None or not ex.intersects(Polygon(q))):
                             out.append([*(um * ax + vm * ay), yaw])
                 v += 2 * l + aisle
             if len(out) > len(best):
@@ -624,7 +624,10 @@ def car_parts(x, y, z, yaw, seed=0):
 def add_cars(glb, root, fill=0.6):
     """Parked cars in the clubhouse lots (OSM amenity=parking, PARKING): `fill` of the stalls, clear of trees."""
     import shapely
-    lots = {oid: g for oid, t, g in osm_geoms() if oid in PARKING and g.geom_type == "Polygon"}
+    from shapely.ops import unary_union
+    G = osm_geoms()
+    lots = {oid: g for oid, t, g in G if oid in PARKING and g.geom_type == "Polygon"}
+    blds = [g for oid, t, g in G if "building" in t and g.geom_type in ("Polygon", "MultiPolygon")]
     if not lots:
         return
     dem = Raster(C.BUILD / "dem.tif")
@@ -640,7 +643,7 @@ def add_cars(glb, root, fill=0.6):
     rng = np.random.default_rng(11)
     n = 0
     for oid, lot in sorted(lots.items()):
-        S = parking_slots(lot)
+        S = parking_slots(lot, exclude=unary_union([b for b in blds if b.intersects(lot)]))
         if not len(S):
             continue
         keep = rng.random(len(S)) < fill

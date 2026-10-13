@@ -280,3 +280,27 @@ def test_curated_fountains_sit_well_inside_a_pond():
         pt = Point(f["geometry"]["coordinates"])
         inside = [g for g in ponds if g.contains(pt)]
         assert inside and inside[0].exterior.distance(pt) > 4.0
+
+
+def test_parking_slots_keep_clear_of_buildings_in_the_lot():
+    """The clubhouse lot polygon overlaps a building: cars were parked through its walls. Stalls touching an
+    excluded footprint (buffered 1 m) are dropped."""
+    from add_structures import parking_slots, SLOT_W, SLOT_L
+    lot = box(0, 0, 60, 30)
+    bld = box(20, 5, 35, 20)
+    S = parking_slots(lot, exclude=bld)
+    rects = [box(x - SLOT_W / 2, y - SLOT_L / 2, x + SLOT_W / 2, y + SLOT_L / 2) for x, y, _ in S]
+    assert len(S) > 20 and all(r.distance(bld) >= 0.99 for r in rects)
+
+
+def test_fountain_spray_is_separate_jets_not_a_dome():
+    """A closed spray umbrella read as a glass dome: the spray is thin arcing jets, so at mid height the spray
+    covers only a small part of its circle."""
+    from add_structures import fountain_parts
+    P, N, UV, I = fountain_parts((0.0, 0.0), 0.0, height=2.5)["spray"]
+    w = np.random.default_rng(0).dirichlet((1, 1, 1), 40)                  # points spread over each triangle
+    pts = np.einsum("kj,tjc->tkc", w, P[I]).reshape(-1, 3)
+    pts = pts[(np.abs(pts[:, 2] - 1.2) < 0.4) & (np.hypot(pts[:, 0], pts[:, 1]) > 0.6)]
+    ang = np.degrees(np.arctan2(pts[:, 1], pts[:, 0]))
+    covered = len(np.unique(np.floor((ang + 180) / 2))) / 180          # fraction of 2-degree sectors with spray
+    assert 0.05 < covered < 0.6
