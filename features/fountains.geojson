@@ -1,4 +1,4 @@
 {"type": "FeatureCollection", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::2958"}},
  "features": [{"type": "Feature", "properties": {"name": "hole 3 pond aerator", "height": 2.5,
-   "source": "pole of inaccessibility of the OSM pond 918946248 (10 m from the shore); position assumed, not surveyed"},
-  "geometry": {"type": "Point", "coordinates": [537510.9, 4810851.9]}}]}
+   "source": "SWOOP 2025: white spray (centroid of the bright pixels) inside a ~4 m ring of disturbed water"},
+  "geometry": {"type": "Point", "coordinates": [537518.5, 4810850.0]}}]}

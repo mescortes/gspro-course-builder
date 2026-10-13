@@ -29,9 +29,8 @@ Open items after QA round 2. Every hole scored 8/10 or more from its verifier; d
 
 ## Model polish
 
-* Mulch beds away from the clubhouse (shrub beds under the trees elsewhere) still read as rough: the classifier
-  cannot tell them from the dormant spring lawns (same Lab colour and NDVI). The clubhouse beds are hand-picked
-  overrides; a summer photo would let the rest be classified.
-* The hole 3 fountain position is assumed (the middle of the pond), not surveyed.
+* Mulch beds are hand-picked overrides around the clubhouse, pro shop and parking islands
+  (`clubhouse_mulch.geojson`, `grounds_mulch.geojson`). Shrub beds under trees elsewhere still read as rough: in the
+  spring photo they look like the leaf litter and dormant lawn around them (same Lab colour and NDVI).
 * **Shelters:** footprints are from LiDAR building returns where they exist. The #4 / #13 shelter postdates the
   LiDAR, so its footprint is +/- 1 m from the photo.
