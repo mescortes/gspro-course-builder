@@ -234,7 +234,8 @@ waterMat.onBeforeCompile = (sh) => {   // second, slower ripple layer at another
     normal = normalize( tbn * mapN );`).replace('void main() {', 'uniform float uTime;\nvoid main() {');
 };
 const waterUniforms = { uTime: { value: 0 } };
-// Ponds: planar reflections of the banks, trees and sky (three.js Water), dark green-brown pond colour, sun glints.
+// Ponds: planar reflections of the banks, trees and sky (three.js Water), a dark neutral pond colour (the sky reads
+// silver-grey on a near-calm pond, not saturated blue), fine ripples, sun glints.
 // Each _WaterPlane is flat at its water level, which is what a planar reflector needs. ?water=simple keeps the old
 // glossy material (cheaper on weak GPUs).
 const waterPlanes = [], ponds = [];
@@ -247,7 +248,7 @@ function makeReflectiveWater(o) {
   // Water.js expects an XY plane whose normal is +Z; ours is XZ (normal +Y): rotate it back, the mesh rotates it up
   g.rotateX(Math.PI / 2);
   const w = new Water(g, { textureWidth: 1024, textureHeight: 1024, waterNormals: pondNormals, sunDirection: sunDir.clone(),
-    sunColor: 0xbfb4a0, waterColor: 0x183a26, distortionScale: 0.3, fog: true, alpha: 1.0 });
+    sunColor: 0xbfb4a0, waterColor: 0x1a2422, distortionScale: 0.08, fog: true, alpha: 1.0 });
   w.rotation.x = -Math.PI / 2; w.position.y = level;
   // Water.js clips the mirror view with an oblique near plane, which the logarithmic depth buffer overrides: the
   // pond bed below the surface showed up in the reflection as brown mud. Clip it with a world plane instead.
@@ -257,7 +258,12 @@ function makeReflectiveWater(o) {
     const prev = r.clippingPlanes; r.clippingPlanes = keepAbove;
     try { mirror.call(this, r, sc, cam); } finally { r.clippingPlanes = prev; }
   };
-  w.material.uniforms.size.value = 7.0;                 // ripple scale: fine pond ruffle, not ocean swell
+  w.material.uniforms.size.value = 20.0;                // ripple scale: fine pond ruffle, not ocean swell
+  // reflected sky partly desaturated: a pond under a hazy summer sky mirrors silver-grey, not postcard blue
+  w.material.fragmentShader = w.material.fragmentShader.replace(
+    'vec3 reflectionSample = vec3( texture2D( mirrorSampler, mirrorCoord.xy / mirrorCoord.w + distortion ) );',
+    'vec3 reflectionSample = vec3( texture2D( mirrorSampler, mirrorCoord.xy / mirrorCoord.w + distortion ) );\n' +
+    'reflectionSample = mix( reflectionSample, vec3( dot( reflectionSample, vec3( 0.2126, 0.7152, 0.0722 ) ) ), 0.45 );');
   w.name = o.name; w.renderOrder = 2;
   o.parent.add(w); o.visible = false; ponds.push(w);
 }
