@@ -1,10 +1,10 @@
 """Headless still renders of the course glTF (visual QA without a browser), with Cycles on the CPU.
 
   blender -b --python scripts/render_blender.py -- <in.glb> <out_dir> <views.json> [name ...] [--size 1600x900]
-         [--samples 48] [--holes output/holes.json]
+         [--samples 48] [--holes output/<slug>/holes.json]
 
-Cameras come from viewer/views.json (model frame: x = E - ORIGIN_E, y = height - BASE_H, z = -(N - ORIGIN_N)), plus
-per-hole presets h<N>-tee / h<N>-green derived from output/holes.json when --holes is given (names like h3-tee).
+Cameras come from output/<slug>/views.json (model frame: x = E - ORIGIN_E, y = height - BASE_H, z = -(N - ORIGIN_N)), plus
+per-hole presets h<N>-tee / h<N>-green derived from holes.json when --holes is given (names like h3-tee).
 glTF import in Blender: X = model x, Y = -model z, Z = model y.
 """
 import json, math, sys

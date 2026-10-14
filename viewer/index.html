@@ -49,7 +49,7 @@ import { Grass } from './grass.js';
 
 const params = new URLSearchParams(location.search);
 const COURSE = params.get('course') || 'westmount';         // output/<course>/ (course folder slug)
-const OUT = `../output/${COURSE}/`;
+const OUT = params.get('out') || `../output/${COURSE}/`;       // e.g. ?out=../build/westmount-test/output/
 const MODEL = params.get('model') || `${OUT}${COURSE}.glb`;
 const HOLES = params.get('holes') || `${OUT}holes.json`;
 const GRASS_SPEC = params.get('grass') || `${OUT}gspro/grass_3dg.json`;

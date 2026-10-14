@@ -23,7 +23,7 @@ STEPS = [
     ("prefabs",    "export_tree_prefabs.py"),  # Unity tree prefabs (LOD0-2) + reference sizes
     ("fbx",        None),                    # Blender: FBX meshes in the Unity terrain frame
     ("maps",       "make_maps.py"),          # yardage-book hole maps, green maps, course map
-    ("views",      "make_views.py"),         # viewer camera presets (viewer/views.json) from hole 1
+    ("views",      "make_views.py"),         # viewer camera presets (output/<slug>/views.json) from hole 1
 ]
 # headless Blender for the FBX step: $BLENDER, else `blender` on PATH
 BLENDER = os.environ.get("BLENDER") or shutil.which("blender") or "blender"

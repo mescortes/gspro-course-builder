@@ -64,7 +64,7 @@ def lidar_tiles(ext, margin=MARGIN):
 
 def fetch_lidar():
     out = C.DATA / "lidar"; out.mkdir(parents=True, exist_ok=True)
-    tiles = lidar_tiles(C.CORE)
+    tiles = lidar_tiles(C.FETCH_CORE)
     for e, n in tiles:
         url = LIDAR_URL.format(project=LIDAR_PROJECT, e=e, n=n)
         size = int(requests.head(url, headers=UA, timeout=60).headers.get("Content-Length", 0)) or None
@@ -161,7 +161,7 @@ def fetch_osm():
     if all(p.exists() for p in snap):
         print(f"osm: keeping the snapshot in {C.RESEARCH} (delete osm_all.json and osm_golf.json to refresh)")
         return
-    w, s, e, n = lonlat_bbox(C.CORE, 400)
+    w, s, e, n = lonlat_bbox(C.FETCH_CORE, 400)
     bb = f"{s},{w},{n},{e}"
     C.RESEARCH.mkdir(parents=True, exist_ok=True)
     ok = overpass(f'[out:json][timeout:180];(nwr({bb}););out geom;', C.RESEARCH / "osm_all.json") and \
@@ -179,7 +179,7 @@ def fetch_osm():
 
 
 def fetch_imagery():
-    e = C.CORE; m = 20
+    e = C.FETCH_CORE; m = 20  # the course extent in both profiles (they share data/<slug>/)
     dst = C.IMAGERY_RAW
     if dst.exists():
         return

@@ -1,5 +1,7 @@
 """config.py: the course loader (courses/<slug>/course.toml, chosen with COURSE=<slug>), on fresh trees and on Westmount."""
 import json, os, shutil, subprocess, sys
+
+import pytest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +16,9 @@ for k, v in vars(C).items():
         continue
     if isinstance(v, Path):
         out[k] = 'PATH:' + v.relative_to(C.ROOT).as_posix()
-    elif k != 'LIDAR_TILES':
+    elif k == 'LIDAR_TILES':
+        out[k] = repr([p.relative_to(C.ROOT).as_posix() for p in v])
+    else:
         out[k] = repr(v)
 out['course_hole'] = repr([C.course_hole(r) for r in ('1', '9', '18', '19', '0', 'x', None, 7, '07')])
 out['to_model'] = repr(C.to_model(537600.5, 4810900.25, 350.0))
@@ -38,7 +42,7 @@ playable = "1-9"
 def load(root, course=None, profile="course"):
     env = {k: v for k, v in os.environ.items() if k not in ("COURSE", "MG_PROFILE")}
     env["MG_PROFILE"] = profile
-    if course:
+    if course is not None:
         env["COURSE"] = course
     r = subprocess.run([sys.executable, "-c", DUMP], cwd=root, env=env, capture_output=True, text=True)
     return r
@@ -83,6 +87,20 @@ def test_config_creates_the_build_and_output_dirs(tmp_path):
     assert r.returncode == 0, r.stderr
     for d in ("build/alpha", "build/alpha/features", "output/alpha"):
         assert (root / d).is_dir(), d
+    assert not (root / "build/alpha-test").exists()
+    r = load(root, profile="test")
+    assert r.returncode == 0, r.stderr
+    for d in ("build/alpha-test", "build/alpha-test/features", "build/alpha-test/output"):
+        assert (root / d).is_dir(), d
+
+
+def test_lidar_tiles_are_the_sorted_laz_files_of_the_course(tmp_path):
+    root = tree(tmp_path, "alpha", "bravo")
+    for c, names in (("alpha", ("b.laz", "a.laz", "notes.txt")), ("bravo", ("c.laz",))):
+        (root / "data" / c / "lidar").mkdir(parents=True)
+        for n in names:
+            (root / "data" / c / "lidar" / n).write_bytes(b"")
+    assert json.loads(load(root, "alpha").stdout)["LIDAR_TILES"] == repr(["data/alpha/lidar/a.laz", "data/alpha/lidar/b.laz"])
 
 
 def test_two_courses_build_side_by_side_without_sharing_a_folder(tmp_path):
@@ -97,8 +115,8 @@ def test_two_courses_build_side_by_side_without_sharing_a_folder(tmp_path):
     for (c, profile), ps in paths.items():
         other = "bravo" if c == "alpha" else "alpha"
         for k, p in ps.items():
-            assert c in p.parts[:2] or p.parts[1].startswith(c), (c, profile, k, p)   # data/alpha, build/alpha-test, ...
-            for q in paths[other, profile].values():
+            assert p.parts[1] in (c, f"{c}-test"), (c, profile, k, p)   # data/alpha, build/alpha-test, ...
+            for q in [*paths[other, "course"].values(), *paths[other, "test"].values()]:
                 assert not (p == q or p in q.parents or q in p.parents), (k, p, q)
     a, t = paths["alpha", "course"], paths["alpha", "test"]
     for k in ("BUILD", "FEATURES", "OUTPUT"):        # the test profile has its own build folders, the same sources
@@ -109,10 +127,72 @@ def test_two_courses_build_side_by_side_without_sharing_a_folder(tmp_path):
 
 def test_the_course_must_be_named_when_there_are_several(tmp_path):
     root = tree(tmp_path, "alpha", "bravo")
-    r = load(root)
-    assert r.returncode != 0 and "COURSE" in r.stderr and "alpha" in r.stderr and "bravo" in r.stderr
+    for course in (None, ""):                       # COURSE= (empty, e.g. an unset CI input) is the same as unset
+        r = load(root, course)
+        assert r.returncode != 0 and "COURSE" in r.stderr and "alpha" in r.stderr and "bravo" in r.stderr
     one = tree(tmp_path / "one", "alpha")
-    assert json.loads(load(one).stdout)["SLUG"] == "'alpha'"
+    for course in (None, ""):
+        assert json.loads(load(one, course).stdout)["SLUG"] == "'alpha'"
+    r = load(tree(tmp_path / "none"))
+    assert r.returncode != 0 and "courses/<slug>/course.toml" in r.stderr
+
+
+def test_course_slugs_cannot_collide_with_a_test_profile_folder(tmp_path):
+    """build/<slug>-test is the test profile's folder: a course called alpha-test would share it with alpha's."""
+    root = tree(tmp_path, "alpha", "alpha-test")
+    for c in ("alpha", "alpha-test"):
+        r = load(root, c)
+        assert r.returncode != 0 and "alpha-test" in r.stderr and "-test" in r.stderr
+    root = tree(tmp_path / "caps", "Bravo")
+    r = load(root)
+    assert r.returncode != 0 and "Bravo" in r.stderr
+
+
+def test_a_broken_course_file_names_the_file_and_the_problem(tmp_path):
+    root = tree(tmp_path, "alpha")
+    toml = root / "courses/alpha/course.toml"
+    toml.write_text(MINIMAL.format(name="Alpha").replace("[frame]", "[frame"))
+    r = load(root)
+    assert r.returncode != 0 and "courses/alpha/course.toml" in r.stderr and "Traceback" not in r.stderr
+    toml.write_text(MINIMAL.format(name="Alpha").replace("base_h = 300.0", ""))
+    r = load(root)
+    assert r.returncode != 0 and "courses/alpha/course.toml" in r.stderr and "base_h" in r.stderr and "Traceback" not in r.stderr
+
+
+def test_course_files_are_read_as_utf8_whatever_the_locale(tmp_path):
+    root = tree(tmp_path, "alpha")
+    toml = root / "courses/alpha/course.toml"
+    toml.write_bytes(MINIMAL.format(name="Club de golf Montréal").encode("utf-8"))
+    env = {k: v for k, v in os.environ.items() if k not in ("COURSE", "MG_PROFILE")}
+    env.update(LC_ALL="en_US.ISO8859-1", LANG="en_US.ISO8859-1", PYTHONUTF8="0")
+    probe = subprocess.run([sys.executable, "-c", "import locale; print(locale.getencoding())"], env=env,
+                           capture_output=True, text=True).stdout.strip()
+    if probe.replace("-", "").upper() not in ("ISO88591", "LATIN1"):
+        pytest.skip(f"no ISO-8859-1 locale here ({probe})")
+    r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'scripts'); import config as C; "
+                        "print(ascii(C.COURSE_NAME))"], cwd=root, env=env, capture_output=True, text=True)
+    assert r.stdout.strip() == ascii("Club de golf Montréal"), r.stdout + r.stderr
+
+
+def test_osm_refs_are_matched_as_numbers(tmp_path):
+    root = tree(tmp_path, "alpha")
+    toml = root / "courses/alpha/course.toml"
+    toml.write_text(MINIMAL.format(name="Alpha").replace('playable = "1-9"', 'playable = "1-18"\nosm_ref = { 7 = 12, 12 = 7 }'))
+    code = ("import sys; sys.path.insert(0, 'scripts'); import config as C; "
+            "print(repr([C.course_hole(r) for r in ('7', '07', ' 7', 7, 7.0, '12', ' 12', 12, '3', 'x', None)]))")
+    env = {k: v for k, v in os.environ.items() if k not in ("COURSE", "MG_PROFILE")}
+    r = subprocess.run([sys.executable, "-c", code], cwd=root, env=env, capture_output=True, text=True)
+    assert r.stdout.strip() == repr([12, 12, 12, 12, 12, 7, 7, 7, 3, 99, 99]), r.stderr
+
+
+def test_downloads_cover_the_course_extent_in_both_profiles(tmp_path):
+    """data/<slug>/ is shared by the two profiles: a test-profile fetch on a fresh course must not leave a
+    test-extent photo or OSM snapshot behind for the course build."""
+    root = tree(tmp_path, "alpha")
+    toml = root / "courses/alpha/course.toml"
+    toml.write_text(MINIMAL.format(name="Alpha") + "[test_profile]\ncore = { xmin = 499500.0, ymin = 4799500.0, xmax = 500000.0, ymax = 4800000.0 }\n")
+    c, t = (json.loads(load(root, profile=p).stdout) for p in ("course", "test"))
+    assert t["CORE"] != c["CORE"] and t["FETCH_CORE"] == c["FETCH_CORE"] == c["CORE"]
 
 
 def test_an_unknown_course_is_an_error(tmp_path):

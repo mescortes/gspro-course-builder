@@ -9,6 +9,9 @@ __pycache__/
 data/
 build/
 output/
+# left behind by checkouts made before the course folders (generated files at the root)
+/features/
+/build_test/
 
 # editors / OS
 .DS_Store

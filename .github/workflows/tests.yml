@@ -18,4 +18,4 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install -r requirements.txt
-      - run: python -m pytest -q tests --ignore=tests/test_course.py
+      - run: python -m pytest -q tests --ignore=tests/test_course.py  # COURSE=westmount: tests/conftest.py

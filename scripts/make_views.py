@@ -1,4 +1,4 @@
-"""Camera presets for the viewer (model frame), derived from hole 1 in output/holes.json + the DEM -> viewer/views.json.
+"""Camera presets for the viewer (model frame), derived from hole 1 in output/holes.json + the DEM -> output/<slug>/views.json.
 
 The viewer also builds per-hole cameras from holes.json at runtime; these are the named presets (#tee, #green, ...)."""
 import sys, json

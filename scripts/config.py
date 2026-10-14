@@ -14,7 +14,7 @@ LiDAR; heights CGVD2013, m). WGS84 inputs (OSM, web imagery) are projected with 
 to the LiDAR empirically (measure_registration.py), which also absorbs the ~1 m WGS84 / NAD83(CSRS) difference.
 Model frame (glTF, Y-up, metres): x = E - ORIGIN_E, y = H - BASE_H, z = -(N - ORIGIN_N).
 """
-import os, sys, tomllib
+import os, re, sys, tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,11 +22,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _slug():
     known = sorted(p.parent.name for p in (ROOT / "courses").glob("*/course.toml"))
-    slug = os.environ.get("COURSE")
+    if not known:
+        sys.exit("no course: add courses/<slug>/course.toml")
+    for k in known:  # build/<slug>-test is the test profile's folder, so no slug may end in -test
+        if not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", k) or k.endswith("-test"):
+            sys.exit(f"courses/{k}: a course folder name is lower-case words joined by '-', not ending in '-test'")
+    slug = os.environ.get("COURSE") or None  # COURSE= (empty) is the same as unset
     if slug is None and len(known) == 1:
         return known[0]
     if slug not in known:
-        sys.exit(f"{'unknown course ' + repr(slug) if slug else 'set COURSE'}: courses/ has {', '.join(known) or 'no course.toml'}")
+        sys.exit(f"{'unknown course ' + repr(slug) if slug else 'set COURSE'}: courses/ has {', '.join(known)}")
     return slug
 
 
@@ -43,8 +48,15 @@ def _holes(spec):
 
 SLUG = _slug()
 COURSE_DIR = ROOT / "courses" / SLUG
-_T = tomllib.loads((COURSE_DIR / "course.toml").read_text())
-_course, _frame, _img, _holes_t = _T["course"], _T["frame"], _T.get("imagery", {}), _T.get("holes", {})
+try:
+    with open(COURSE_DIR / "course.toml", "rb") as _f:  # TOML is UTF-8 whatever the locale
+        _T = tomllib.load(_f)
+    _course, _frame, _img, _holes_t = _T["course"], _T["frame"], _T.get("imagery", {}), _T.get("holes", {})
+    for _k in ("crs", "origin", "base_h", "core", "terrain"):
+        _frame[_k]
+    _course["name"]
+except (tomllib.TOMLDecodeError, KeyError) as _e:
+    sys.exit(f"courses/{SLUG}/course.toml: {'missing ' + str(_e) if isinstance(_e, KeyError) else _e}")
 
 SOURCES = COURSE_DIR / "features"   # hand-made course features (tracked)
 RESEARCH = COURSE_DIR / "research"  # OSM snapshot, notes, QA verdicts (tracked)
@@ -65,6 +77,7 @@ BASE_H = float(_frame["base_h"])  # metres subtracted from heights in the model 
 
 PROFILE = os.environ.get("MG_PROFILE", "course")
 CORE = dict(_frame["core"])  # build extent: every hole + >= 100 m margin, a whole number of TILEs
+FETCH_CORE = dict(CORE)  # downloads cover the course extent in both profiles (data/<slug>/ is shared)
 TILE = float(_frame.get("tile", 256.0))  # processing tile size (m); rasters are built tile by tile with overlap
 # Unity/GSPro terrain square (2048 m gives a 4097^2 heightmap at 0.5 m) centred on CORE; cells outside CORE come from
 # the backdrop DEM
@@ -103,18 +116,25 @@ YARDS_PER_M = 1.0 / 0.9144
 
 # ---- course definition
 SCENERY_HOLES = _holes(_holes_t.get("scenery", ()))  # holes visible from play but not played
-_OSM_REF = {str(k): int(v) for k, v in _holes_t.get("osm_ref", {}).items()}  # OSM golf=hole ref -> hole, if not equal
+_OSM_REF = {int(k): int(v) for k, v in _holes_t.get("osm_ref", {}).items()}  # OSM golf=hole ref -> hole, if not equal
 
 
 def course_hole(osm_ref):
     """OSM golf=hole ref -> course hole number (99 = not a course hole)."""
-    if str(osm_ref) in _OSM_REF:
-        return _OSM_REF[str(osm_ref)]
     try:
         r = int(osm_ref)
     except (TypeError, ValueError):
         return 99
+    r = _OSM_REF.get(r, r)
     return r if r in PLAYABLE or r in SCENERY_HOLES else 99
+
+
+def lidar_tiles():
+    """LIDAR_TILES, or exit naming the folder: an empty folder used to build all-NaN rasters without an error."""
+    if not LIDAR_TILES:
+        sys.exit(f"no lidar tiles in {DATA / 'lidar'}: run fetch_data.py lidar"
+                 + (f" (or move the old data/ into data/{SLUG}/)" if (ROOT / "data" / "lidar").exists() else ""))
+    return LIDAR_TILES
 
 
 LAYOUT = _course.get("layout", f"{len(PLAYABLE)} holes")
