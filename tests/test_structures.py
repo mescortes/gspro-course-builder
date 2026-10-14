@@ -9,6 +9,7 @@ from shapely.geometry import box, shape
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+import config as C  # noqa: E402
 
 
 def _flat(z):
@@ -30,7 +31,7 @@ def test_hipped_roof_is_a_pyramid_from_the_eaves():
 
 
 def test_curated_structures_are_valid_buildings():
-    path = ROOT / "features/structures.geojson"
+    path = C.SOURCES / "structures.geojson"
     if not path.exists():
         pytest.skip("no curated structures")
     fc = json.load(open(path))
@@ -84,7 +85,7 @@ def test_patio_tables_sit_inside_the_paving_and_apart():
 
 
 def test_curated_patios_are_valid():
-    path = ROOT / "features/patios.geojson"
+    path = C.SOURCES / "patios.geojson"
     if not path.exists():
         pytest.skip("no curated patios")
     for f in json.load(open(path))["features"]:
@@ -264,12 +265,12 @@ def test_cars_are_car_sized_and_parked_on_the_ground():
 
 def test_clubhouse_mulch_beds_are_valid_and_clear_of_the_buildings_and_patio():
     from shapely.ops import unary_union
-    feats = [f for n in ("clubhouse_mulch", "grounds_mulch") for f in json.load(open(ROOT / f"features/overrides/{n}.geojson"))["features"]]
+    feats = [f for n in ("clubhouse_mulch", "grounds_mulch") for f in json.load(open(C.SOURCES / f"overrides/{n}.geojson"))["features"]]
     beds = [shape(f["geometry"]) for f in feats]
     props = [f["properties"] for f in feats]
     assert beds and all(g.is_valid and 5 < g.area < 300 for g in beds)
     assert all(p["surface"] == "native" and p["hole"] == 99 for p in props)
-    patio = unary_union([shape(f["geometry"]) for f in json.load(open(ROOT / "features/patios.geojson"))["features"]])
+    patio = unary_union([shape(f["geometry"]) for f in json.load(open(C.SOURCES / "patios.geojson"))["features"]])
     assert all(g.intersection(patio).area < 0.15 * g.area for g in beds)
 
 
@@ -277,7 +278,7 @@ def test_curated_fountains_sit_well_inside_a_pond():
     from surface_classify import osm_geoms
     from shapely.geometry import Point
     ponds = [g for oid, t, g in osm_geoms() if ("water" in str(t)) and g.geom_type == "Polygon"]
-    for f in json.load(open(ROOT / "features/fountains.geojson"))["features"]:
+    for f in json.load(open(C.SOURCES / "fountains.geojson"))["features"]:
         pt = Point(f["geometry"]["coordinates"])
         inside = [g for g in ponds if g.contains(pt)]
         assert inside and inside[0].exterior.distance(pt) > 4.0

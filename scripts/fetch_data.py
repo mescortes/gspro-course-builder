@@ -4,7 +4,7 @@
            nominal / 14-20 measured, EPSG:2958 + CGVD2013), 1 km COPC tiles from the NRCan CanElevation S3 bucket
            covering config.CORE + margin. Licence: Open Government Licence - Ontario / - Canada (attribution).
   OSM      golf / building / road features via Overpass, or the OSM API when Overpass is down
-           (research/osm_all.json, research/osm_golf.json, both in Overpass 'out geom' JSON)
+           (courses/<slug>/research/osm_all.json, osm_golf.json, both in Overpass 'out geom' JSON)
   Imagery  Ontario SWOOP 2025 orthoimagery (RGB + NIR, 0.16 m, OGL-Ontario) over CORE + 20 m (config.IMAGERY_RAW)
   Backdrop handled by fetch_backdrop.py / build_backdrop.py
 """
@@ -155,26 +155,26 @@ def osm_api_map(bb, step=0.012):
 
 
 def fetch_osm():
-    """research/osm_all.json + osm_golf.json. An existing snapshot is kept (the model and its QA overrides were built
-    from it); delete both files to refresh."""
-    snap = [C.ROOT / "research/osm_all.json", C.ROOT / "research/osm_golf.json"]
+    """courses/<slug>/research/osm_all.json + osm_golf.json. An existing snapshot is kept (the model and its QA
+    overrides were built from it); delete both files to refresh."""
+    snap = [C.RESEARCH / "osm_all.json", C.RESEARCH / "osm_golf.json"]
     if all(p.exists() for p in snap):
-        print("osm: keeping the snapshot in research/ (delete osm_all.json and osm_golf.json to refresh)")
+        print(f"osm: keeping the snapshot in {C.RESEARCH} (delete osm_all.json and osm_golf.json to refresh)")
         return
     w, s, e, n = lonlat_bbox(C.CORE, 400)
     bb = f"{s},{w},{n},{e}"
-    (C.ROOT / "research").mkdir(exist_ok=True)
-    ok = overpass(f'[out:json][timeout:180];(nwr({bb}););out geom;', C.ROOT / "research/osm_all.json") and \
+    C.RESEARCH.mkdir(parents=True, exist_ok=True)
+    ok = overpass(f'[out:json][timeout:180];(nwr({bb}););out geom;', C.RESEARCH / "osm_all.json") and \
         overpass(f'[out:json][timeout:180];(nwr({bb})["golf"];nwr({bb})["leisure"="golf_course"];);out geom;',
-                 C.ROOT / "research/osm_golf.json")
+                 C.RESEARCH / "osm_golf.json")
     if not ok:
         print("overpass unavailable: falling back to the OSM API", flush=True)
         els = osm_api_map((w, s, e, n))
         meta = {"version": 0.6, "generator": "fetch_data.py (OSM API /map fallback)",
                 "osm3s": {"copyright": "The data included in this document is from www.openstreetmap.org. The data is made "
                                        "available under ODbL."}}
-        json.dump(dict(meta, elements=els), open(C.ROOT / "research/osm_all.json", "w"))
-        json.dump(dict(meta, elements=golf_only(els)), open(C.ROOT / "research/osm_golf.json", "w"))
+        json.dump(dict(meta, elements=els), open(C.RESEARCH / "osm_all.json", "w"))
+        json.dump(dict(meta, elements=golf_only(els)), open(C.RESEARCH / "osm_golf.json", "w"))
     print("osm ok")
 
 

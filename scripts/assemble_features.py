@@ -1,8 +1,8 @@
 """Merge the automatic surface partition with hand-curated overrides.
 
-features/overrides/*.geojson: polygons with properties {surface, hole}. Each override polygon is burned on top of the
+courses/<slug>/features/overrides/*.geojson: polygons with properties {surface, hole}. Each override polygon is burned on top of the
 automatic partition (removing whatever was there), so curated edits survive re-running the automatic steps.
-Output: features/course_surfaces.geojson
+Output: build/<slug>/features/course_surfaces.geojson
 """
 import sys, json, glob
 from shapely.geometry import shape, mapping, box
@@ -56,7 +56,7 @@ def main():
     auto = json.load(open(C.FEATURES / "auto_core.geojson"))
     feats = [(shape(f["geometry"]), f["properties"]) for f in auto["features"]]
     over = []
-    for p in sorted(glob.glob(str(C.FEATURES / "overrides/*.geojson"))):
+    for p in sorted(glob.glob(str(C.SOURCES / "overrides/*.geojson"))):
         for f in json.load(open(p))["features"]:
             over.append((shape(f["geometry"]), f["properties"]))
     if over:

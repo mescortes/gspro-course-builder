@@ -90,7 +90,7 @@ def test_cleared_tree_list_is_reviewed_and_local():
     """Every clearance point carries its evidence (photo note) and sits near a post-2018 tee: hole 5 / 8 Blue."""
     import json
     from shapely.geometry import shape
-    fc = json.load(open(ROOT / "features/trees_cleared.geojson"))
+    fc = json.load(open(D.C.SOURCES / "trees_cleared.geojson"))
     assert fc["features"]
     for f in fc["features"]:
         p = f["properties"]

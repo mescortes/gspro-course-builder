@@ -1,6 +1,6 @@
 """Turn the per-pixel classification into a clean planar partition of course surfaces (GeoJSON, config.CRS).
 
-Output: features/auto_core.geojson — one feature per polygon with properties
+Output: build/<slug>/features/auto_core.geojson — one feature per polygon with properties
   surface: green | fringe | fairway | semirough | rough | tee | bunker | cartpath | native | road | building | court | water
   hole:    course hole (config.course_hole of the OSM ref), 98 (cart paths), 99 (course-wide background)
 The partition has no overlaps and covers the whole CORE extent (rough fills the remainder).

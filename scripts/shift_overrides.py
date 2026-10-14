@@ -11,7 +11,7 @@ import config as C
 
 dx, dy = C.IMAGERY_SHIFT
 n_f = n_m = 0
-for p in sorted(glob.glob(str(C.FEATURES / "overrides" / "*.geojson"))):
+for p in sorted(glob.glob(str(C.SOURCES / "overrides" / "*.geojson"))):
     fc = json.load(open(p))
     for f in fc["features"]:
         if f["properties"].get("frame") == "lidar":
@@ -20,7 +20,7 @@ for p in sorted(glob.glob(str(C.FEATURES / "overrides" / "*.geojson"))):
         f["properties"]["frame"] = "lidar"
         n_f += 1
     json.dump(fc, open(p, "w"))
-for p in sorted(glob.glob(str(C.FEATURES / "overrides" / "*_meta.json"))):
+for p in sorted(glob.glob(str(C.SOURCES / "overrides" / "*_meta.json"))):
     m = json.load(open(p))
     if m.get("frame") == "lidar":
         continue

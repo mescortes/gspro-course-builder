@@ -42,14 +42,14 @@ _OSM_CACHE = {}
 
 
 def osm_geoms():
-    """All tagged OSM ways/relations/nodes in research/osm_all.json as (id, tags, shapely geometry in UTM).
-    Golf features come from research/osm_golf.json as well (wider query); cart-path centre lines traced from the photo
-    (research/paths_detected.geojson, trace_paths.py) are appended as golf=cartpath lines (tag source=trace_paths), and
-    QA-curated structures OSM lacks (features/structures.geojson: shelters, with building / height / roof tags).
+    """All tagged OSM ways/relations/nodes in courses/<slug>/research/osm_all.json as (id, tags, shapely geometry in UTM).
+    Golf features come from osm_golf.json as well (wider query); cart-path centre lines traced from the photo
+    (build/<slug>/paths_detected.geojson, trace_paths.py) are appended as golf=cartpath lines (tag source=trace_paths), and
+    QA-curated structures OSM lacks (courses/<slug>/features/structures.geojson: shelters, with building / height / roof tags).
     Cached per process and on disk."""
     import pickle, os
-    src = [C.ROOT / "research/osm_all.json", C.ROOT / "research/osm_golf.json", C.ROOT / "research/paths_detected.geojson",
-           C.FEATURES / "structures.geojson"]
+    src = [C.RESEARCH / "osm_all.json", C.RESEARCH / "osm_golf.json", C.BUILD / "paths_detected.geojson",
+           C.SOURCES / "structures.geojson"]
     stamp = tuple(int(os.path.getmtime(p)) if p.exists() else 0 for p in src)
     cache = C.BUILD / "osm_geoms.pkl"
     if stamp in _OSM_CACHE:

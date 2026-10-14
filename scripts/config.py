@@ -1,121 +1,140 @@
-"""Shared project configuration: coordinate frames, extents, resolutions, course definition.
+"""Course configuration, loaded from courses/<slug>/course.toml. The course is chosen with COURSE=<slug>; it can be
+left out while courses/ holds a single course.
 
-World frame: NAD83(CSRS) / UTM zone 17N (EPSG:2958), the frame of the Ontario LiDAR; heights CGVD2013 (m).
-WGS84 inputs (OSM, web imagery) are projected with pyproj; the imagery is then registered to the LiDAR empirically
-(measure_registration.py), which also absorbs the ~1 m WGS84 / NAD83(CSRS) difference.
+Folders, per course:
+  courses/<slug>/           tracked: course.toml, features/ (hand-made sources: overrides, structures, patios ...),
+                            research/ (OSM snapshot, notes, QA verdicts)
+  data/<slug>/              downloads (LiDAR, imagery, backdrop DEM, textures) and a few derived caches
+  build/<slug>/             intermediate products; generated features in build/<slug>/features
+  output/<slug>/            the model, the GSPro package, maps, viewer presets
+MG_PROFILE=test builds the [test_profile] extent of course.toml into build/<slug>-test/ (features/, output/ inside).
+
+World frame: the course's projected CRS (Westmount: NAD83(CSRS) / UTM zone 17N, EPSG:2958, the frame of the Ontario
+LiDAR; heights CGVD2013, m). WGS84 inputs (OSM, web imagery) are projected with pyproj; the imagery is then registered
+to the LiDAR empirically (measure_registration.py), which also absorbs the ~1 m WGS84 / NAD83(CSRS) difference.
 Model frame (glTF, Y-up, metres): x = E - ORIGIN_E, y = H - BASE_H, z = -(N - ORIGIN_N).
 """
-import os
+import os, sys, tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data"
-BUILD = ROOT / "build"
-FEATURES = ROOT / "features"
-OUTPUT = ROOT / "output"
 
-COURSE_NAME = "Westmount Golf & Country Club"
-COURSE_SHORT = "Westmount G&CC"
-LAYOUT = "18 holes"
-MODEL_NAME = "westmount"          # output/<MODEL_NAME>.glb, output/<MODEL_NAME>_noveg.glb
-UNITY_SCRIPT = "WestmountSetup.cs"
 
-CRS = "EPSG:2958"
-CRS_LABEL = "NAD83(CSRS) / UTM zone 17N (EPSG:2958); heights CGVD2013 (m)"
-ORIGIN_E = 537500.0
-ORIGIN_N = 4810850.0
-BASE_H = 345.0  # metres CGVD2013 subtracted from heights in the model frame
+def _slug():
+    known = sorted(p.parent.name for p in (ROOT / "courses").glob("*/course.toml"))
+    slug = os.environ.get("COURSE")
+    if slug is None and len(known) == 1:
+        return known[0]
+    if slug not in known:
+        sys.exit(f"{'unknown course ' + repr(slug) if slug else 'set COURSE'}: courses/ has {', '.join(known) or 'no course.toml'}")
+    return slug
+
+
+def _holes(spec):
+    """"1-9,11" or [1, 2] -> (1, ..., 9, 11)"""
+    if not isinstance(spec, str):
+        return tuple(spec)
+    out = []
+    for part in filter(None, (s.strip() for s in spec.split(","))):
+        a, _, b = part.partition("-")
+        out += range(int(a), int(b or a) + 1)
+    return tuple(out)
+
+
+SLUG = _slug()
+COURSE_DIR = ROOT / "courses" / SLUG
+_T = tomllib.loads((COURSE_DIR / "course.toml").read_text())
+_course, _frame, _img, _holes_t = _T["course"], _T["frame"], _T.get("imagery", {}), _T.get("holes", {})
+
+SOURCES = COURSE_DIR / "features"   # hand-made course features (tracked)
+RESEARCH = COURSE_DIR / "research"  # OSM snapshot, notes, QA verdicts (tracked)
+DATA = ROOT / "data" / SLUG
+BUILD = ROOT / "build" / SLUG
+FEATURES = BUILD / "features"       # generated features: auto_core, course_surfaces, trees
+OUTPUT = ROOT / "output" / SLUG
+
+COURSE_NAME = _course["name"]
+COURSE_SHORT = _course.get("short", COURSE_NAME)
+MODEL_NAME = _course.get("model_name", SLUG)    # output/<slug>/<MODEL_NAME>.glb, <MODEL_NAME>_noveg.glb
+UNITY_SCRIPT = _course.get("unity_script", "".join(w.title() for w in SLUG.split("-")) + "Setup.cs")
+
+CRS = _frame["crs"]
+CRS_LABEL = _frame.get("crs_label", CRS)
+ORIGIN_E, ORIGIN_N = (float(v) for v in _frame["origin"])
+BASE_H = float(_frame["base_h"])  # metres subtracted from heights in the model frame
 
 PROFILE = os.environ.get("MG_PROFILE", "course")
-# Build extent: all 18 holes (OSM course outline E 536898-538156, N 4810400-4811320) + >= 100 m margin, 6 x 5 tiles of 256 m.
-CORE = dict(xmin=536760.0, ymin=4810220.0, xmax=538296.0, ymax=4811500.0)
-TILE = 256.0  # processing tile size (m); rasters are built tile by tile with overlap
-# Unity/GSPro terrain square (2048 m, 4097^2 heightmap at 0.5 m) centred on CORE; cells outside CORE come from the backdrop DEM
-TERRAIN = dict(xmin=536504.0, ymin=4809836.0, xmax=538552.0, ymax=4811884.0)
-if PROFILE == "test":  # small regression build around holes 1-2 (MG_PROFILE=test), written to build_test/
-    CORE = dict(xmin=537340.0, ymin=4810720.0, xmax=537980.0, ymax=4811360.0)
-    TERRAIN = dict(CORE)
-    BUILD = ROOT / "build_test"
+CORE = dict(_frame["core"])  # build extent: every hole + >= 100 m margin, a whole number of TILEs
+TILE = float(_frame.get("tile", 256.0))  # processing tile size (m); rasters are built tile by tile with overlap
+# Unity/GSPro terrain square (2048 m gives a 4097^2 heightmap at 0.5 m) centred on CORE; cells outside CORE come from
+# the backdrop DEM
+TERRAIN = dict(_frame["terrain"])
+PLAYABLE = _holes(_holes_t.get("playable", "1-18"))
+_tp = _T.get("test_profile", {})
+TEST_HOLES = _holes(_tp.get("holes", PLAYABLE))  # the holes the test profile covers
+if PROFILE == "test":  # small regression build ([test_profile] in course.toml), written to build/<slug>-test/
+    CORE = dict(_tp.get("core", CORE))
+    TERRAIN = dict(_tp.get("terrain", CORE))
+    BUILD = ROOT / "build" / f"{SLUG}-test"
     FEATURES = BUILD / "features"
     OUTPUT = BUILD / "output"
-for _d in (BUILD, FEATURES, OUTPUT):  # git-ignored (FEATURES only in the test profile): absent on a fresh clone
+for _d in (BUILD, FEATURES, OUTPUT):  # git-ignored: absent on a fresh clone
     _d.mkdir(parents=True, exist_ok=True)
-DEM_RES = 0.25  # metres
+DEM_RES = float(_frame.get("dem_res", 0.25))  # metres
 
 LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))
-LIDAR_LEAF_OFF = True   # March 2018 flights: deciduous crowns are sparse in the CHM (detect_trees.py closes them)
-IMAGERY_LEAF_OFF = True  # spring photo: the ground is visible through the bare crowns (vectorize.py keeps it)
+LIDAR_LEAF_OFF = bool(_T.get("lidar", {}).get("leaf_off", False))  # deciduous crowns sparse in the CHM (detect_trees closes them)
+IMAGERY_LEAF_OFF = bool(_img.get("leaf_off", False))  # ground visible through bare crowns (vectorize.py keeps it)
 
-# Aerial imagery covering CORE (+20 m): Ontario SWOOP 2025, 0.16 m, 4 bands (R, G, B, NIR), native EPSG:2958, Open
-# Government Licence - Ontario (scripts/fetch_imageserver.py). The pipeline reads the registered copy written by
-# register_imagery.py; band 4 (NIR) feeds the classifier, everything else reads bands 1-3.
-IMAGERY_RAW = DATA / "imagery" / "swoop2025_course.tif"
-IMAGERY_RES = 0.16
-# SWOOP 2025 vs the 2018 LiDAR (measure_registration.py, 59 bunkers: photo sand vs LiDAR hollows): dx 0.00 m, dy -0.25 m,
-# MAD 0.25 m, uniform over the course (north/south/east/west halves agree); OSM buildings within 0.5 m
-IMAGERY_SHIFT = (0.0, -0.25)  # metres +E/+N applied to the photo
-IMAGERY = DATA / "imagery" / "swoop2025_course_reg.tif"
-IMAGERY_CREDIT = "Contains information licensed under the Open Government Licence - Ontario (SWOOP 2025 orthoimagery)"
+# Aerial imagery covering CORE (+20 m). The pipeline reads the registered copy written by register_imagery.py; band 4
+# (NIR), when present, feeds the classifier, everything else reads bands 1-3.
+IMAGERY_RAW = DATA / "imagery" / _img.get("raw", "imagery.tif")
+IMAGERY_RES = float(_img.get("res", 0.16))
+IMAGERY_SHIFT = tuple(float(v) for v in _img.get("shift", (0.0, 0.0)))  # metres +E/+N applied to the photo
+IMAGERY = DATA / "imagery" / _img.get("registered", IMAGERY_RAW.stem + "_reg.tif")
+IMAGERY_CREDIT = _img.get("credit", "")
 
-# Turf colour of the glTF / viewer textures: the spring photo shows dormant, hazy turf (greens straw-coloured), so the
-# median colour of each turf surface is moved to a summer target (sRGB) and the photo only contributes the local
-# variation (mowing, wear, shade). None = use the photo's own colours. GSPro assigns its own turf materials by name.
-# Targets are Lab a* -13..-19, b* +20..+26: with the viewer's sunlight and tone mapping (Neutral, exposure 1.5) they
-# render as summer bentgrass / bluegrass in sun (fairway a* ~-20, b* ~+32). The first targets (a* -25..-28) rendered as
-# a saturated "Kelly green".
-TURF_TINT = {"green": (105, 130, 78), "fringe": (101, 124, 74), "fairway": (106, 124, 74), "tee": (105, 126, 76),
-             "semirough": (96, 113, 68), "rough": (89, 105, 65),
-             # bunker sand: the photo's sand rendered near-white (235, 226, 189); a warm tan reads as wet-raked silica
-             "bunker": (196, 180, 146)}
+# Turf colour of the glTF / viewer textures: the median colour of each turf surface is moved to this summer target
+# (sRGB) and the photo only contributes the local variation. None = use the photo's own colours.
+TURF_TINT = {k: tuple(v) for k, v in _T["turf_tint"].items()} if "turf_tint" in _T else None
 
 YARDS_PER_M = 1.0 / 0.9144
 
 
-# ---- course definition: OSM golf=hole refs 1-18 are the course holes (verified against the scorecard pars)
+# ---- course definition
+SCENERY_HOLES = _holes(_holes_t.get("scenery", ()))  # holes visible from play but not played
+_OSM_REF = {str(k): int(v) for k, v in _holes_t.get("osm_ref", {}).items()}  # OSM golf=hole ref -> hole, if not equal
+
+
 def course_hole(osm_ref):
     """OSM golf=hole ref -> course hole number (99 = not a course hole)."""
+    if str(osm_ref) in _OSM_REF:
+        return _OSM_REF[str(osm_ref)]
     try:
         r = int(osm_ref)
     except (TypeError, ValueError):
         return 99
-    return r if 1 <= r <= 18 else 99
+    return r if r in PLAYABLE or r in SCENERY_HOLES else 99
 
 
-PLAYABLE = tuple(range(1, 19))
-SCENERY_HOLES = ()  # holes visible from play but not played (none at Westmount)
-NINE = {**{h: "Front" for h in range(1, 10)}, **{h: "Back" for h in range(10, 19)}}
+LAYOUT = _course.get("layout", f"{len(PLAYABLE)} holes")
+NINE = {h: n for n, spec in _holes_t.get("nines", {}).items() for h in _holes(spec)} or \
+    {h: "Front" if h <= 9 else "Back" for h in PLAYABLE}
 
-# Tee sets, back to front: (key, display name, marker colour). SCORECARD yardages follow this order. The club's
-# combination sets (Blue/White, White/Red, Red/Gold) reuse these boxes hole by hole and need no geometry of their own.
-TEES = (("blue", "Blue", "#2a52be"), ("white", "White", "#f5f5f5"), ("red", "Red", "#c8102e"), ("gold", "Gold", "#d4a017"))
+# Tee sets, back to front: (key, display name, marker colour). SCORECARD yardages follow this order.
+TEES = tuple((t["key"], t["name"], t["colour"]) for t in _T.get("tees", ()))
 TEE_KEYS = tuple(k for k, _, _ in TEES)
 TEE_NAMES = {k: n for k, n, _ in TEES}
 TEE_COLOURS = {k: c for k, _, c in TEES}
-# Scorecard: Golf Canada Score Centre (course 20954), live 2026-10-11 = the 2025-07 card (new back tees on 5 and 11 in
-# 2024, hole 8 lengthened in 2025). Cross-checked against the club's 2024 card, Golf Ontario and Wayback captures
-# (research/NOTES.md). (par, Blue, White, Red, Gold)
-SCORECARD = {
-    1: (5, 559, 535, 514, 433),  2: (4, 373, 357, 335, 286),  3: (3, 195, 179, 165, 160),  4: (4, 412, 385, 365, 323),
-    5: (5, 605, 568, 527, 455),  6: (3, 202, 180, 163, 133),  7: (5, 541, 503, 483, 449),  8: (4, 305, 275, 260, 245),
-    9: (4, 401, 373, 346, 334), 10: (4, 334, 319, 304, 217), 11: (5, 580, 540, 502, 451), 12: (3, 141, 127, 108, 93),
-    13: (5, 554, 520, 503, 439), 14: (4, 375, 359, 318, 293), 15: (4, 453, 396, 367, 315), 16: (4, 439, 418, 400, 359),
-    17: (3, 165, 149, 132, 113), 18: (4, 384, 367, 351, 334),
-}
-# Men's stroke index (Golf Canada 2026 allocation)
-HANDICAP = dict(zip(range(1, 19), (7, 13, 9, 1, 3, 15, 11, 17, 5, 12, 6, 18, 8, 10, 2, 4, 16, 14)))
-HANDICAP_WOMEN = dict(zip(range(1, 19), (3, 11, 15, 9, 1, 17, 5, 13, 7, 14, 6, 18, 8, 12, 2, 4, 16, 10)))
-RATINGS = {  # tee: (men rating, men slope, women rating, women slope, total yards) - Golf Canada, re-rated late 2024
-    "blue": (73.0, 132, None, None, 7018), "white": (71.1, 129, 76.9, 135, 6550),
-    "red": (69.3, 121, 75.1, 130, 6143), "gold": (66.3, 113, 71.3, 121, 5432)}
+SCORECARD = {int(h): tuple(v) for h, v in _T.get("scorecard", {}).items()}  # hole: (par, yards per tee...)
+_si = _T.get("stroke_index", {})
+HANDICAP = dict(zip(PLAYABLE, _si.get("men", ())))
+HANDICAP_WOMEN = dict(zip(PLAYABLE, _si.get("women", ())))
+RATINGS = {t: (*r.get("men", (None, None)), *r.get("women", (None, None)), r.get("yards"))  # (men rating, slope,
+           for t, r in _T.get("ratings", {}).items()}                                      # women rating, slope, yards)
 
-
-# LiDAR tree archetypes (detect_trees.assign_archetypes): Southern Ontario parkland species groups
-#   maple  sugar / silver / Norway maple, basswood: dense rounded deciduous crowns
-#   oak    red / bur oak, honey locust, ash: broad, more open, irregular crowns
-#   pine   eastern white pine (+ Scots / red pine): tall, open, layered, high crown base
-#   spruce Norway / white / blue spruce, cedar: dense narrow cones with branches to the ground
-#   shrub  under 4.5 m
-TREE_ARCHETYPES = ("maple", "oak", "pine", "spruce", "shrub")
+# LiDAR tree archetypes (detect_trees.assign_archetypes)
+TREE_ARCHETYPES = tuple(_T.get("trees", {}).get("archetypes", ("maple", "oak", "pine", "spruce", "shrub")))
 
 
 def to_model(e, n, h):

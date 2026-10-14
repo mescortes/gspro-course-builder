@@ -101,11 +101,11 @@ def off_surfaces(feats, polys, max_shift=4.0, clearance=0.75):
     return out
 
 
-CLEARED = C.ROOT / "features" / "trees_cleared.geojson"
+CLEARED = C.SOURCES / "trees_cleared.geojson"
 
 
 def drop_cleared(feats, pts, radius=1.5):
-    """Trees within `radius` m of a reviewed clearance point (features/trees_cleared.geojson): 2018 LiDAR
+    """Trees within `radius` m of a reviewed clearance point (courses/<slug>/features/trees_cleared.geojson): 2018 LiDAR
     trees the 2025 photo shows gone, cut down for the tees and paths built since (holes 5 and 8 Blue)."""
     if not len(pts):
         return feats

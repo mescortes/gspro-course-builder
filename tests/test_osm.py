@@ -63,7 +63,7 @@ def test_split_bbox_tiles_cover_the_box():
 
 
 def _fake_root(tmp_path, monkeypatch, calls):
-    monkeypatch.setattr(fetch_data.C, "ROOT", tmp_path)
+    monkeypatch.setattr(fetch_data.C, "RESEARCH", tmp_path / "research")
     def fake_overpass(query, path):
         calls.append(path); Path(path).write_text('{"elements": []}'); return True
     monkeypatch.setattr(fetch_data, "overpass", fake_overpass)
@@ -71,7 +71,7 @@ def _fake_root(tmp_path, monkeypatch, calls):
 
 
 def test_fetch_osm_keeps_the_committed_snapshot(tmp_path, monkeypatch):
-    """The model is built from the OSM snapshot in research/: `fetch_data.py osm` must not overwrite it (README:
+    """The model is built from the OSM snapshot in courses/<slug>/research/: `fetch_data.py osm` must not overwrite it (README:
     delete the files to refresh)."""
     calls = []
     _fake_root(tmp_path, monkeypatch, calls)

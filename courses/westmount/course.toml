@@ -1,0 +1,126 @@
+# Westmount Golf & Country Club, Kitchener, Ontario (Stanley Thompson, 1931). Read by scripts/config.py (COURSE=westmount).
+# Anything not set here falls back to the engine defaults in config.py.
+
+[course]
+name = "Westmount Golf & Country Club"
+short = "Westmount G&CC"
+layout = "18 holes"
+model_name = "westmount"           # output/westmount/<model_name>.glb, <model_name>_noveg.glb
+unity_script = "WestmountSetup.cs"  # unity/Editor/<unity_script>, shipped in the GSPro package
+
+[frame]
+# NAD83(CSRS) / UTM zone 17N, the frame of the Ontario LiDAR; heights CGVD2013 (m)
+crs = "EPSG:2958"
+crs_label = "NAD83(CSRS) / UTM zone 17N (EPSG:2958); heights CGVD2013 (m)"
+origin = [537500.0, 4810850.0]
+base_h = 345.0  # metres CGVD2013 subtracted from heights in the model frame
+# Build extent: all 18 holes (OSM course outline E 536898-538156, N 4810400-4811320) + >= 100 m margin, 6 x 5 tiles of 256 m.
+core = { xmin = 536760.0, ymin = 4810220.0, xmax = 538296.0, ymax = 4811500.0 }
+# Unity/GSPro terrain square (2048 m, 4097^2 heightmap at 0.5 m) centred on CORE; cells outside CORE come from the backdrop DEM
+terrain = { xmin = 536504.0, ymin = 4809836.0, xmax = 538552.0, ymax = 4811884.0 }
+
+[lidar]
+leaf_off = true  # March 2018 flights: deciduous crowns are sparse in the CHM (detect_trees.py closes them)
+
+[imagery]
+# Ontario SWOOP 2025, 0.16 m, 4 bands (R, G, B, NIR), native EPSG:2958, Open Government Licence - Ontario
+# (scripts/fetch_imageserver.py), over CORE + 20 m. The pipeline reads the registered copy written by
+# register_imagery.py; band 4 (NIR) feeds the classifier, everything else reads bands 1-3.
+raw = "swoop2025_course.tif"
+registered = "swoop2025_course_reg.tif"
+res = 0.16
+# SWOOP 2025 vs the 2018 LiDAR (measure_registration.py, 59 bunkers: photo sand vs LiDAR hollows): dx 0.00 m,
+# dy -0.25 m, MAD 0.25 m, uniform over the course (north/south/east/west halves agree); OSM buildings within 0.5 m
+shift = [0.0, -0.25]  # metres +E/+N applied to the photo
+leaf_off = true  # spring photo: the ground is visible through the bare crowns (vectorize.py keeps it)
+credit = "Contains information licensed under the Open Government Licence - Ontario (SWOOP 2025 orthoimagery)"
+
+# Turf colour of the glTF / viewer textures (sRGB): the spring photo shows dormant, hazy turf (greens straw-coloured), so
+# the median colour of each turf surface is moved to a summer target and the photo only contributes the local variation
+# (mowing, wear, shade). Leave the table out to use the photo's own colours. GSPro assigns its own turf materials by
+# name. Targets are Lab a* -13..-19, b* +20..+26: with the viewer's sunlight and tone mapping (Neutral, exposure 1.5)
+# they render as summer bentgrass / bluegrass in sun (fairway a* ~-20, b* ~+32). The first targets (a* -25..-28)
+# rendered as a saturated "Kelly green".
+[turf_tint]
+green = [105, 130, 78]
+fringe = [101, 124, 74]
+fairway = [106, 124, 74]
+tee = [105, 126, 76]
+semirough = [96, 113, 68]
+rough = [89, 105, 65]
+bunker = [196, 180, 146]  # the photo's sand rendered near-white (235, 226, 189); a warm tan reads as wet-raked silica
+
+[holes]
+# OSM golf=hole refs 1-18 are the course holes (verified against the scorecard pars)
+playable = "1-18"
+scenery = []  # holes visible from play but not played (none at Westmount)
+nines = { Front = "1-9", Back = "10-18" }
+
+# Tee sets, back to front. Scorecard yardages follow this order. The club's combination sets (Blue/White, White/Red,
+# Red/Gold) reuse these boxes hole by hole and need no geometry of their own.
+[[tees]]
+key = "blue"
+name = "Blue"
+colour = "#2a52be"
+
+[[tees]]
+key = "white"
+name = "White"
+colour = "#f5f5f5"
+
+[[tees]]
+key = "red"
+name = "Red"
+colour = "#c8102e"
+
+[[tees]]
+key = "gold"
+name = "Gold"
+colour = "#d4a017"
+
+# Golf Canada Score Centre (course 20954), live 2026-10-11 = the 2025-07 card (new back tees on 5 and 11 in 2024, hole 8
+# lengthened in 2025). Cross-checked against the club's 2024 card, Golf Ontario and Wayback captures
+# (courses/westmount/research/NOTES.md). hole = [par, blue, white, red, gold]
+[scorecard]
+1 = [5, 559, 535, 514, 433]
+2 = [4, 373, 357, 335, 286]
+3 = [3, 195, 179, 165, 160]
+4 = [4, 412, 385, 365, 323]
+5 = [5, 605, 568, 527, 455]
+6 = [3, 202, 180, 163, 133]
+7 = [5, 541, 503, 483, 449]
+8 = [4, 305, 275, 260, 245]
+9 = [4, 401, 373, 346, 334]
+10 = [4, 334, 319, 304, 217]
+11 = [5, 580, 540, 502, 451]
+12 = [3, 141, 127, 108, 93]
+13 = [5, 554, 520, 503, 439]
+14 = [4, 375, 359, 318, 293]
+15 = [4, 453, 396, 367, 315]
+16 = [4, 439, 418, 400, 359]
+17 = [3, 165, 149, 132, 113]
+18 = [4, 384, 367, 351, 334]
+
+[stroke_index]  # holes 1-18 (Golf Canada 2026 allocation)
+men = [7, 13, 9, 1, 3, 15, 11, 17, 5, 12, 6, 18, 8, 10, 2, 4, 16, 14]
+women = [3, 11, 15, 9, 1, 17, 5, 13, 7, 14, 6, 18, 8, 12, 2, 4, 16, 10]
+
+[ratings]  # tee = { men = [rating, slope], women = [rating, slope], yards } - Golf Canada, re-rated late 2024
+blue = { men = [73.0, 132], yards = 7018 }
+white = { men = [71.1, 129], women = [76.9, 135], yards = 6550 }
+red = { men = [69.3, 121], women = [75.1, 130], yards = 6143 }
+gold = { men = [66.3, 113], women = [71.3, 121], yards = 5432 }
+
+[trees]
+# LiDAR tree archetypes (detect_trees.assign_archetypes): Southern Ontario parkland species groups
+#   maple  sugar / silver / Norway maple, basswood: dense rounded deciduous crowns
+#   oak    red / bur oak, honey locust, ash: broad, more open, irregular crowns
+#   pine   eastern white pine (+ Scots / red pine): tall, open, layered, high crown base
+#   spruce Norway / white / blue spruce, cedar: dense narrow cones with branches to the ground
+#   shrub  under 4.5 m
+archetypes = ["maple", "oak", "pine", "spruce", "shrub"]
+
+[test_profile]  # MG_PROFILE=test: a small regression build around holes 1-2, in build/westmount-test/
+core = { xmin = 537340.0, ymin = 4810720.0, xmax = 537980.0, ymax = 4811360.0 }
+terrain = { xmin = 537340.0, ymin = 4810720.0, xmax = 537980.0, ymax = 4811360.0 }
+holes = [1, 2]

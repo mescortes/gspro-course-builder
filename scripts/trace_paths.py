@@ -8,7 +8,7 @@ water), inside the course, away from mapped greens / bunkers / water / buildings
 too). Candidates are cleaned, skeletonised and kept as centre lines where the strip is path-wide and the line is long
 (>= MIN_LEN); aligned gaps (trunks, cars, leaf litter) up to MAX_GAP are bridged.
 
-Output: research/paths_detected.geojson (LineStrings, properties golf=cartpath, source=trace_paths) in config.CRS.
+Output: build/<slug>/paths_detected.geojson (LineStrings, properties golf=cartpath, source=trace_paths) in config.CRS.
 surface_classify.osm_geoms() reads it like OSM paths, so classification, vectorize and the cart-path surfaces use it.
 QA overrides correct what this misses.
 """
@@ -25,7 +25,7 @@ from shapely.ops import linemerge, unary_union
 sys.path.insert(0, str(Path(__file__).parent))
 import config as C
 
-OUT = C.ROOT / "research" / "paths_detected.geojson"
+OUT = C.BUILD / "paths_detected.geojson"
 RIDGE_MIN, NDVI_MAX, L_MIN = 0.05, 0.25, 35.0
 SIGMAS_M = (0.5, 0.75, 1.0, 1.25)   # Sato scales (m): ridges ~1-2.5 m wide
 WIDTH = (0.6, 4.5)      # m, full strip width at the skeleton

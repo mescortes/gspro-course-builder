@@ -1,7 +1,7 @@
 """Build fingerprint: a digest of every downloaded input and build product, compared with a golden reference before an
 engine change merges. Usage:
 
-  fingerprint.py write [path]     compute and save (default fingerprints/<MODEL_NAME>.json)
+  fingerprint.py write [path]     compute and save (default courses/<slug>/fingerprint.json)
   fingerprint.py check [path]     compute and compare; exit 1 when an enforced artefact changed, is missing or is new
   fingerprint.py compare A B      compare two saved fingerprints
 
@@ -23,7 +23,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent)); import config as C
 
-GOLDEN = C.ROOT / "fingerprints" / f"{C.MODEL_NAME}.json"
+GOLDEN = C.COURSE_DIR / "fingerprint.json"
 UNENFORCED = (".fbx", ".blend")  # Blender writes the time into both, and FBX ids come from the salted str hash
 
 
@@ -63,7 +63,7 @@ def artefacts():
     one("DATA/imagery/" + C.IMAGERY.name, C.IMAGERY)
     for n in ("dem_raw", "dem", "dsm", "bdsm", "chm", "intensity", "ground_count"):
         one(f"BUILD/{n}.tif", B / f"{n}.tif")
-    one("RESEARCH/paths_detected.geojson", C.ROOT / "research/paths_detected.geojson")
+    one("RESEARCH/paths_detected.geojson", B / "paths_detected.geojson")  # key kept from the pre-course layout
     for n in ("labels_osm.tif", "classes.tif", "proba_u8.npy"):
         one(f"BUILD/{n}", B / n)
     one("FEATURES/auto_core.geojson", F / "auto_core.geojson")
@@ -90,7 +90,7 @@ def artefacts():
         one("OUTPUT/gspro/" + p.name, p, core=True)
     many("OUTPUT", O, "gspro/**/*", skip=lambda p: p in core)
     many("OUTPUT", O, "maps/**/*")
-    one("VIEWER/views.json", C.ROOT / "viewer/views.json")
+    one("VIEWER/views.json", O / "views.json")  # key kept from the pre-course layout
     return out
 
 

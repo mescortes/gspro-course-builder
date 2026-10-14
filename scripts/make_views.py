@@ -66,7 +66,7 @@ def main():
         "overview":     {"pos": m(tee - d1 * 150, 160.0), "target": m(mid), "fov": 45},
         "top":          {"pos": m([C.ORIGIN_E, C.ORIGIN_N], 420.0), "target": m([C.ORIGIN_E, C.ORIGIN_N + 1]), "fov": 45},
     }
-    json.dump(views, open(C.ROOT / 'viewer/views.json', 'w'), indent=1)
+    json.dump(views, open(C.OUTPUT / 'views.json', 'w'), indent=1)
     print(json.dumps(views, indent=1))
 
 
