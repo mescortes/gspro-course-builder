@@ -1,4 +1,4 @@
-"""Backdrop terrain: a 5 km square of the HRDEM 1 m DTM (2 m grid) around the detailed core, draped with SWOOP 2025.
+"""Backdrop terrain: a 5 km square of the backdrop DEM (2 m grid) around the detailed core, draped with the course photo.
 
 The inner boundary reuses the exact boundary vertices (and heights) of the core terrain mesh, so the join is
 watertight. Two rings: near (core + 640 m, finer mesh, 0.5 m imagery) and far (to 2.5 km, 1.2 m imagery).
@@ -90,15 +90,16 @@ def summer_tif(path):
 
 
 def imagery(ext, res, path):
-    """<stem>.tif: SWOOP RGB; <stem>_nir.tif: its NIR band (same grid); <stem>_summer.tif: RGB after summer_grade
+    """<stem>.tif: the photo's RGB; <stem>_nir.tif: its NIR band (same grid); <stem>_summer.tif: RGB after summer_grade
     (read by the GSPro outer overlay); <stem>.jpg: the summer RGB with lift_shadows (viewer / glTF drape)."""
     tif, nir, summer = path.with_suffix(".tif"), path.with_name(path.stem + "_nir.tif"), summer_tif(path)
     raw = path.with_name(path.stem + "_raw.jpg")
-    import fetch_imageserver
+    import sources
+    mod, spec = sources.provider("imagery")
     if not tif.exists():
-        fetch_imageserver.fetch(ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], res, tif)
+        mod.fetch(spec, ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], res, tif, bands=tuple(spec["bands"][:3]))
     if not nir.exists():
-        fetch_imageserver.fetch(ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], res, nir, bands=(3,))
+        mod.fetch(spec, ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], res, nir, bands=tuple(spec["bands"][3:4]))
     if summer.exists() and path.exists() and min(summer.stat().st_mtime, path.stat().st_mtime) > max(
             tif.stat().st_mtime, nir.stat().st_mtime, __import__("os").stat(__file__).st_mtime):
         return

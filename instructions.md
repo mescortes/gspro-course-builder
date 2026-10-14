@@ -84,8 +84,8 @@ Collect:
 
 > **[MountainGate]** The CRS, data-source and species notes in this section are MountainGate's (UTM 11N, USGS 3DEP and
 > TNM, Southern California species, its hole-13 water test). Westmount uses EPSG:2958 (NAD83(CSRS) / UTM 17N,
-> CGVD2013), the NRCan COPC Lake Erie 2018 LiDAR (`fetch_data.LIDAR_PROJECT`), the HRDEM backdrop
-> (`fetch_backdrop.URLS`) and Southern Ontario archetypes (`config.TREE_ARCHETYPES`: maple, oak, pine, spruce, shrub).
+> CGVD2013), the NRCan COPC Lake Erie 2018 LiDAR, the HRDEM backdrop (all three sources are
+> `courses/<slug>/course.toml` [sources], read by the providers in `scripts/sources/`) and Southern Ontario archetypes (`config.TREE_ARCHETYPES`: maple, oak, pine, spruce, shrub).
 > The list of edit points is still a useful map of where course facts live; the course-builder plan moves them into
 > `courses/<slug>/course.toml` (PRs 2-3).
 
@@ -126,8 +126,8 @@ OSM `golf=hole` line (check after Phase C).
 ## 4. Phase C: fetch data (≈ 20–40 min, mostly download)
 
 > **[MountainGate]** The TNM, NAIP and Esri gotchas below are from the US build. Westmount fetches NRCan COPC tiles,
-> SWOOP 2025 from the LIO ImageServer and NRCan HRDEM (§11b); `fetch_naip.py` and `fetch_tiles.py` are MountainGate
-> leftovers. The US notes become relevant again for Brambles (California), through the plan's data providers (PR 4).
+> SWOOP 2025 from the LIO ImageServer and NRCan HRDEM (§11b); `fetch_naip.py` and `fetch_tiles.py` (MountainGate
+> leftovers) are retired. The US notes become relevant again for Brambles (California), through the plan's data providers (PR 4).
 
 ```bash
 .venv/bin/python scripts/fetch_data.py lidar osm imagery
@@ -147,7 +147,7 @@ Gotchas, all of which happened:
     file mtimes.
 * **Imagery.** NAIP endpoints often time out (504); Esri World Imagery z20 tiles work.
   * Esri imagery is fine for tracing, colour and the overlay, but **check its terms before redistributing**.
-  * NAIP is the public-domain fallback (`fetch_naip.py`).
+  * NAIP is the public-domain fallback (now the `arcgis_imageserver` provider on the USDA NAIP service).
 * **Backdrop DEM.** Read the COGs by range (the full 1 m tiles are huge).
 
 **Checkpoint:** LiDAR tiles cover CORE, `research/osm_golf.json` has every hole line, green, tee and bunker, and the
