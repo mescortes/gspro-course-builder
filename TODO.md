@@ -1,7 +1,7 @@
 # TODO
 
 Open items after QA round 2. Every hole scored 8/10 or more from its verifier; details are in
-`research/qa/qa_round2_verdicts.json`.
+`courses/westmount/research/qa/qa_round2_verdicts.json`.
 
 ## Windows side (course designer)
 

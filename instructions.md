@@ -16,8 +16,10 @@ Read `research/GSPRO_COSMETICS.md` for how GSPro courses are put together and wh
 > then partly updated for Westmount (Ontario open data). Sections marked **[MountainGate]** below describe the
 > MountainGate setup and are out of date for this repo: the Westmount sources, frame and species are in
 > `scripts/config.py`, `scripts/fetch_*.py`, the README and §11b. It will be replaced by `docs/PLAYBOOK.md`
-> (course-builder plan, PR 6). Every engine change is checked against `fingerprints/westmount.json`
-> (`scripts/fingerprint.py check`).
+> (course-builder plan, PR 6). Every engine change is checked against `courses/westmount/fingerprint.json`
+> (`scripts/fingerprint.py check`). Since PR 2 each course lives in `courses/<slug>/` (`course.toml`, `features/`,
+> `research/`) and builds into `data/<slug>/`, `build/<slug>/` and `output/<slug>/`; paths below that start with
+> `features/` or `research/` mean the course's folder.
 
 ---
 

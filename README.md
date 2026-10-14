@@ -26,7 +26,7 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
 | ![Hole 11 tee](docs/images/render_h11_tee.jpg) | |
 | Hole 11 Blue tee: the deck was rebuilt about 2023 and is synthetic over the 2018 terrain | |
 
-*Headless Blender (Cycles) renders of `output/westmount.glb`. The turf is graded to summer; trees use the
+*Headless Blender (Cycles) renders of `output/westmount/westmount.glb`. The turf is graded to summer; trees use the
 LiDAR-derived archetypes. GSPro renders with its own materials.*
 
 ## The course
@@ -39,7 +39,7 @@ LiDAR-derived archetypes. GSPro renders with its own materials.*
 | Gold | 5,432 | 66.3 / 113 | 71.3 / 121 |
 
 Par 73 (37 out / 36 in). Source: Golf Canada Score Centre (live 2026-10-11). It was cross-checked against the club's
-cards and Wayback captures by an adversarial verifier; see [research/NOTES.md](research/NOTES.md). The combination sets
+cards and Wayback captures by an adversarial verifier; see [courses/westmount/research/NOTES.md](courses/westmount/research/NOTES.md). The combination sets
 (Blue/White 6,732, White/Red 6,322, Red/Gold 5,814) reuse these four boxes.
 
 Per hole, as modelled. Tee columns give the measured yards (GreenKeeper's rule: tee → aim points nearer the green →
@@ -104,14 +104,14 @@ The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the Mountain
    are told apart from bare hardwoods by pulse penetration and crown NDVI. Archetypes: maple, oak, white pine, spruce,
    shrub, each in five shape variants (height, spread, crown base, lean, clumping) with per-card leaf hue.
 7. **Structures**: OSM buildings, plus five shelters and service buildings OSM lacks
-   (`features/structures.geojson`, footprints from LiDAR building returns or the 2025 photo). Roofs follow the
+   (`courses/westmount/features/structures.geojson`, footprints from LiDAR building returns or the 2025 photo). Roofs follow the
    building-class LiDAR returns (`bdsm.tif`), so the clubhouse keeps its ridges and hips without the crowns of the
    trees that overhang it. A rectangular roof is a gable when a ridge fits its returns better than hips. House walls
    vary between seven colours (white, cream, beige, grey, buff, red and brown brick). The clubhouse restaurant patio
-   beside the hole 3 tee (`features/patios.geojson`) is a paved terrace with tables, chairs and umbrellas. The
+   beside the hole 3 tee (`courses/westmount/features/patios.geojson`) is a paved terrace with tables, chairs and umbrellas. The
    clubhouse lots have parked cars (about 60 % of the stalls), the hole 3 pond has an aerating fountain
-   (`features/fountains.geojson`, placed at the spray visible in the 2025 photo), and the mulch beds round the
-   clubhouse and pro shop are traced from the photo (`features/overrides/clubhouse_mulch.geojson`,
+   (`courses/westmount/features/fountains.geojson`, placed at the spray visible in the 2025 photo), and the mulch beds round the
+   clubhouse and pro shop are traced from the photo (`courses/westmount/features/overrides/clubhouse_mulch.geojson`,
    `grounds_mulch.geojson`).
 8. **Mesh**: one conforming constrained Delaunay triangulation with fine triangles in the playing corridors, OPCD
    bunker lips (10 cm) and water objects. It joins a 5 km imagery-draped backdrop without seams. Within 640 m of the
@@ -123,12 +123,12 @@ The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the Mountain
 10. **QA** (multi-agent, `workflows/hole_qa_round1.js`, `hole_qa_round2.js`; 24 agents in two rounds). Per-hole
     inspectors compare the model with the photo and LiDAR, and adversarial verifiers approve or reject every proposed
     correction.
-    * Approved corrections (123 features) live in `features/overrides/`, with two later additions confirmed in
+    * Approved corrections (123 features) live in `courses/westmount/features/overrides/`, with two later additions confirmed in
       review: a path traced by hand (`hole18_paths.geojson`) and the new hole 14 Gold box (`hole14_gold.geojson`).
     * Issues that recurred across holes were fixed in the pipeline, with tests: leaf litter, shadowed sand, path gaps,
       off-course sidewalks, false tees, L-shaped pads, tees newer than the LiDAR, pins on steep greens, missing
       shelters.
-    * After round 2 every hole scored 8 or 9 out of 10. The verdicts are in `research/qa/`.
+    * After round 2 every hole scored 8 or 9 out of 10. The verdicts are in `courses/westmount/research/qa/`.
 11. **Export**: glTF, the OPCD package, FBX (headless Blender), maps.
 
 ## Rebuilding
@@ -157,20 +157,31 @@ uv pip install --python .venv/bin/python -r requirements.txt
 .venv/bin/python scripts/fetch_backdrop.py
 BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py      # all steps (about 25 min on 96 cores)
 .venv/bin/python -m pytest -q tests                                  # unit + built-course tests
-.venv/bin/python scripts/fingerprint.py check                        # the build against fingerprints/westmount.json
+.venv/bin/python scripts/fingerprint.py check                        # the build against courses/westmount/fingerprint.json
 # CI (.github/workflows/tests.yml) runs the unit tests only: pytest tests --ignore=tests/test_course.py
 python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?v=1#h1-tee
 ```
 
-`fingerprints/westmount.json` is the golden build fingerprint: a digest of every downloaded input and build product
-(GeoTIFFs by pixels and georeference, `.npz` files by their arrays), with readable summaries and the machine, OS and
-package versions that produced it. Every engine change must rebuild Westmount to the same fingerprint, or explain
-each difference. Floating-point results only match on that machine and package set; `fingerprint.py check` lists any
-environment difference before the artefacts. FBX and .blend files are listed, not compared: Blender writes the time
-into both and derives FBX object ids from Python's per-process string hash. The glTF they are converted from and
-`gspro/fbx_manifest.json` are compared.
+`courses/westmount/fingerprint.json` is the golden build fingerprint: a digest of every downloaded input and build
+product (GeoTIFFs by pixels and georeference, `.npz` files by their arrays), with readable summaries and the machine,
+OS and package versions that produced it. Every engine change must rebuild Westmount to the same fingerprint, or
+explain each difference. Floating-point results only match on that machine and package set; `fingerprint.py check`
+lists any environment difference before the artefacts. FBX and .blend files are listed, not compared: Blender writes
+the time into both and derives FBX object ids from Python's per-process string hash. The glTF they are converted from
+and `gspro/fbx_manifest.json` are compared.
 
-`research/osm_*.json` hold the OSM snapshot the model was built from. Delete them before `fetch_data.py osm` to refresh.
+`courses/westmount/research/osm_*.json` hold the OSM snapshot the model was built from. Delete them before
+`fetch_data.py osm` to refresh.
+
+Each course lives in `courses/<slug>/` (`course.toml`, `features/`, `research/`) and builds into `data/<slug>/`,
+`build/<slug>/` and `output/<slug>/`. Set `COURSE=<slug>` once there is more than one course. A checkout made before
+the course folders keeps its downloads at the top of `data/`; move them rather than fetching again, so the inputs
+stay byte-identical:
+
+```bash
+mkdir -p data/westmount && mv data/lidar data/imagery data/dem data/textures data/westmount/
+rm -rf build output features/auto_core.geojson features/course_surfaces.geojson features/trees.geojson
+```
 
 ## Known limitations
 
@@ -179,7 +190,7 @@ into both and derives FBX object ids from Python's per-process string hash. The 
   with graded banks; a deck that would sit cut into the slope is built up to a neighbouring deck of the same hole
   instead (hole 8 Blue to the White deck, +1.8 m; hole 17 and hole 14 Gold too). Their real heights are unknown, and
   some banks are 1-2 m. The 2018 trees the 2025 photo shows cleared for the hole 5 and hole 8 Blue tees are removed
-  (`features/trees_cleared.geojson`). The hole 12 tees were rebuilt after 2018 too (one long two-terrace box
+  (`courses/westmount/features/trees_cleared.geojson`). The hole 12 tees were rebuilt after 2018 too (one long two-terrace box
   in the 2025 photo); the model keeps the four 2018 LiDAR decks, which still give the card yardages (see `TODO.md`).
 * **Closest tees to the card.**
   * Hole 5 Blue is 600 against 605. The marker is at the back of the 2023 deck, and the Blue box was confirmed
@@ -201,7 +212,7 @@ into both and derives FBX object ids from Python's per-process string hash. The 
   materials by object name.
 * **Cart paths** are traced automatically from the near-infrared photo and corrected in two QA rounds. A few short
   segments under evergreens are missing or interpolated (see `TODO.md`).
-* **Structures** OSM lacks are curated by hand (`features/structures.geojson`). The #4 / #13 shelter is newer than
+* **Structures** OSM lacks are curated by hand (`courses/westmount/features/structures.geojson`). The #4 / #13 shelter is newer than
   the LiDAR, so its footprint is approximate (+/- 1 m). The patio outline is traced from the photo (+/- 1 m); its
   furniture layout is generic, not a survey.
 * **Windows side not run here.** Unity, OPCD and GreenKeeper steps cannot run on this Linux build host. The Unity
