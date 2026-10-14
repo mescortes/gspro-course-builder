@@ -12,6 +12,13 @@ The pipeline runs on macOS/Linux (Python + headless Blender). It produces:
 
 Read `research/GSPRO_COSMETICS.md` for how GSPro courses are put together and why the hand-off looks the way it does.
 
+> **Status (gspro-course-builder, October 2026).** This file was written for MountainGate (California, USGS data) and
+> then partly updated for Westmount (Ontario open data). Sections marked **[MountainGate]** below describe the
+> MountainGate setup and are out of date for this repo: the Westmount sources, frame and species are in
+> `scripts/config.py`, `scripts/fetch_*.py`, the README and §11b. It will be replaced by `docs/PLAYBOOK.md`
+> (course-builder plan, PR 6). Every engine change is checked against `fingerprints/westmount.json`
+> (`scripts/fingerprint.py check`).
+
 ---
 
 ## 0. Ground rules (read first)
@@ -70,6 +77,13 @@ Collect:
 
 ## 3. Phase B: configure (≈ 15 min)
 
+> **[MountainGate]** The CRS, data-source and species notes in this section are MountainGate's (UTM 11N, USGS 3DEP and
+> TNM, Southern California species, its hole-13 water test). Westmount uses EPSG:2958 (NAD83(CSRS) / UTM 17N,
+> CGVD2013), the NRCan COPC Lake Erie 2018 LiDAR (`fetch_data.LIDAR_PROJECT`), the HRDEM backdrop
+> (`fetch_backdrop.URLS`) and Southern Ontario archetypes (`config.TREE_ARCHETYPES`: maple, oak, pine, spruce, shrub).
+> The list of edit points is still a useful map of where course facts live; the course-builder plan moves them into
+> `courses/<slug>/course.toml` (PRs 2-3).
+
 ### `scripts/config.py`
 
 * `CRS`: the UTM zone of the course, e.g. `EPSG:32611` for 11N; the LiDAR comes in NAD83(2011) UTM.
@@ -105,6 +119,10 @@ Collect:
 OSM `golf=hole` line (check after Phase C).
 
 ## 4. Phase C: fetch data (≈ 20–40 min, mostly download)
+
+> **[MountainGate]** The TNM, NAIP and Esri gotchas below are from the US build. Westmount fetches NRCan COPC tiles,
+> SWOOP 2025 from the LIO ImageServer and NRCan HRDEM (§11b); `fetch_naip.py` and `fetch_tiles.py` are MountainGate
+> leftovers. The US notes become relevant again for Brambles (California), through the plan's data providers (PR 4).
 
 ```bash
 .venv/bin/python scripts/fetch_data.py lidar osm imagery
