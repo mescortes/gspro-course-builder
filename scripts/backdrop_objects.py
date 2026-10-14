@@ -17,12 +17,13 @@ DSM = C.DATA / "dem" / "backdrop_dsm.tif"
 DTM = C.DATA / "dem" / "backdrop_dem.tif"
 DEFAULT_HEIGHT = 6.0      # m: a two-storey house, for footprints without building returns
 MIN_TREE_H = 5.0          # m: lower peaks are hedges, shrubs, cars, fences
-ROOF_PALETTE = ((0.34, 0.33, 0.32), (0.28, 0.24, 0.22), (0.45, 0.42, 0.38), (0.38, 0.27, 0.22), (0.22, 0.23, 0.25))
+ROOF_PALETTE = C.as_tuples(C.REGION["buildings"]["roof_palette"])
+_BD = C.REGION["trees"]["backdrop"]   # backdrop billboard species, their shares, crown radius = clip(a * h + b, lo, hi)
 
 
 def tree_peaks(chm, T, min_h=MIN_TREE_H, min_sep=6.0):
     """(n, 4) array of x, y, height, crown radius: local maxima of the canopy height model at least `min_sep` m apart
-    and `min_h` m tall. The radius scales with height (Southern Ontario parkland: about a third of the height)."""
+    and `min_h` m tall. The radius scales with height (the region's [trees] backdrop crown model)."""
     res = abs(T.a)
     s = ndimage.gaussian_filter(np.nan_to_num(chm, nan=0.0), 0.6)
     k = int(np.ceil(min_sep / res)) | 1
@@ -35,7 +36,8 @@ def tree_peaks(chm, T, min_h=MIN_TREE_H, min_sep=6.0):
     raw = ndimage.maximum_filter(np.nan_to_num(chm, nan=0.0), size=3)  # the height from the unsmoothed canopy
     h = raw[np.round(r).astype(int), np.round(c).astype(int)]
     x = T.c + (c + 0.5) * T.a; y = T.f + (r + 0.5) * T.e
-    return np.c_[x, y, h, np.clip(0.3 * h + 0.5, 2.0, 8.0)]
+    a, b, lo, hi = _BD["crown"]
+    return np.c_[x, y, h, np.clip(a * h + b, lo, hi)]
 
 
 def building_top(dsm_vals, ground):
@@ -127,8 +129,8 @@ def add(glb, root):
     pk = tree_peaks(chm, T)
     pk = pk[shapely.contains_xy(ring, pk[:, 0], pk[:, 1])]
     rng = np.random.default_rng(31)
-    kinds = ("maple", "oak", "spruce")
-    pick = rng.choice(len(kinds), len(pk), p=(0.5, 0.35, 0.15))
+    kinds = tuple(_BD["kinds"])
+    pick = rng.choice(len(kinds), len(pk), p=tuple(_BD["share"]))
     leaf = {}
     tgrp = glb.node("Backdrop_Trees", parent=root)
     nt = 0

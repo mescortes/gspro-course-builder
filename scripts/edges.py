@@ -11,15 +11,18 @@ Conventions follow the OPCD Blender add-on and SetMeshMaterial.cs (research/opcd
 The rings are added only where the mesh is fine (the detail zone around the playable holes): a 10 cm band would not
 survive the coarse simplification used elsewhere.
 """
+import sys
 import numpy as np
 import shapely
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import unary_union
 from scipy import ndimage
 
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent)); import config as C
+
 LIP_W = 0.10           # bunker lip band width (m)
 LIP_DEPTH = 0.05       # sand sits this much below the lip edge (OPCD V4 add-on default 'bunker lip depth')
-LIP_HOLES = range(1, 19)
+LIP_HOLES = C.PLAYABLE
 WATER_EDGE_W = 0.15    # OPCD Water_Edge inset
 PLANE_OUTSET = 2.0     # OPCD WaterPlane outset under the banks
 BED_SHORE, BED_SLOPE, BED_MAX = 0.08, 0.35, 1.2   # bed depth below the water level: shore, gradient, maximum (m)

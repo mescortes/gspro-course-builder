@@ -1,14 +1,14 @@
-// Westmount G&CC: Unity editor helpers for the GSPro / OPCD hand-off (output/gspro/).
+// {{SHORT}}: Unity editor helpers for the GSPro / OPCD hand-off (output/gspro/).
 // Unity 2018.2.8f1 per the OPCD documentation (check the V4 BaseProject's ProjectVersion.txt); built-in render pipeline.
 // Put this file in Assets/Editor/. On Unity 2018.3+ the terrain overlay uses a TerrainLayer (SplatPrototype is obsolete there).
 //
-// Menu "Westmount/...":
+// Menu "{{NAME}}/...":
 //   1. Build Terrains       inner + outer (OPCD 'Plot (Outer)') Unity terrains from the 16-bit RAW heightmaps and overlays
 //   2. Place Trees          LiDAR trees from trees.csv as tree_prefabs.fbx objects (LOD groups) with trunk colliders
 //   3. Water Reflection Probes   a realtime / on-awake reflection probe over every *_WaterPlane (OPCD guidance)
 //   4. Add 3D Grass (3DG)   Stix Games Grass Renderer on *_SemiRough / *_Rough / *_DeepRough meshes, layer '600m cull'
 // Run SetMeshMaterials (OPCD) on course_meshes.fbx as usual; the meshes carry OPCD names (Hole##_<Surface>).
-// Files are read from the folder chosen in the window (default: Assets/Westmount). Nothing here needs network access.
+// Files are read from the folder chosen in the window (default: Assets/{{NAME}}). Nothing here needs network access.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -17,16 +17,16 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-public class WestmountSetup : EditorWindow
+public class {{NAME}}Setup : EditorWindow
 {
-    string dataDir = "Assets/Westmount";
-    string treeModelPath = "Assets/Westmount/tree_prefabs.fbx";
+    string dataDir = "Assets/{{NAME}}";
+    string treeModelPath = "Assets/{{NAME}}/tree_prefabs.fbx";
     float treeMaxDistance = 0f;      // 0 = all trees; else only trees within this many metres of a course mesh
     bool treeColliders = true;
     Material grassSemiRough, grassRough, grassDeepRough;
 
-    [MenuItem("Westmount/Setup Window")]
-    static void Open() { GetWindow<WestmountSetup>("Westmount"); }
+    [MenuItem("{{NAME}}/Setup Window")]
+    static void Open() { GetWindow<{{NAME}}Setup>("{{NAME}}"); }
 
     void OnGUI()
     {
@@ -121,7 +121,7 @@ public class WestmountSetup : EditorWindow
             outer.basemapDistance = 20000f;
             outer.heightmapPixelError = 8f;
         }
-        Debug.Log("Westmount: terrains built (inner at the origin; course meshes and trees use the same frame)");
+        Debug.Log("{{NAME}}: terrains built (inner at the origin; course meshes and trees use the same frame)");
     }
 
     // ------------------------------------------------------------------ trees
@@ -143,7 +143,7 @@ public class WestmountSetup : EditorWindow
         List<Bounds> course = new List<Bounds>();
         if (maxDist > 0)
             foreach (MeshRenderer r in FindObjectsOfType<MeshRenderer>())
-                if (r.name.StartsWith("Hole") && r.name.Length > 6 && char.IsDigit(r.name[4]) && int.Parse(r.name.Substring(4, 2)) <= 18)
+                if (r.name.StartsWith("Hole") && r.name.Length > 6 && char.IsDigit(r.name[4]) && int.Parse(r.name.Substring(4, 2)) <= {{LAST_HOLE}})
                     course.Add(r.bounds);
 
         string[] lines = File.ReadAllLines(Path.Combine(dir, "trees.csv"));
@@ -151,7 +151,7 @@ public class WestmountSetup : EditorWindow
         Func<string, int> col = (k) => Array.IndexOf(head, k);
         int cPrefab = col("prefab"), cx = col("unity_x"), cy = col("unity_y"), cz = col("unity_z"), cYaw = col("yaw_deg"),
             cSxz = col("scale_xz"), cSy = col("scale_y");
-        GameObject root = new GameObject("Westmount_Trees");
+        GameObject root = new GameObject("{{NAME}}_Trees");
         Dictionary<string, Transform> cells = new Dictionary<string, Transform>();
         int placed = 0;
         for (int i = 1; i < lines.Length; i++)
@@ -192,7 +192,7 @@ public class WestmountSetup : EditorWindow
                     if (mm != null && !mm.enableInstancing) mm.enableInstancing = true;
             placed++;
         }
-        Debug.Log("Westmount: placed " + placed + " trees in " + cells.Count + " cells");
+        Debug.Log("{{NAME}}: placed " + placed + " trees in " + cells.Count + " cells");
     }
 
     static void AddLodGroup(GameObject t)
@@ -231,7 +231,7 @@ public class WestmountSetup : EditorWindow
             p.farClipPlane = 5000f;   // keep the distant backdrop in the reflection
             n++;
         }
-        Debug.Log("Westmount: " + n + " water reflection probes");
+        Debug.Log("{{NAME}}: " + n + " water reflection probes");
     }
 
     // ------------------------------------------------------------------ 3D grass
@@ -267,7 +267,7 @@ public class WestmountSetup : EditorWindow
             if (layer >= 0) go.layer = layer;
             n++;
         }
-        Debug.Log("Westmount: 3DG on " + n + " meshes. The meshes' colour layer 'Col' holds 3DG vertex densities " +
+        Debug.Log("{{NAME}}: 3DG on " + n + " meshes. The meshes' colour layer 'Col' holds 3DG vertex densities " +
                   "(R = grass type 1, G = type 2 / dry): set each 3DG material's Density Mode to 'Vertex density'. See grass_3dg.json.");
     }
 

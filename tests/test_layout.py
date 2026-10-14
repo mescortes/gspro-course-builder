@@ -32,3 +32,16 @@ def test_no_script_uses_paths_relative_to_the_working_directory():
     bad = [f"{p.name}:{n.lineno} {n.value!r}" for p in SCRIPTS for n in _strings(ast.parse(p.read_text()))
            if n.value.startswith(("build/", "output/", "features/", "research/", "data/", "viewer/views"))]
     assert not bad, bad
+
+
+def test_engine_code_names_no_course_or_region():
+    """Course and region facts live in courses/<slug>/ and regions/<name>.toml (plan PR 3). Comments and docstrings
+    may mention them; string constants may not. The Ontario data-source fetchers move to providers in plan PR 4."""
+    import re
+    pat = re.compile(r"westmount|kitchener|ontario|swoop|lake_erie", re.I)
+    pr4 = {"fetch_data.py", "fetch_imageserver.py", "fetch_backdrop.py", "fetch_textures.py"}
+    bad = [f"{p.name}:{n.lineno} {n.value[:60]!r}" for p in SCRIPTS if p.name not in pr4
+           for n in _strings(ast.parse(p.read_text())) if pat.search(n.value)]
+    assert not bad, bad
+    html = (ROOT / "viewer/index.html").read_text()
+    assert not re.search(r"westmount", re.sub(r"//.*", "", html), re.I)

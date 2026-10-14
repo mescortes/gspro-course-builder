@@ -1,0 +1,295 @@
+# Southern Ontario parkland (Westmount, Whistle Bear, Deer Ridge): cool-season turf (bentgrass greens, bluegrass /
+# ryegrass / fine fescue), maple / oak / white pine / spruce tree lines, leaf-off spring photo and LiDAR.
+# Read by scripts/config.py for a course whose [course] region = "southern_ontario". A course.toml table of the same
+# name overrides it key by key (e.g. [turf_tint] or [trees.bark]).
+
+[region]
+name = "Southern Ontario"
+
+# Turf colour of the glTF / viewer textures (sRGB): the spring photo shows dormant, hazy turf (greens straw-coloured), so
+# the median colour of each turf surface is moved to a summer target and the photo only contributes the local variation
+# (mowing, wear, shade). GSPro assigns its own turf materials by name. Targets are Lab a* -13..-19, b* +20..+26: with the
+# viewer's sunlight and tone mapping (Neutral, exposure 1.5) they render as summer bentgrass / bluegrass in sun (fairway
+# a* ~-20, b* ~+32). The first targets (a* -25..-28) rendered as a saturated "Kelly green".
+[turf_tint]
+green = [105, 130, 78]
+fringe = [101, 124, 74]
+fairway = [106, 124, 74]
+tee = [105, 126, 76]
+semirough = [96, 113, 68]
+rough = [89, 105, 65]
+bunker = [196, 180, 146]
+
+# LiDAR tree archetypes (detect_trees), their bark (Poly Haven sets) and the backdrop billboard mix (backdrop_objects:
+# crown radius = clip(a * height + b, lo, hi), about a third of the height):
+#   maple  sugar / silver / Norway maple, basswood: dense rounded deciduous crowns
+#   oak    red / bur oak, honey locust, ash: broad, more open, irregular crowns
+#   pine   eastern white pine (+ Scots / red pine): tall, open, layered, high crown base
+#   spruce Norway / white / blue spruce, cedar: dense narrow cones with branches to the ground
+#   shrub  under 4.5 m
+[trees]
+archetypes = ["maple", "oak", "pine", "spruce", "shrub"]
+classifier = "leaf_off_parkland"
+bark = { maple = "trident_maple_bark", oak = "jolcham_oak_bark_01", pine = "pine_bark", spruce = "knotted_pine_bark", shrub = "bark_brown_01" }
+backdrop = { kinds = ["maple", "oak", "spruce"], share = [0.5, 0.35, 0.15], crown = [0.3, 0.5, 2.0, 8.0] }
+
+# detect_trees.leaf_off_parkland: leaf-off LiDAR (evergreens stop the pulses) + leaf-off photo (only evergreens green).
+# conifer = penetration < conifer_pen, or (crown NDVI > a and penetration < b) for each [a, b] of conifer_green;
+# pine = a conifer with crown base > pine_base of its height, or taller than pine_tall[0] m and flatter than pine_tall[1];
+# oak = the hardwoods broader than the oak_pct percentile of crown radius / height (trees over oak_min_h m).
+[trees.leaf_off_parkland]
+shrub_h = 4.5
+conifer_pen = 0.24
+conifer_green = [[0.28, 0.32], [0.22, 0.27]]
+pine_base = 0.4
+pine_tall = [20, 2.0]
+oak_pct = 65
+oak_min_h = 6
+oak_default = 0.35
+names = { shrub = "shrub", pine = "pine", conifer = "spruce", broad = "oak", other = "maple" }
+
+# make_trees space-colonisation archetypes: crown envelope (kind, vertical start / end as fraction of height),
+# horizontal radius R, trunk height fraction, growth parameters, leaf cards.
+[trees.shapes.maple]
+H = 14.0
+R = 6.0
+crown = ["ovoid", 0.24, 1.0]
+trunk = 0.24
+attract = 1100
+seg = 0.45
+infl = 3.6
+kill = 0.9
+tropism = [0, 0.18, 0]
+tip_r = 0.012
+exp = 2.05
+cards = 1150
+card = [1.3, 1.9]
+lean = 0.08
+nsides = 10
+up_bias = 0.6
+trunk_r = 0.34
+clumps = 24
+clump_sd = 0.27
+
+[trees.shapes.oak]
+H = 13.0
+R = 7.0
+crown = ["ellipsoid", 0.24, 1.0]
+trunk = 0.22
+attract = 1100
+seg = 0.5
+infl = 3.8
+kill = 0.95
+tropism = [0, 0.06, 0]
+tip_r = 0.012
+exp = 2.05
+cards = 1000
+card = [1.3, 2.0]
+lean = 0.15
+nsides = 10
+up_bias = 0.65
+trunk_r = 0.38
+clumps = 18
+clump_sd = 0.24
+
+[trees.shapes.pine]
+H = 19.0
+R = 5.2
+crown = ["irregular", 0.45, 1.0]
+trunk = 0.42
+attract = 900
+seg = 0.55
+infl = 5.0
+kill = 0.9
+tropism = [0, 0.12, 0]
+tip_r = 0.014
+exp = 2.05
+cards = 950
+card = [1.5, 2.2]
+lean = 0.12
+nsides = 9
+clumps = 11
+clump_sd = 0.14
+up_bias = 0.7
+trunk_r = 0.36
+tip_depth = 3
+
+[trees.shapes.spruce]
+H = 15.0
+R = 3.3
+crown = ["cone", 0.04, 1.0]
+trunk = 0.06
+attract = 1000
+seg = 0.4
+infl = 2.6
+kill = 0.7
+tropism = [0, -0.05, 0]
+tip_r = 0.01
+exp = 2.1
+cards = 1300
+card = [1.0, 1.5]
+lean = 0.02
+nsides = 8
+up_bias = 0.35
+trunk_r = 0.26
+leader = true
+droop = 0.25
+tip_depth = 4
+
+[trees.shapes.shrub]
+H = 3.2
+R = 2.0
+crown = ["ellipsoid", 0.05, 1.0]
+trunk = 0.05
+attract = 260
+seg = 0.25
+infl = 1.5
+kill = 0.4
+tropism = [0, 0.1, 0]
+tip_r = 0.008
+exp = 2.1
+cards = 260
+card = [0.8, 1.2]
+lean = 0.0
+nsides = 6
+up_bias = 0.5
+trunk_r = 0.06
+
+# make_foliage leaf cards (Southern Ontario summer foliage): sprite source in data/<slug>/textures/leaf_refs ("" =
+# procedural needles), target HSV, leaves per card, leaf scale, twig colour, extra hues.
+[foliage.maple]
+src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg"
+hsv = [0.23, 0.62, 0.4]
+n = 120
+scale = [0.085, 0.13]
+twig = [95, 82, 66]
+alt = [[[0.21, 0.55, 0.47], 0.18], [[0.25, 0.65, 0.33], 0.15]]
+
+[foliage.oak]
+src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg"
+hsv = [0.22, 0.58, 0.29]
+n = 300
+scale = [0.05, 0.075]
+twig = [72, 60, 48]
+alt = [[[0.2, 0.5, 0.36], 0.2]]
+
+[foliage.shrub]
+src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg"
+hsv = [0.22, 0.48, 0.32]
+n = 380
+scale = [0.035, 0.055]
+twig = [80, 70, 55]
+alt = [[[0.17, 0.4, 0.4], 0.15]]
+
+[foliage.pine]
+src = ""
+hsv = [0.3, 0.38, 0.33]
+n = 0
+scale = [0, 0]
+twig = [92, 74, 58]
+alt = []
+
+[foliage.spruce]
+src = ""
+hsv = [0.37, 0.42, 0.24]
+n = 0
+scale = [0, 0]
+twig = [80, 62, 48]
+alt = []
+
+# 3D grass (Stix Games 3DG) hand-off and viewer preview, written as output/<slug>/gspro/grass_3dg.json. Heights and
+# densities are estimates for cool-season rough (no public source gives per-surface 3DG values).
+[grass]
+about = "3D grass settings per OPCD surface. 3dg = Stix Games DirectX 11 Grass Shader material settings to start from (estimates, tune in Unity); viewer = our three.js preview. Masks: FBX colour layer 'Col' (R = grass type 1 density, G = grass type 2 / dry, B = 0) for 3DG 'Vertex density' mode."
+
+[grass.3dg.common]
+"Density Mode" = "Vertex density"
+"Grass Types" = "2 textures (type 1 = green blades, type 2 = dry blades)"
+layer = "600m cull"
+"Density Falloff Start" = 12.0
+"Grass Fade End" = 90.0
+"Lighting Mode" = "Default PBR"
+notes = "Target Density: smaller number = denser grass (Stix docs)"
+
+[grass.3dg.SemiRough]
+blade_height_m = [0.025, 0.045]
+blade_width_m = 0.006
+relative_density = 1.0
+
+[grass.3dg.Rough]
+blade_height_m = [0.045, 0.085]
+blade_width_m = 0.007
+relative_density = 0.9
+
+[grass.3dg.DeepRough]
+blade_height_m = [0.12, 0.32]
+blade_width_m = 0.008
+relative_density = 0.55
+
+[grass.viewer]
+radius_m = 55
+full_density_m = 22
+far_density = 0.18
+tile_m = 6
+max_instances = 400000
+
+[grass.viewer.wind]
+strength = 0.35
+speed = 1.0
+
+[grass.viewer.surfaces.SemiRough]
+height = [0.03, 0.05]
+width = 0.008
+density = 45
+blades = 8
+colour_tip = [1.06, 1.1, 1.02]
+dry = 0.0
+
+[grass.viewer.surfaces.Rough]
+height = [0.05, 0.09]
+width = 0.009
+density = 40
+blades = 9
+colour_tip = [1.07, 1.12, 1.02]
+dry = 0.05
+
+[grass.viewer.surfaces.DeepRough]
+height = [0.14, 0.32]
+width = 0.01
+density = 14
+blades = 9
+colour_tip = [1.14, 1.1, 0.88]
+dry = 0.25
+
+[grass.viewer.surfaces.Pinestraw]
+height = [0.22, 0.45]
+width = 0.008
+density = 7
+blades = 10
+colour_tip = [1.22, 1.12, 0.82]
+dry = 0.6
+
+# Wall tints (multipliers on the white stucco texture: white, cream, beige siding, warm grey, buff, red / brown brick),
+# backdrop roof colours (asphalt shingle), parking stall width / length / aisle (m), share of SUVs among parked cars.
+[buildings]
+wall_palette = [[1.0, 1.0, 1.0], [0.97, 0.93, 0.82], [0.86, 0.8, 0.68], [0.74, 0.74, 0.72], [0.9, 0.84, 0.72], [0.62, 0.4, 0.31], [0.5, 0.35, 0.28]]
+roof_palette = [[0.34, 0.33, 0.32], [0.28, 0.24, 0.22], [0.45, 0.42, 0.38], [0.38, 0.27, 0.22], [0.22, 0.23, 0.25]]
+parking_stall = [2.6, 5.5, 6.5]
+suv_share = 0.4
+
+# The spring photo drapes the 5 km backdrop in dormant lawns and leaf-off woods: vegetated pixels (NDVI ramp) are graded
+# to summer_green (sRGB) when summer_grade is true.
+[backdrop]
+summer_grade = true
+summer_green = [86, 106, 56]
+ndvi = [0.08, 0.22]
+
+# Ground textures (Poly Haven sets) for wooded rough (deciduous leaf litter) and native areas.
+[materials]
+deeprough = "forest_leaves_02"
+native = "withered_grass"
+
+# Viewer: crown tints per archetype and the sky / horizon gradient (pale summer horizon over green-grey ground).
+[viewer]
+species_tint = { maple = [1.0, 1.04, 0.9], oak = [0.9, 0.94, 0.78], pine = [0.84, 0.95, 0.9], spruce = [0.7, 0.84, 0.86], shrub = [1.0, 1.0, 0.9] }
+sky = [[0.0, "#2f6db8"], [0.3, "#5f97d3"], [0.45, "#a9c7e3"], [0.5, "#d6e2ea"], [0.53, "#c2cdb8"], [1.0, "#7d8a64"]]

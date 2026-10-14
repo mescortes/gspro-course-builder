@@ -221,7 +221,16 @@ def trees_csv(hmin):
     return len(trees)
 
 
-GKD_TEE_SLOT = {"blue": "Blue", "white": "White", "red": "Red", "gold": "Yellow"}   # GKD TeeType per card tee
+GKD_TEE_SLOT = dict(C.TEE_GKD)   # GKD TeeType per card tee (course.toml [[tees]] gkd_slot)
+
+
+def unity_script(short=None, name=None, last_hole=None):
+    """The Unity editor helper for this course, from unity/Editor/CourseSetup.cs.in: class <name>Setup, menu and
+    Assets/<name>, course meshes Hole01 .. Hole<last_hole>."""
+    t = (C.ROOT / "unity/Editor/CourseSetup.cs.in").read_bytes().decode()
+    return (t.replace("{{SHORT}}", short or C.COURSE_SHORT).replace("{{NAME}}", name or C.UNITY_NAME)
+             .replace("{{LAST_HOLE}}", str(last_hole or max(C.PLAYABLE))))
+
 GKD_PIN_DAYS = (("Thursday", "middle"), ("Friday", "front"), ("Saturday", "back"))   # Sunday: the harder side pin
 
 
@@ -323,11 +332,11 @@ def main():
     n = svg()
     nt = trees_csv(hmin)
     grass_spec_json()
-    import shutil   # Unity editor helpers (terrains, trees, water probes, 3DG) travel with the package
+    # Unity editor helpers (terrains, trees, water probes, 3DG) travel with the package
     (OUT / "unity/Editor").mkdir(parents=True, exist_ok=True)
     for old in (OUT / "unity/Editor").glob("*.cs"):
         old.unlink()
-    shutil.copy(C.ROOT / "unity/Editor" / C.UNITY_SCRIPT, OUT / "unity/Editor" / C.UNITY_SCRIPT)
+    (OUT / "unity/Editor" / C.UNITY_SCRIPT).write_bytes(unity_script().encode())
     meta = json.load(open(OUT / "terrain.json"))
     meta["outer"] = outer_terrain()
     meta["outer"]["unity_position"]["y"] = round(meta["outer"]["unity_position"]["y"] - hmin, 3)

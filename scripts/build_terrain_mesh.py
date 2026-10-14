@@ -340,7 +340,8 @@ def blended_dem(dem, T, feats):
         del den, delta, gm, ext, corr, w
     # tees with no LiDAR deck (built after the 2018 survey) get a synthetic one
     out = level_tees(out, T, [g for g, s, _ in feats if s == "tee"], holes=[h for g, s, h in feats if s == "tee"],
-                     protect=mask(("cartpath", "road", "building", "green", "fringe", "bunker", "water")) > 0)
+                     protect=mask(("cartpath", "road", "building", "green", "fringe", "bunker", "water")) > 0,
+                     **C.tuning("level_tees", {}))
     # water: a flat water level per body (lowest ~20 % of the shoreline); under it a shelving bed (OPCD Water_Base),
     # and the banks inside the WaterPlane's outset kept above the water
     import edges

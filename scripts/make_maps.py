@@ -140,6 +140,17 @@ def green_map(hole, feats, dem, T, out):
     fig.tight_layout(); fig.savefig(out); plt.close(fig)
 
 
+NINE_COLOURS = (("blue", "#1f4fd1"), ("red", "#d1361f"), ("green", "#2a9d3c"), ("orange", "#e08a1e"))
+
+
+def nine_legend(nine):
+    """("1–9 blue · 10–18 red", {hole: colour}): one colour per nine, in hole order."""
+    names = list(dict.fromkeys(nine[h] for h in sorted(nine)))
+    col = {n: NINE_COLOURS[i % len(NINE_COLOURS)] for i, n in enumerate(names)}
+    span = {n: [h for h in sorted(nine) if nine[h] == n] for n in names}
+    return " · ".join(f"{span[n][0]}–{span[n][-1]} {col[n][0]}" for n in names), {h: col[n][1] for h, n in nine.items()}
+
+
 def course_map(data, feats, dem, T, out):
     """Whole-course map: surfaces over hillshade, lines of play, tees and hole numbers (front nine blue, back nine red)."""
     e = C.CORE
@@ -150,10 +161,11 @@ def course_map(data, feats, dem, T, out):
     step = 4
     hs = hillshade(dem[::step, ::step], T.a * step)
     ax.imshow(hs, extent=(e["xmin"], e["xmax"], e["ymin"], e["ymax"]), cmap="gray", alpha=0.3, zorder=2, vmin=0, vmax=1)
+    legend, nine_colour = nine_legend(C.NINE)
     for h in data["holes"]:
         if not h.get("tees"):
             continue
-        col = "#1f4fd1" if h["hole"] <= 9 else "#d1361f"
+        col = nine_colour[h["hole"]]
         cl = np.asarray(h["centerline_utm"])
         ax.plot(cl[:, 0], cl[:, 1], color="white", lw=1.0, zorder=4)
         ax.plot(*cl[0], "o", ms=4, color=col, zorder=5)
@@ -164,7 +176,7 @@ def course_map(data, feats, dem, T, out):
     ax.set_xticks([]); ax.set_yticks([])
     tot = {k: sum(t["yards"] for h in data["holes"] for t in h.get("tees", []) if t["key"] == k) for k in C.TEE_KEYS}
     card = {k: sum(v[1 + i] for v in C.SCORECARD.values()) for i, k in enumerate(C.TEE_KEYS)}
-    ax.set_title(f"{C.COURSE_NAME} (1–9 blue · 10–18 red)\nmodel yardage " + " / ".join(f"{tot[k]:.0f}" for k in C.TEE_KEYS) +
+    ax.set_title(f"{C.COURSE_NAME} ({legend})\nmodel yardage " + " / ".join(f"{tot[k]:.0f}" for k in C.TEE_KEYS) +
                  " (card " + " / ".join(str(card[k]) for k in C.TEE_KEYS) + ", " + " / ".join(C.TEE_NAMES[k] for k in C.TEE_KEYS) + ")", fontsize=11)
     ax.plot([e["xmax"] - 230, e["xmax"] - 30], [e["ymin"] + 30, e["ymin"] + 30], color="white", lw=3, zorder=7)
     ax.text(e["xmax"] - 130, e["ymin"] + 42, "200 m", color="white", ha="center", zorder=7)

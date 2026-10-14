@@ -230,9 +230,7 @@ def planar_roof(V2, zb, poly, inset=0.0, fit_d=4.0):
     return best[1]
 
 
-WALL_PALETTE = (   # linear-ish multipliers on the white stucco texture: white, cream, beige siding, warm grey, buff
-    (1.0, 1.0, 1.0), (0.97, 0.93, 0.82), (0.86, 0.80, 0.68), (0.74, 0.74, 0.72), (0.90, 0.84, 0.72),
-    (0.62, 0.40, 0.31), (0.50, 0.35, 0.28))   # last two: red / brown brick tones
+WALL_PALETTE = C.as_tuples(C.REGION["buildings"]["wall_palette"])  # multipliers on the white stucco texture
 
 
 def wall_colour(oid):
@@ -536,10 +534,11 @@ def add_fountains(glb, root):
     print("fountains", n)
 
 
-SLOT_W, SLOT_L, AISLE = 2.6, 5.5, 6.5
+SLOT_W, SLOT_L, AISLE = C.REGION["buildings"]["parking_stall"]  # stall width, length, aisle (m)
+SUV_SHARE = C.REGION["buildings"]["suv_share"]
 CAR_PAINT = ((0.85, 0.85, 0.84), (0.05, 0.05, 0.06), (0.55, 0.56, 0.57), (0.3, 0.31, 0.32), (0.08, 0.12, 0.25),
              (0.45, 0.06, 0.05), (0.7, 0.7, 0.72), (0.18, 0.2, 0.18))
-PARKING = (824691380, 485368326, 184857598)    # OSM amenity=parking lots by the clubhouse
+PARKING = C.PARKING    # OSM amenity=parking lots by the clubhouse (course.toml [structures] parking)
 
 
 def parking_slots(lot, w=SLOT_W, l=SLOT_L, aisle=AISLE, exclude=None):
@@ -614,7 +613,7 @@ def car_parts(x, y, z, yaw, seed=0):
     (sedan or SUV), four tyres, head and tail lights. [(P, N, UV, I, kind)] in UTM, length along the yaw-turned
     +y axis (the bonnet at +y), standing on z."""
     rng = np.random.default_rng(seed)
-    suv = rng.random() < 0.4
+    suv = rng.random() < SUV_SHARE
     W = rng.uniform(1.75, 1.9); L = rng.uniform(4.4, 4.9) if not suv else rng.uniform(4.5, 4.95)
     zb0, zb1 = z + 0.22, z + (0.95 if suv else 0.8)
     zc1 = z + (rng.uniform(1.62, 1.78) if suv else rng.uniform(1.42, 1.5))

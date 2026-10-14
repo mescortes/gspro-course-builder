@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Westmount G&amp;CC</title>
+<title>Course viewer</title>
 <style>
   :root { --bg: #0e1410; --fg: #e8efe6; --panel: rgba(14, 20, 16, 0.78); --accent: #8fd18a; --line: #5a7a58; }
   @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --panel: rgba(255,255,255,0.86); --fg: #142014; --bg: #dfe8dc; --line: #7d9a7b; } }
@@ -29,7 +29,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
-  <h1>Westmount Golf &amp; Country Club</h1>
+  <h1 id="title">Course viewer</h1>
   <h2>Hole</h2><div id="holes"></div>
   <h2>Camera</h2><div id="shots"></div>
   <h2>Views</h2><div id="views"></div>
@@ -48,9 +48,18 @@ import { Water } from 'three/addons/objects/Water.js';
 import { Grass } from './grass.js';
 
 const params = new URLSearchParams(location.search);
-const COURSE = params.get('course') || 'westmount';         // output/<course>/ (course folder slug)
-const OUT = params.get('out') || `../output/${COURSE}/`;       // e.g. ?out=../build/westmount-test/output/
-const MODEL = params.get('model') || `${OUT}${COURSE}.glb`;
+const COURSE = params.get('course');                         // a course folder slug: output/<course>/
+const OUT = params.get('out') || `../output/${COURSE}/`;       // e.g. ?out=../build/<course>-test/output/
+if (!COURSE && !params.get('out')) {
+  document.getElementById('info').textContent = 'Open the viewer with ?course=<slug> (a folder in courses/).';
+  throw new Error('no course');
+}
+// output/<course>/viewer.json (export_course.py): title, model file, crown tint per archetype, sky gradient
+let site = {};
+try { const r = await fetch(`${OUT}viewer.json?` + Date.now()); if (r.ok) site = await r.json(); } catch (e) {}
+if (site.title) document.title = site.title;
+if (site.name) document.getElementById('title').textContent = site.name;
+const MODEL = params.get('model') || `${OUT}${site.model || COURSE + '.glb'}`;
 const HOLES = params.get('holes') || `${OUT}holes.json`;
 const GRASS_SPEC = params.get('grass') || `${OUT}gspro/grass_3dg.json`;
 const LOD_DIST = parseFloat(params.get('lod') || '240');     // detailed trees within this distance (m)
@@ -99,8 +108,8 @@ function skyTexture() {
   const W = 2048, H = 1024, c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d');
   const grd = g.createLinearGradient(0, 0, 0, H);
-  grd.addColorStop(0.00, '#2f6db8'); grd.addColorStop(0.30, '#5f97d3'); grd.addColorStop(0.45, '#a9c7e3');
-  grd.addColorStop(0.50, '#d6e2ea'); grd.addColorStop(0.53, '#c2cdb8'); grd.addColorStop(1.00, '#7d8a64');
+  for (const [t, col] of site.sky || [[0.0, '#2f6db8'], [0.3, '#5f97d3'], [0.45, '#a9c7e3'], [0.5, '#d6e2ea'],
+                                      [0.53, '#c2cdb8'], [1.0, '#7d8a64']]) grd.addColorStop(t, col);
   g.fillStyle = grd; g.fillRect(0, 0, W, H);
   const sx = ((Math.atan2(sunDir.x, -sunDir.z) / (2 * Math.PI)) + 0.5) * W, sy = (0.5 - Math.asin(sunDir.y) / Math.PI) * H;
   const rg = g.createRadialGradient(sx, sy, 2, sx, sy, 280); rg.addColorStop(0, 'rgba(255,250,235,0.9)'); rg.addColorStop(1, 'rgba(255,250,235,0)');
@@ -271,8 +280,7 @@ function makeReflectiveWater(o) {
 }
 // Tree crowns: one foliage texture per archetype made every crown the same green. Each instance gets a species tint
 // and its own brightness / yellow-blue shift, hashed from its position so all LODs of a tree agree.
-const SPECIES_TINT = { maple: [1.0, 1.04, 0.9], oak: [0.9, 0.94, 0.78], pine: [0.84, 0.95, 0.9], spruce: [0.7, 0.84, 0.86],
-  shrub: [1.0, 1.0, 0.9] };
+const SPECIES_TINT = site.species_tint || {};
 function tintCrowns(o, arch) {
   const base = SPECIES_TINT[arch] || [1, 1, 1], mtx = new THREE.Matrix4(), p = new THREE.Vector3(), c = new THREE.Color();
   const hash = (x, z, k) => { const v = Math.sin(x * 12.9898 + z * 78.233 + k * 37.719) * 43758.5453; return v - Math.floor(v); };

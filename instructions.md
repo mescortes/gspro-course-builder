@@ -21,7 +21,8 @@ Read `research/GSPRO_COSMETICS.md` for how GSPro courses are put together and wh
 > `research/`) and builds into `data/<slug>/`, `build/<slug>/` and `output/<slug>/`. Below, paths that start with
 > `features/`, `research/` (except `GSPRO_COSMETICS.md`), `data/`, `build/` or `output/` mean the course's folders,
 > `viewer/views.json` is `output/<slug>/views.json`, and the course values said to live in `scripts/config.py` are in
-> `courses/<slug>/course.toml` (config.py loads it).
+> `courses/<slug>/course.toml` (config.py loads it). Region facts (species, foliage, 3D grass, turf tint, building
+> palettes) are in `regions/<region>.toml`, and limits tuned on one course are read with `config.tuning()`.
 
 ---
 
@@ -55,7 +56,7 @@ Read `research/GSPRO_COSMETICS.md` for how GSPro courses are put together and wh
 | `tests/` | `test_course.py` (built course), `test_blend.py`, `test_edges.py` (unit) |
 | `viewer/` | three.js viewer (`index.html`, `grass.js`, `views.json`); `scripts/devserver.py` serves it |
 | `workflows/*.js` | Multi-agent workflow templates: course research, per-hole QA rounds 1 and 2, GSPro research |
-| `unity/Editor/<config.UNITY_SCRIPT>` | Unity editor helpers shipped in the package (terrains, trees, water probes, 3DG); here `WestmountSetup.cs` |
+| `unity/Editor/CourseSetup.cs.in` | Unity editor helpers (terrains, trees, water probes, 3DG), rendered per course into the package as `<config.UNITY_SCRIPT>` (Westmount: `WestmountSetup.cs`) |
 | `research/` | Notes, OSM dumps, OPCD docs and toolset (conventions only, never redistribute) |
 | `output/` | glTF, `holes.json`, maps, `gspro/` hand-off package |
 
@@ -178,7 +179,7 @@ imagery covers CORE + 20 m.
 python3 scripts/devserver.py 8765
 ```
 
-Open <http://localhost:8765/viewer/?v=1#h1-tee>.
+Open <http://localhost:8765/viewer/?course=westmount&v=1#h1-tee>.
 
 ## 6. Phase E: verify and QA (≈ 2–3 h, multi-agent)
 
@@ -242,7 +243,7 @@ The pipeline already produces all of this; check it and tune per course. Details
   * OPCD now recommends **Arborist** for planting; our CSV is a faithful alternative or a reference.
 * **Terrains.** Inner: 4097² RAW over 2048 m, sunk 5 cm under the meshes. **Outer plot**: 4097² over 4096 m, sunk
   2 m inside the inner square. Both get feathered imagery overlays. `terrain.json` has the import settings.
-* **Unity helper.** `unity/Editor/<config.UNITY_SCRIPT>` (Unity 2018.2 APIs: `SplatPrototype`, not `TerrainLayer`;
+* **Unity helper.** `unity/Editor/CourseSetup.cs.in`, rendered as `<config.UNITY_SCRIPT>` (Unity 2018.2 APIs: `SplatPrototype`, not `TerrainLayer`;
   newer Unity behind `#if UNITY_2018_3_OR_NEWER`), menu named after the course, does four things:
   1. builds both terrains;
   2. places the trees;

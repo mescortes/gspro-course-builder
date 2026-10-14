@@ -13,25 +13,8 @@ import config as C
 
 OUT = C.DATA / "trees"
 
-ARCH = {
-    # crown envelope: kind, vertical start/end as fraction of height, horizontal radius; trunk: height fraction
-    # (Southern Ontario parkland species groups, see config.TREE_ARCHETYPES)
-    "maple":  dict(H=14.0, R=6.0, crown=("ovoid", 0.24, 1.0), trunk=0.24, attract=1100, seg=0.45, infl=3.6, kill=0.9,
-                   tropism=(0, 0.18, 0), tip_r=0.012, exp=2.05, cards=1150, card=(1.3, 1.9), lean=0.08, nsides=10,
-                   up_bias=0.6, trunk_r=0.34, clumps=24, clump_sd=0.27),
-    "oak":    dict(H=13.0, R=7.0, crown=("ellipsoid", 0.24, 1.0), trunk=0.22, attract=1100, seg=0.5, infl=3.8, kill=0.95,
-                   tropism=(0, 0.06, 0), tip_r=0.012, exp=2.05, cards=1000, card=(1.3, 2.0), lean=0.15, nsides=10,
-                   up_bias=0.65, trunk_r=0.38, clumps=18, clump_sd=0.24),
-    "pine":   dict(H=19.0, R=5.2, crown=("irregular", 0.45, 1.0), trunk=0.42, attract=900, seg=0.55, infl=5.0, kill=0.9,
-                   tropism=(0, 0.12, 0), tip_r=0.014, exp=2.05, cards=950, card=(1.5, 2.2), lean=0.12, nsides=9, clumps=11,
-                   clump_sd=0.14, up_bias=0.7, trunk_r=0.36, tip_depth=3),
-    "spruce": dict(H=15.0, R=3.3, crown=("cone", 0.04, 1.0), trunk=0.06, attract=1000, seg=0.4, infl=2.6, kill=0.7,
-                   tropism=(0, -0.05, 0), tip_r=0.010, exp=2.1, cards=1300, card=(1.0, 1.5), lean=0.02, nsides=8,
-                   up_bias=0.35, trunk_r=0.26, leader=True, droop=0.25, tip_depth=4),
-    "shrub":  dict(H=3.2, R=2.0, crown=("ellipsoid", 0.05, 1.0), trunk=0.05, attract=260, seg=0.25, infl=1.5, kill=0.4,
-                   tropism=(0, 0.1, 0), tip_r=0.008, exp=2.1, cards=260, card=(0.8, 1.2), lean=0.0, nsides=6,
-                   up_bias=0.5, trunk_r=0.06),
-}
+# crown envelope: kind, vertical start/end as fraction of height, horizontal radius; trunk: height fraction
+ARCH = C.as_tuples(C.REGION["trees"]["shapes"])  # regions/<region>.toml [trees.shapes.<archetype>]
 
 
 N_VARIANTS = 5   # model variants per archetype (add_vegetation picks one per tree from its id)

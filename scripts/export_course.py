@@ -20,6 +20,7 @@ import config as C
 from gltf_builder import GLB
 
 GEN = C.DATA / "textures_gen"; PH = C.DATA / "textures"
+_GROUND = C.REGION["materials"]   # wooded-rough and native ground textures (regions/<region>.toml [materials])
 # surface -> OPCD material name, albedo, normal, orm, tile size (m), normal scale, tint blur (m)
 MATS = {
     "green":     ("Green",       GEN / "green/albedo.jpg",     GEN / "green/normal.png",     GEN / "green/orm.jpg",     1.0, 0.6, 0.30),
@@ -29,8 +30,8 @@ MATS = {
     "semirough": ("SemiRough",   GEN / "semirough/albedo.jpg", GEN / "semirough/normal.png", GEN / "semirough/orm.jpg", 2.0, 0.7, 0.50),
     "rough":     ("Rough",       GEN / "rough/albedo.jpg",     GEN / "rough/normal.png",     GEN / "rough/orm.jpg",     2.5, 0.65, 0.60),
     "bunker":    ("Bunker",      PH / "sand_01/diffuse.jpg",   PH / "sand_01/nor_gl.jpg",    PH / "sand_01/arm.jpg",    2.5, 1.0, 0.35),
-    "deeprough": ("DeepRough",   PH / "forest_leaves_02/diffuse.jpg", PH / "forest_leaves_02/nor_gl.jpg", PH / "forest_leaves_02/arm.jpg", 3.0, 1.0, 0.6),
-    "native":    ("Pinestraw",   PH / "withered_grass/diffuse.jpg", PH / "withered_grass/nor_gl.jpg", PH / "withered_grass/arm.jpg", 3.0, 1.0, 0.6),
+    "deeprough": ("DeepRough",   PH / f"{_GROUND['deeprough']}/diffuse.jpg", PH / f"{_GROUND['deeprough']}/nor_gl.jpg", PH / f"{_GROUND['deeprough']}/arm.jpg", 3.0, 1.0, 0.6),
+    "native":    ("Pinestraw",   PH / f"{_GROUND['native']}/diffuse.jpg", PH / f"{_GROUND['native']}/nor_gl.jpg", PH / f"{_GROUND['native']}/arm.jpg", 3.0, 1.0, 0.6),
     "cartpath":  ("Concrete",    PH / "concrete_floor_worn_001/diffuse.jpg", PH / "concrete_floor_worn_001/nor_gl.jpg", PH / "concrete_floor_worn_001/arm.jpg", 4.0, 0.6, 0.4),
     "road":      ("Road",        PH / "asphalt_02/diffuse.jpg", PH / "asphalt_02/nor_gl.jpg", PH / "asphalt_02/arm.jpg", 6.0, 0.8, 0.6),
     "building":  ("Building_Base", PH / "concrete_floor_worn_001/diffuse.jpg", PH / "concrete_floor_worn_001/nor_gl.jpg", PH / "concrete_floor_worn_001/arm.jpg", 4.0, 0.6, 0.6),
@@ -429,9 +430,23 @@ def add_water_planes(glb, parent):
     print("water planes", n)
 
 
+SKY = ((0.0, "#2f6db8"), (0.3, "#5f97d3"), (0.45, "#a9c7e3"), (0.5, "#d6e2ea"), (0.53, "#c2cdb8"), (1.0, "#7d8a64"))
+
+
+def viewer_config():
+    """output/<slug>/viewer.json, read by viewer/index.html: title, model file, crown tint per archetype and the sky
+    gradient (regions/<region>.toml [viewer])."""
+    v = C.REGION.get("viewer", {})
+    tint = v.get("species_tint", {})
+    return {"title": C.COURSE_SHORT, "name": C.COURSE_NAME, "model": f"{C.MODEL_NAME}.glb",
+            "species_tint": {a: list(tint.get(a, (1.0, 1.0, 1.0))) for a in C.TREE_ARCHETYPES},
+            "sky": [list(s) for s in v.get("sky", SKY)]}
+
+
 def main(out=None):
     out = out or (C.OUTPUT / f"{C.MODEL_NAME}.glb")
     C.OUTPUT.mkdir(exist_ok=True)
+    json.dump(viewer_config(), open(C.OUTPUT / "viewer.json", "w"), indent=1)
     glb = GLB()
     root = glb.node(C.COURSE_SHORT.replace(" ", "_").replace("&", "and"), extras={
         "course": C.COURSE_NAME, "crs": C.CRS, "crs_label": C.CRS_LABEL, "origin_utm": [C.ORIGIN_E, C.ORIGIN_N], "base_height": C.BASE_H,

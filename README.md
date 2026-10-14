@@ -159,7 +159,7 @@ BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py      # all steps 
 .venv/bin/python -m pytest -q tests                                  # unit + built-course tests
 .venv/bin/python scripts/fingerprint.py check                        # the build against courses/westmount/fingerprint.json
 # CI (.github/workflows/tests.yml) runs the unit tests only: pytest tests --ignore=tests/test_course.py
-python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?v=1#h1-tee
+python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?course=westmount&v=1#h1-tee
 ```
 
 `courses/westmount/fingerprint.json` is the golden build fingerprint: a digest of every downloaded input and build
@@ -206,8 +206,8 @@ rm -rf data/textures_gen data/trees build output features   # derived; the build
   * hardwoods are split into maple and oak by crown shape;
   * conifers are split into spruce and white pine;
   * crown sizes come from closed leaf-off canopy.
-* **Spring photo.** Turf colour in the glTF and viewer is a summer grade (`config.TURF_TINT`) over the photo's
-  variation. The photo itself shows dormant greens and brown fairways. Beyond the course, vegetated pixels of the
+* **Spring photo.** Turf colour in the glTF and viewer is a summer grade (`config.TURF_TINT`, from
+  `regions/southern_ontario.toml`) over the photo's variation. The photo itself shows dormant greens and brown fairways. Beyond the course, vegetated pixels of the
   backdrop photo (by NDVI from its near-infrared band) are graded to summer green the same way
   (`build_backdrop.summer_grade`), for the glTF drape and the GSPro outer-plot overlay. GSPro assigns its own turf
   materials by object name.

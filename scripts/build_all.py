@@ -6,7 +6,7 @@ sys.path.insert(0, str(S)); import config as C
 STEPS = [
     ("register",   "register_imagery.py"),   # imagery translated onto the LiDAR (config.IMAGERY_SHIFT)
     ("rasters",    "build_rasters.py"),      # LiDAR -> DEM / DSM / CHM / intensity
-    ("paths",      "trace_paths.py"),        # cart-path centre lines from the photo (OSM maps none at Westmount)
+    ("paths",      "trace_paths.py"),        # cart-path centre lines from the photo ([tuning] trace_paths)
     ("classify",   "surface_classify.py"),   # imagery + LiDAR per-pixel surfaces
     ("vectorize",  "vectorize.py"),          # clean surface partition (build/<slug>/features/auto_core.geojson)
     ("assemble",   "assemble_features.py"),  # auto + manual overrides -> build/<slug>/features/course_surfaces.geojson
@@ -43,6 +43,8 @@ for n, script in STEPS[a:b + 1]:
         continue
     if not (S / script).exists():
         print(f"-- skip {n} (missing {script})"); continue
+    if n == "paths" and not C.tuning("trace_paths", True):   # a course whose OSM maps its cart paths
+        print("-- skip paths (course.toml [tuning] trace_paths = false)"); continue
     t = time.time(); print(f"== {n}", flush=True)
     subprocess.run([sys.executable, str(S / script)], check=True)
     print(f"   {n} done in {time.time() - t:.0f}s", flush=True)

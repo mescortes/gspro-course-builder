@@ -51,8 +51,9 @@ def lift_shadows(a, knee=40.0, keep=0.6, chroma=1.25):
     return out
 
 
-SUMMER_GREEN = (86, 106, 56)   # sRGB target for the median vegetated backdrop pixel (cf. config.TURF_TINT rough)
-NDVI_LO, NDVI_HI = 0.08, 0.22   # NDVI ramp: below LO untouched (roads, roofs, water), above HI fully graded
+_GRADE = C.REGION["backdrop"]  # regions/<region>.toml [backdrop]
+SUMMER_GREEN = tuple(_GRADE["summer_green"])   # sRGB target for the median vegetated backdrop pixel (cf. config.TURF_TINT)
+NDVI_LO, NDVI_HI = _GRADE["ndvi"]   # NDVI ramp: below LO untouched (roads, roofs, water), above HI fully graded
 
 
 def summer_grade(a, ndvi, target=SUMMER_GREEN, keep_l=0.5):
@@ -108,7 +109,7 @@ def imagery(ext, res, path):
         n = ds.read(1).astype(np.float32)
     r = a[..., 0].astype(np.float32)
     ndvi = ndimage.gaussian_filter((n - r) / np.maximum(n + r, 1), 1.0)
-    g = summer_grade(a, ndvi)
+    g = summer_grade(a, ndvi) if _GRADE["summer_grade"] else a
     with rasterio.open(summer, "w", **dict(prof, compress="deflate")) as ds:
         ds.write(np.moveaxis(g, -1, 0))
     Image.fromarray(a).save(raw, quality=88)
