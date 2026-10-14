@@ -6,7 +6,9 @@ engine change merges. Usage:
   fingerprint.py compare A B      compare two saved fingerprints
 
 GeoTIFFs hash their pixels and georeference (not the encoding), .npz files their arrays (not the zip timestamps),
-everything else its bytes. FBX and .blend files carry their creation time, so they are listed but not enforced.
+everything else its bytes. FBX and .blend files are listed but not enforced: Blender writes the time into both and
+derives FBX object ids from Python's per-process string hash (their content is covered by the glTF they are made from
+and fbx_manifest.json).
 Summaries (surface counts and areas, trees per archetype, hole yards, glTF object counts) explain a difference. The
 environment (machine, OS, package versions, Blender) is recorded; a different one is a note, not a failure, but
 floating-point results are only expected to match on the machine and packages that wrote the golden file.
@@ -22,7 +24,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent)); import config as C
 
 GOLDEN = C.ROOT / "fingerprints" / f"{C.MODEL_NAME}.json"
-UNENFORCED = (".fbx", ".blend")  # Blender writes the creation time into both
+UNENFORCED = (".fbx", ".blend")  # Blender writes the time into both, and FBX ids come from the salted str hash
 
 
 @dataclass
