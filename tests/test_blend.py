@@ -161,3 +161,39 @@ def test_synthetic_deck_does_not_feather_into_a_cart_path():
     assert np.abs(out - dem)[protect].max() < 1e-9
     inside = rasterize([(tee.buffer(-0.3), 1)], out_shape=dem.shape, transform=T).astype(bool)
     assert np.abs(out - dem)[inside].max() > 0.3, "the tee is still levelled"
+
+
+def test_new_tee_is_built_up_to_its_neighbouring_deck():
+    """Hole 8's 2025 Blue tee sat 1.7 m below the White deck 26 m away, in a hole cut into the slope (its deck was at
+    the 2018 slope's mean height). A new tee next to a real deck of the same hole is built up to that deck's level."""
+    from build_terrain_mesh import level_tees
+    from rasterio.features import rasterize
+    dem, T, c = _plane(slope=0.06)                                   # rises 6 % towards +x
+    old = Point(c + 12, c).buffer(4.0)
+    n = dem.shape[0]; xx = (np.arange(n) + 0.5) * RES
+    deck = float(dem[:, int((c + 12) / RES)].mean())
+    dem = np.where(rasterize([(old.buffer(1.0), 1)], out_shape=dem.shape, transform=T).astype(bool), deck, dem)  # flat real deck
+    new = Point(c - 12, c).buffer(4.0)
+    out = level_tees(dem.copy(), T, [old, new], holes=[8, 8])
+    m = rasterize([(new.buffer(-0.3), 1)], out_shape=dem.shape, transform=T).astype(bool)
+    assert abs(out[m].mean() - deck) < 0.1, f"new deck {out[m].mean():.2f} vs neighbour {deck:.2f}"
+    mo = rasterize([(old, 1)], out_shape=dem.shape, transform=T).astype(bool)
+    assert np.abs(out[mo] - dem[mo]).max() < 1e-9, "the real deck is untouched"
+    # another hole's deck is no reference
+    out2 = level_tees(dem.copy(), T, [old, new], holes=[7, 8])
+    assert abs(out2[m].mean() - dem[m].mean()) < 0.02
+
+
+def test_new_tee_is_never_dug_down_to_a_lower_neighbour():
+    """Hole 11's new back tee is above its old deck: following the lower neighbour would sink it 2.2 m into the hill.
+    Only a deck cut into the slope is built up, and never lowered."""
+    from build_terrain_mesh import level_tees
+    from rasterio.features import rasterize
+    dem, T, c = _plane(slope=0.06)
+    old = Point(c - 12, c).buffer(4.0)                              # the lower, real deck
+    deck = float(dem[:, int((c - 12) / RES)].mean())
+    dem = np.where(rasterize([(old.buffer(1.0), 1)], out_shape=dem.shape, transform=T).astype(bool), deck, dem)
+    new = Point(c + 12, c).buffer(4.0)
+    out = level_tees(dem.copy(), T, [old, new], holes=[11, 11])
+    m = rasterize([(new.buffer(-0.3), 1)], out_shape=dem.shape, transform=T).astype(bool)
+    assert abs(out[m].mean() - dem[m].mean()) < 0.02

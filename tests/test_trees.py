@@ -74,3 +74,24 @@ def test_trees_are_moved_off_tees_greens_and_bunkers():
     p = Point(out[0]["geometry"]["coordinates"])
     assert not tee.contains(p) and abs(p.x - 20.75) < 0.05 and abs(p.y - 5.0) < 0.05
     assert out[1]["geometry"]["coordinates"] == (30.0, 5.0)
+
+
+def test_trees_cleared_after_the_lidar_are_dropped():
+    """Hole 5's 2023 Blue tee: 2018 LiDAR trees stood on its mound and in the line of play (one on the cart path), but
+    the 2025 photo shows them gone. Trees within `radius` m of a reviewed clearance point are dropped, others kept."""
+    pts = [(10.0, 10.0), (50.0, 50.0)]
+    feats = [{"type": "Feature", "geometry": {"type": "Point", "coordinates": c}, "properties": {"id": i}}
+             for i, c in enumerate([(10.6, 10.4), (13.0, 10.0), (49.0, 50.5), (80.0, 80.0)])]
+    kept = D.drop_cleared(feats, pts, radius=1.5)
+    assert [f["properties"]["id"] for f in kept] == [1, 3]
+
+
+def test_cleared_tree_list_is_reviewed_and_local():
+    """Every clearance point carries its evidence (photo note) and sits near a post-2018 tee: hole 5 / 8 Blue."""
+    import json
+    from shapely.geometry import shape
+    fc = json.load(open(ROOT / "features/trees_cleared.geojson"))
+    assert fc["features"]
+    for f in fc["features"]:
+        p = f["properties"]
+        assert p.get("note") and p.get("hole") in (5, 8) and f["geometry"]["type"] == "Point"

@@ -101,6 +101,20 @@ def off_surfaces(feats, polys, max_shift=4.0, clearance=0.75):
     return out
 
 
+CLEARED = C.ROOT / "features" / "trees_cleared.geojson"
+
+
+def drop_cleared(feats, pts, radius=1.5):
+    """Trees within `radius` m of a reviewed clearance point (features/trees_cleared.geojson): 2018 LiDAR
+    trees the 2025 photo shows gone, cut down for the tees and paths built since (holes 5 and 8 Blue)."""
+    if not len(pts):
+        return feats
+    from scipy.spatial import cKDTree
+    xy = np.array([f["geometry"]["coordinates"][:2] for f in feats], float)
+    d, _ = cKDTree(np.asarray(pts, float)).query(xy)
+    return [f for f, di in zip(feats, d) if di > radius]
+
+
 def main(out=None):
     with rasterio.open(C.BUILD / "chm.tif") as ds:
         chm = ds.read(1); T = ds.transform
@@ -144,6 +158,10 @@ def main(out=None):
                  for g in getattr(shape(f["geometry"]), "geoms", [shape(f["geometry"])])]
         n0 = len(feats); feats = off_surfaces(feats, polys)
         print(f"trees on tees / greens / bunkers: {n0 - len(feats)} dropped (cleared), the rest moved off the edge", flush=True)
+    if CLEARED.exists():
+        pts = [f["geometry"]["coordinates"][:2] for f in json.load(open(CLEARED))["features"]]
+        n0 = len(feats); feats = drop_cleared(feats, pts)
+        print(f"trees cleared since the LiDAR (trees_cleared.geojson): {n0 - len(feats)} dropped", flush=True)
     json.dump({"type": "FeatureCollection", "features": feats}, open(out or (C.FEATURES / "trees.geojson"), "w"))
     from collections import Counter
     print("trees", len(feats), Counter(f["properties"]["archetype"] for f in feats))
