@@ -175,12 +175,13 @@ and `gspro/fbx_manifest.json` are compared.
 
 Each course lives in `courses/<slug>/` (`course.toml`, `features/`, `research/`) and builds into `data/<slug>/`,
 `build/<slug>/` and `output/<slug>/`. Set `COURSE=<slug>` once there is more than one course. A checkout made before
-the course folders keeps its downloads at the top of `data/`; move them rather than fetching again, so the inputs
-stay byte-identical:
+the course folders still has its downloads at the top of `data/` after updating to this layout (and generated files in
+`build/`, `output/` and `features/`, which are no longer tracked); move the downloads rather than fetching them again,
+so the inputs stay byte-identical:
 
 ```bash
 mkdir -p data/westmount && mv data/lidar data/imagery data/dem data/textures data/westmount/
-rm -rf build output features/auto_core.geojson features/course_surfaces.geojson features/trees.geojson
+rm -rf data/textures_gen data/trees build output features   # derived; the build regenerates them
 ```
 
 ## Known limitations
