@@ -4,7 +4,7 @@ Each texture is a periodic canvas of individually drawn grass blades (wrap-aroun
 Albedo is generated neutral-bright and is modulated per vertex by the aerial-imagery tint (COLOR_0) in the model.
 Output: data/textures_gen/<name>/{albedo.jpg, normal.png, orm.jpg}
 """
-import sys, colorsys
+import sys, colorsys, zlib
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 from scipy import ndimage
@@ -118,7 +118,7 @@ def orm(h, base_rough):
 
 def make(name):
     spec = SPECS[name]
-    rng = np.random.default_rng(abs(hash(name)) % 2**32)
+    rng = np.random.default_rng(zlib.crc32(name.encode()))  # not hash(name): Python salts it per process
     alb, h = draw_blades(spec, rng)
     out = OUT / name; out.mkdir(parents=True, exist_ok=True)
     Image.fromarray((np.clip(alb, 0, 1) * 255).astype(np.uint8)).save(out / "albedo.jpg", quality=92)
