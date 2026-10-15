@@ -266,10 +266,16 @@ def discover_sources(sc, fr, bbox_ll, crs, zone):
     provider, notes = sc["lidar"]["provider"], []
     if provider == "nrcan_copc":
         province = sc["lidar"]["province"]
+        if zone is None:  # tile names are the tiles' UTM coordinates in their zone, read from the frame's
+            sys.exit(f"frame CRS {crs} is not a UTM zone, but NRCan names its 1 km tiles by UTM zone and their "
+                     f"coordinates in that zone: the frame must be a {sc['datum']} / UTM zone CRS (leave --crs out for "
+                     "the course's own zone, or pass the neighbouring zone's EPSG code)")
         projects = nrcan_projects(fr["core"], zone, province)
         if not projects:
             sys.exit(f"no NRCan point-cloud folder under pointclouds_nuagespoints/{province}/ holds the course's 1 km "
-                     f"tiles (zone {zone}): check --osm / --bbox, or the region's [scaffold] lidar")
+                     f"tiles (zone {zone}): check --osm / --bbox, or the region's [scaffold] lidar; near a zone "
+                     f"boundary the project may be delivered in the neighbouring zone: --crs with that zone's "
+                     f"{sc['datum']} / UTM EPSG code")
         lidar = {"provider": "nrcan_copc", "zone": zone, "projects": projects}
         dtm = [sc["backdrop"]["url"].format(province=province, project=p["folder"].split("/", 1)[1], kind="dtm")
                for p in projects]
@@ -322,7 +328,7 @@ def main(argv=None):
         sys.exit("--osm or --bbox")
     lon = sum(p[0] for p in ll) / len(ll); lat = sum(p[1] for p in ll) / len(ll)
     crs = check_frame_crs(a.crs or utm_crs(lon, lat, sc["datum"], sc.get("crs")))
-    from pyproj import Transformer
+    from pyproj import CRS, Transformer
     tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
     xy = [tr.transform(*p) for p in ll]
     bbox_ll = (min(p[0] for p in ll), min(p[1] for p in ll), max(p[0] for p in ll), max(p[1] for p in ll))
@@ -331,7 +337,8 @@ def main(argv=None):
     holes = osm_holes(bbox_ll) if a.osm else []
     notes.append(f"OSM: {len(holes)} golf=hole refs inside the outline box" + (f" ({_ranges(holes)})" if holes else
                  " - draw the holes in courses/<slug>/features/golf.geojson"))
-    zone = int((lon + 180) // 6) + 1
+    zone = CRS(crs).utm_zone  # the frame's zone ("18N"), not the longitude's: the frame may be --crs another zone
+    zone = int(zone[:-1]) if zone else None
     lidar, backdrop, found = discover_sources(sc, fr, bbox_ll, crs, zone)
     notes += found
     ground = median_ground(backdrop.get("dtm") or [], crs, fr["core"])

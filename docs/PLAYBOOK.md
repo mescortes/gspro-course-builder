@@ -76,7 +76,9 @@ course and what changed on the course since the LiDAR was flown.
 ```
 
 It writes `courses/<slug>/course.toml`: the frame (UTM CRS from the region's datum, origin, base height, build extent
-CORE = outline + 100 m in 256 m tiles, the 2048 m GSPro terrain square) and the likely `[sources]`.
+CORE = outline + 100 m in 256 m tiles, the 2048 m GSPro terrain square) and the likely `[sources]`. With `nrcan_copc`
+the frame must be a UTM zone (NRCan names its tiles by zone): near a zone boundary, `--crs` the neighbouring zone's EPSG
+code if the project is delivered in that zone.
 
 **A region** (`regions/<name>.toml`) holds what is true of a whole area: tree archetypes and the rules that sort LiDAR
 crowns into them, foliage cards, 3D grass, the turf colour target, building palettes, backdrop vegetation, viewer sky,

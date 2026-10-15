@@ -2,7 +2,7 @@
 NAD83(2011) / California zone 2 (ftUS) + NAVD88 height (ftUS)), the neighbouring UTM zone, heights in feet. They are
 reprojected as they are read; tiles already in the frame are read as before. Synthetic tiles written by laspy, no
 network."""
-import sys
+import sys, tomllib
 from pathlib import Path
 
 import numpy as np
@@ -279,3 +279,24 @@ def test_crown_statistics_read_reprojected_tiles(tmp_path, monkeypatch):
         out.append(D.crown_base(lab, T, 1))
     assert 3.4 < out[0][0][0] < 4.2
     assert out[1][0].tolist() == out[0][0].tolist() and out[1][1].tolist() == out[0][1].tolist()
+
+
+# ---- new_course: NRCan tile names are UTM coordinates in the frame's zone
+def test_nrcan_tiles_are_searched_in_the_frames_utm_zone(monkeypatch, capsys):
+    """The zone came from the longitude while the tile coordinates came from --crs: --crs EPSG:2959 searched zone-17
+    names with zone-18 coordinates, found nothing, and wrote zone = 17 next to a zone 18 frame."""
+    import new_course as N
+    seen = []
+    monkeypatch.setattr(N, "nrcan_projects", lambda core, zone, province: seen.append((zone, core["xmin"]))
+                        or [{"folder": "XX/Project_2020", "suffix": "2020P"}])
+    monkeypatch.setattr(N, "median_ground", lambda urls, crs, ext: None)
+    args = ["test-club", "Test Club", "--region", "southern_ontario", "--bbox=-78.06,44.0,-78.04,44.02", "--dry-run"]
+    N.main(args + ["--crs", "EPSG:2959"])
+    t = tomllib.loads(capsys.readouterr().out)
+    assert seen[-1][0] == 18 and seen[-1][1] < 500000 and t["sources"]["lidar"]["zone"] == 18
+    assert t["frame"]["crs"] == "EPSG:2959"
+    N.main(args)
+    t = tomllib.loads(capsys.readouterr().out)
+    assert seen[-1][0] == 17 and seen[-1][1] > 500000 and t["sources"]["lidar"]["zone"] == 17
+    with pytest.raises(SystemExit, match="UTM"):
+        N.main(args + ["--crs", "EPSG:3161"])
