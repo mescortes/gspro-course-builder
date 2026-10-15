@@ -66,11 +66,12 @@ def _rel(p):
         return Path(p)
 
 
-def require_cover(path, ext, what, step=20.0):
+def require_cover(path, ext, what):
     """Exit unless the raster `path` covers `ext` with heights: past its border the samplers repeat its edge heights
     (flat smeared bands with no message), e.g. a backdrop DEM fetched before the [frame] terrain grew; inside it a cell
-    without data (sampled every `step` m) became a NaN backdrop vertex, or a flat plateau at the DEM's mean height in
-    the GSPro outer plot."""
+    without data became a NaN backdrop vertex, or in the GSPro heightmaps a plateau (or a wall, for a strip) at the
+    DEM's mean height. Every cell is read: a 5 km square at 2 m is about 6 M cells, and a strip narrower than the
+    20 m samples this used to read passed."""
     if not Path(path).exists():
         sys.exit(f"{_rel(path)}: missing (the backdrop DEM): run scripts/fetch_backdrop.py")
     span = f"E {ext['xmin']:.0f}-{ext['xmax']:.0f} N {ext['ymin']:.0f}-{ext['ymax']:.0f}"
@@ -80,10 +81,11 @@ def require_cover(path, ext, what, step=20.0):
             sys.exit(f"{_rel(path)} covers E {b.left:.0f}-{b.right:.0f} N {b.bottom:.0f}-{b.top:.0f}, but {what} needs "
                      f"{span}: run scripts/fetch_backdrop.py again (it sizes the backdrop to the course.toml [frame] "
                      "terrain), then build_all.py backdrop")
-        from rasterio.windows import from_bounds
-        shape = (max(1, int((ext["ymax"] - ext["ymin"]) / step)), max(1, int((ext["xmax"] - ext["xmin"]) / step)))
-        z = ds.read(1, window=from_bounds(ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], transform=ds.transform),
-                    out_shape=shape, masked=True)
+        from rasterio.windows import Window, from_bounds
+        w = from_bounds(ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], transform=ds.transform)
+        c0, r0 = max(0, math.floor(w.col_off + 1e-6)), max(0, math.floor(w.row_off + 1e-6))   # every cell in ext
+        c1 = min(ds.width, math.ceil(w.col_off + w.width - 1e-6)); r1 = min(ds.height, math.ceil(w.row_off + w.height - 1e-6))
+        z = ds.read(1, window=Window(c0, r0, max(1, c1 - c0), max(1, r1 - r0)), masked=True)
     gap = float((np.ma.getmaskarray(z) | ~np.isfinite(z.filled(0))).mean())
     if gap:
         sys.exit(f"{_rel(path)}: {gap:.1%} of {what} ({span}) has no height (cells without data): the DEMs listed in "
@@ -114,19 +116,35 @@ def datum_offset(dem, backdrop, core, band=(10.0, 50.0), res=2.0):
     return med, float(np.median(np.abs(diff - med))), int(diff.size)
 
 
+Z_OFFSET_TAG = "Z_OFFSET"   # GeoTIFF tag: the [sources.backdrop] z_offset (m) fetch_backdrop added to the file
+
+
+def applied_z_offset(path):
+    """The z_offset (m) fetch_backdrop added to the GeoTIFF `path`: 0 for a file it did not move (no tag)."""
+    with rasterio.open(path) as ds:
+        return float(ds.tags().get(Z_OFFSET_TAG, 0.0))
+
+
 def check_datum(dem, backdrop, core):
     """The backdrop DEM's offset from the LiDAR DEM round the build extent. Another vertical datum (ellipsoidal vs
     orthometric heights, an older national datum) or unit (feet) would leave a wall or a berm all round the course:
     a warning above [tuning] backdrop_datum_warn_m (0.3 m), a stop above backdrop_datum_max_m (3 m). The z_offset
-    suggested is the one that removes the offset: the measured DEM already carries any [sources.backdrop] z_offset
-    (fetch_backdrop adds it), so suggesting -median sent a wrong sign round in a loop (+30 -> -60 -> +30 ...)."""
+    suggested is the one that removes the offset: the measured DEM already carries the z_offset fetch_backdrop added
+    (applied_z_offset), so suggesting -median sent a wrong sign round in a loop (+30 -> -60 -> +30 ...). A DEM fetched
+    with another z_offset than course.toml's (set or changed, but fetch_backdrop not rerun: it is not a build step)
+    stops first: measured on it, the suggestion would be wrong."""
+    want = float(C.DATA_SOURCES.get("backdrop", {}).get("z_offset", 0.0))
+    now = applied_z_offset(backdrop)
+    if abs(now - want) > 1e-6:
+        sys.exit(f"{_rel(backdrop)} was fetched with z_offset {now:g}, but [sources.backdrop] in courses/{C.SLUG}/"
+                 f"course.toml says {want:g}: run scripts/fetch_backdrop.py (it adds the offset as it writes the DEM), "
+                 "then build_all.py backdrop")
     r = datum_offset(dem, backdrop, core)
     if r is None:
         print("!! backdrop DEM vs LiDAR DEM: no cell near the edge of the build extent has both heights", flush=True)
         return
     med, mad, n = r
     msg = f"backdrop DEM - LiDAR DEM, 10-50 m inside the build extent: median {med:+.2f} m, MAD {mad:.2f} m ({n} cells)"
-    now = float(C.DATA_SOURCES.get("backdrop", {}).get("z_offset", 0.0))
     fix = (f"[sources.backdrop] z_offset = {round(now - med, 2):.2f} in courses/{C.SLUG}/course.toml"
            + (f" (now {now:g}: the offset is measured on the DEM it already moved)" if now else "")
            + ", then run scripts/fetch_backdrop.py again and build_all.py backdrop")
@@ -262,8 +280,8 @@ def imagery(ext, res, path):
 
 def dem_heights(dem, xy, o):
     """Heights of the GeoTIFF `dem` at the points `xy` (n x 2, metres from the origin `o`), bilinear. Exits on a point
-    next to a cell without data (a gap between require_cover's samples): it became a NaN vertex in
-    backdrop_mesh.npz, the glTF and the FBX."""
+    next to a cell without data (require_cover stops on any first; this guards a DEM it was not given): it became a
+    NaN vertex in backdrop_mesh.npz, the glTF and the FBX."""
     with rasterio.open(dem) as ds:
         Z = ds.read(1).astype(np.float64); T = ds.transform
     xs = T.c + (np.arange(Z.shape[1]) + 0.5) * T.a - o[0]; ys = T.f + (np.arange(Z.shape[0]) + 0.5) * T.e - o[1]
