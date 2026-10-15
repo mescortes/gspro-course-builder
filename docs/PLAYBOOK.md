@@ -95,6 +95,9 @@ Fill in `course.toml` by hand from the research:
   elements that are wrong or gone: a disused runway, a demolished building, a neighbour's hole line).
 * `[lidar] leaf_off`, `[imagery] leaf_off`: from the flight and photo dates. They change how trees are segmented and how
   ground under canopy is treated, and the region's tree classifier expects one of them.
+* `[tuning.level_tees] enabled = false` when the LiDAR was flown after every tee was built (compare the flight date
+  with the course's opening and tee works). The engine gives tees with no deck in the LiDAR a synthetic one; on a
+  course whose decks are all in the LiDAR (Brambles) it cuts and fills tee polygons that take in banks instead.
 * `[structures] parking`: OSM parking ids that get parked cars.
 
 ```bash
@@ -169,9 +172,12 @@ Whistle Bear: 0.25 m east.
 
 Read failures as data: a tee yardage gap means a wrong or missing pad, or a card that disagrees with the ground; a
 green size or slope failure means a green outline that takes in banks or misses half the putting surface; "no
-fairway" means a fairway that carries another hole's number. Course-dependent limits go in `course.toml [tests]`
-(`green_area`, `min_bunkers`, `green_slope_max`, `known_tee_gaps = { "7.back" = 40 }` with the reason in
-research/NOTES.md); fix the rest.
+fairway" means a fairway that carries another hole's number (a fairway polygon several lines of play run through is
+split between their corridors; one that misses its own line goes to the nearest one); a step around a green is
+usually the bank of a synthetic tee deck nearby (§2, `[tuning.level_tees]`). Course-dependent limits go in
+`course.toml [tests]` (`green_area`, `min_bunkers`, `green_slope_max`, `known_tee_gaps = { "7.back" = 40 }` with the
+reason in research/NOTES.md); fix the rest. A course with few bunkers needs `min_bunkers` (the bunker tests count
+the bunkers over 20 m2 and the automatic ones over 40 m2).
 
 ## 7. QA rounds
 
@@ -192,6 +198,19 @@ Inspectors propose overrides per hole; adversarial verifiers keep what the photo
 Rebuild from `assemble`, regenerate the QA images, run the tests, then round 2 (`round: 2`), which also removes
 round-1 overrides that turned out wrong. **Problems that recur across holes are engine bugs**: fix them in the
 engine with a test, not with overrides.
+
+Engine settings for problems QA finds on many holes (`course.toml [tuning]`, defaults in brackets):
+
+| Problem | Setting |
+|---|---|
+| Bare soil in channels, ditches or path cuts kept as unmapped bunkers | `[tuning.bunker_hollow]`: an unmapped bunker must hold `pond` m (0.05) of water on `pond_frac` (0.2) of its area, or lie `face` m (0.35) below the ground around it; `pond_frac = 0` turns the test off |
+| Bunkers spilling onto their grass faces with a coarse photo | `[tuning.bunker_trim]`: with a photo of `photo_res` m (0.3) or coarser, bunkers are cut to their LiDAR pans (`radius` 5 m rim search, `depth` 0.08 m, `lip` 0.5 m); `photo_res = 100` turns it off |
+| A shared fairway split badly between holes | `shared_fairway_min_part` (150 m2): the smallest part a hole takes from a fairway another line of play also runs through |
+| Two tee sets on one marker | `tee_marker_gap` (2 m): a set never takes a spot this close to another set's while another pad is free; the gap is reported |
+| Holes in the terrain at tees, steps around greens | `[tuning.level_tees] enabled = false` when the LiDAR shows every tee (§2) |
+
+Tracks inside the course mapped `surface=grass / ground / dirt / earth` or `tracktype=grade4 / grade5` are turf;
+other tracks and service roads there are cart paths.
 
 **Checkpoint:** every hole scores at least 8 of 10 from its verifier; the tests pass or each failure is documented.
 
