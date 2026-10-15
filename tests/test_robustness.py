@@ -157,3 +157,11 @@ def test_a_backdrop_dem_can_name_its_real_datum(tmp_path):
     with rasterio.open(tmp_path / "out.tif") as d:
         a = d.read(1)
     assert np.isfinite(a).all() and abs(float(a[0, 0]) - (10 * 40 + 10 + 0.5 + 0.5 * 40)) < 1e-3
+
+
+def test_tee_labels_tell_black_from_blue():
+    """Whistle Bear has Black and Blue tees: the hole summary and the QA images labelled both "B". Labels are the
+    shortest prefixes that tell the tees apart."""
+    assert C.tee_labels(("black", "gold", "blue", "white", "red")) == {
+        "black": "Bla", "gold": "G", "blue": "Blu", "white": "W", "red": "R"}
+    assert C.tee_labels(("blue", "white", "red", "gold")) == {"blue": "B", "white": "W", "red": "R", "gold": "G"}
