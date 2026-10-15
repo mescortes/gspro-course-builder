@@ -167,3 +167,9 @@ def test_gkd_ratings_take_women_only_and_unrated_tees():
                "middle": (None, None, None, None, 6579)}
     slots = {"back": "Black", "middle": "White", "front": "Red"}
     assert X.gkd_ratings(ratings, slots) == {"BlackSR": "73.1/141", "RedSR_women": "71.5/127"}
+def test_tee_labels_tell_black_from_blue():
+    """Whistle Bear has Black and Blue tees: the hole summary and the QA images labelled both "B". Labels are the
+    shortest prefixes that tell the tees apart."""
+    assert C.tee_labels(("black", "gold", "blue", "white", "red")) == {
+        "black": "Bla", "gold": "G", "blue": "Blu", "white": "W", "red": "R"}
+    assert C.tee_labels(("blue", "white", "red", "gold")) == {"blue": "B", "white": "W", "red": "R", "gold": "G"}
