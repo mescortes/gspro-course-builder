@@ -15,6 +15,34 @@ can be run by hand.
   packages of the golden Westmount build; `requirements.txt` lists the direct dependencies unpinned)
 * `COURSE= .venv/bin/python -m pytest -q tests --ignore=tests/test_course.py` must pass (no data needed).
 
+### Linux and Claude cloud sessions
+
+`tools/setup_linux.sh` sets up Ubuntu 24.04 x86_64: the X11 / GL libraries Blender's Linux build loads even with `-b`,
+Blender 4.2.23 LTS (checksum-verified) and the golden Python environment, linked as `.venv` in the checkout. As root it
+installs into `/opt`, otherwise into `~/.local/share/gspro-course-builder`; it prints the `BLENDER=` path.
+
+A Claude Code cloud session (claude.ai/code) is a fresh Ubuntu 24.04 VM per session with about 4 vCPUs, 16 GB of RAM
+and 30 GB of disk, and no GPU (code.claude.com/docs/en/cloud-environments). For this engine that means:
+
+* **Setup script**: use `tools/setup_linux.sh` as the environment's setup script; what it installs is cached with the
+  environment (when it finishes within about 5 minutes). Set `BLENDER=/opt/blender-4.2.23-linux-x64/blender` in the
+  environment's variables. Each session starts from a fresh clone, so add a SessionStart hook (or run once per
+  session) `ln -sfn /opt/gspro-venv .venv`.
+* **Network**: set the environment's network access to Custom, keep the default package-manager list, and add the
+  hosts the downloads use: `tnmaccess.nationalmap.gov`, `rockyweb.usgs.gov` (USGS LiDAR; `prd-tnm.s3.amazonaws.com`
+  for the 1 m DEM is in the default `*.amazonaws.com`), `apps.geo.fpac.usda.gov` (NAIP), `overpass-api.de`,
+  `api.openstreetmap.org` (OSM), `api.polyhaven.com`, `dl.polyhaven.org` (textures), `download.blender.org` (setup),
+  and for Ontario courses `ws.geoservices.lrc.gov.on.ca`. A blocked host answers HTTP 403 with
+  `x-deny-reason: host_not_allowed`.
+* **Nothing in `data/`, `build/` or `output/` survives the session** (they are not in git): download and build in one
+  session, and commit what the course needs (`courses/<slug>/`) before it ends.
+* **Memory**: 16 GB is at the edge for an 18-hole build; `build_all.py` prints each step's peak memory. Prefer your
+  own machine (or Remote Control to it) for full builds when a course peaks above about 14 GB.
+* **Long steps**: run builds as background commands with an explicit timeout (a background command gets 30 min by
+  default and up to 2 h); run `build_all.py` in ranges of steps rather than all at once.
+* **Commit attribution**: cloud sessions add a session link to commits and PR bodies; the `attribution` settings
+  (settings reference) turn it off.
+
 ## 1. Is the course buildable?
 
 Before any work, find out what public data covers it. This decides everything else.
