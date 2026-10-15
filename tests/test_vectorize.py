@@ -141,3 +141,20 @@ def test_a_green_holding_two_holes_ends_is_split_between_them():
     part3 = next(p for p, h in out if h == 3)
     assert part3.contains(Point(0, 0)) and not part3.contains(Point(30, 0)) and part3.area > 0.9 * a.area
     assert next(p for p, h in out if h == 7).equals(single)
+def test_cart_paths_tagged_service_road_are_cart_path_labels(monkeypatch):
+    """Whistle Bear maps its cart paths golf=cartpath + highway=service (+ golf_cart=designated): the classifier's
+    training labels must call them cart path, not road; a plain service road stays road."""
+    import rasterio
+    from shapely.geometry import LineString, box
+    import surface_classify as S
+    T = rasterio.transform.from_origin(0.0, 100.0, 0.25, 0.25)
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 100, 100)),
+         (2, {"golf": "cartpath", "highway": "service", "service": "driveway", "golf_cart": "designated"},
+          LineString([(10, 30), (90, 30)])),
+         (3, {"highway": "service"}, LineString([(10, 70), (90, 70)]))]
+    monkeypatch.setattr(S, "osm_geoms", lambda: G)
+    lab, _ = S.osm_label_raster(400, 400, T, np.zeros((400, 400), np.float32))
+    row = lambda y: int((100 - y) / 0.25)
+    assert lab[row(30), 200] == CID["cartpath"]
+    assert lab[row(70), 200] == CID["road"]
+    assert lab[row(30) - int(2.0 / 0.25), 200] != CID["road"]    # no 2.5 m road band around the cart path

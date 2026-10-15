@@ -15,7 +15,7 @@ Read `research/GSPRO_COSMETICS.md` for how GSPro courses are put together and wh
 > **Status (gspro-course-builder, October 2026).** This file was written for MountainGate (California, USGS data) and
 > then partly updated for Westmount (Ontario open data). Sections marked **[MountainGate]** below describe the
 > MountainGate setup and are out of date for this repo: the Westmount sources, frame and species are in
-> `scripts/config.py`, `scripts/fetch_*.py`, the README and §11b. It will be replaced by `docs/PLAYBOOK.md`
+> `scripts/config.py`, `scripts/fetch_*.py`, `courses/westmount/README.md` and §11b. It will be replaced by `docs/PLAYBOOK.md`
 > (course-builder plan, PR 6). Every engine change is checked against `courses/westmount/fingerprint.json`
 > (`scripts/fingerprint.py check`). Since PR 2 each course lives in `courses/<slug>/` (`course.toml`, `features/`,
 > `research/`) and builds into `data/<slug>/`, `build/<slug>/` and `output/<slug>/`. Below, paths that start with
@@ -276,9 +276,10 @@ Still to verify per course:
 
 ## 9. Phase H: document and report
 
-* Rewrite `README.md` for the course:
+* Write `courses/<slug>/README.md` for the course (Westmount's is the model) and add its row to the table of courses
+  in the top-level `README.md`:
   * `scripts/readme_table.py` regenerates the per-hole table between the `<!-- holes-table -->` markers;
-  * copy `output/maps/course_map.png` to `docs/images/` (downscaled);
+  * copy `output/<slug>/maps/course_map.png` to `courses/<slug>/images/` (downscaled);
   * add 2–3 viewer renders;
   * list known limitations (tee gaps with reasons, imagery licence, Windows-side steps).
 * Update `TODO.md`.

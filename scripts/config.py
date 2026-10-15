@@ -189,6 +189,20 @@ TEE_GKD = {t["key"]: t["gkd_slot"] for t in _T.get("tees", ()) if "gkd_slot" in 
 TEE_KEYS = tuple(k for k, _, _ in TEES)
 TEE_NAMES = {k: n for k, n, _ in TEES}
 TEE_COLOURS = {k: c for k, _, c in TEES}
+
+
+def tee_labels(keys):
+    """Marker labels: the shortest capitalised prefix of each tee key that no other tee shares (Black / Blue -> Bla, Blu)."""
+    out = {}
+    for k in keys:
+        n = 1
+        while any(o != k and o[:n] == k[:n] for o in keys) and n < len(k):
+            n += 1
+        out[k] = k[:n].capitalize()
+    return out
+
+
+TEE_LABEL = tee_labels(TEE_KEYS)  # hole summaries and QA images
 SCORECARD = {int(h): tuple(v) for h, v in _T.get("scorecard", {}).items()}  # hole: (par, yards per tee...)
 _si = _T.get("stroke_index", {})
 HANDICAP = dict(zip(PLAYABLE, _si.get("men", ())))
@@ -204,6 +218,7 @@ _osm_ref = lambda s: (s.partition("/")[0], int(s.partition("/")[2]))   # "way/15
 OSM_OUTLINE = tuple(_osm_ref(s) for s in _osm.get("outline", ()))  # the course's leisure=golf_course outline(s)
 OSM_EXCLUDE = {_osm_ref(s) for s in _osm.get("exclude", ())}       # OSM elements left out (a disused runway ...)
 DATA_SOURCES = _T.get("sources", {})  # [sources.lidar], [sources.imagery], [sources.backdrop]: scripts/sources
+TESTS = _T.get("tests", {})  # limits of the built-course tests (tests/test_course.py), e.g. known_tee_gaps
 DRAFT = _T.get("draft", {})  # draft_features.py thresholds (sections turf, green, tee, sand, water, outline, path)
 
 

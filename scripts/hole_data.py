@@ -317,7 +317,7 @@ def main():
         holes.append(rec)
         if "tees" in rec and rec["tees"]:
             print(f"hole {h:2d} ({rec['nine']} {rec['nine_hole']}) par {rec['par']}: " +
-                  "  ".join(f"{t['key'][0].upper()} {t['yards']:.0f}/{t['scorecard_yards']}" + (f" (pad off {t['pad_error_yd']:.0f})" if t['pad_error_yd'] > 3 else "")
+                  "  ".join(f"{C.TEE_LABEL[t['key']]} {t['yards']:.0f}/{t['scorecard_yards']}" + (f" (pad off {t['pad_error_yd']:.0f})" if t['pad_error_yd'] > 3 else "")
                             for t in rec["tees"]) + f"  green {rec['green']['area_sqft']} sqft", flush=True)
         else:
             print(f"hole {h}: {rec.get('error', 'no tees')}")

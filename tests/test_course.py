@@ -1,5 +1,7 @@
-"""Regression tests for the Westmount model: data alignment, surface partition, per-hole data vs the scorecard,
-mesh integrity, glTF and the GSPro/OPCD package. Run with MG_PROFILE=test to check the small holes 1-2 build."""
+"""Built-course tests: data alignment, surface partition, per-hole data vs the scorecard, mesh integrity, glTF and the
+GSPro/OPCD package. `pytest --course <slug> tests/test_course.py` tests courses/<slug>'s build (default Westmount);
+MG_PROFILE=test checks the small test-profile build. Course-dependent limits come from course.toml [tests] (LIMITS
+below); the reference course's own regressions are in test_westmount_model.py."""
 import json, math, struct, sys
 from pathlib import Path
 
@@ -20,10 +22,12 @@ HOLES = C.OUTPUT / "holes.json"
 GSPRO = C.OUTPUT / "gspro"
 FULL = C.PROFILE == "course"
 PLAYABLE = list(C.PLAYABLE) if FULL else list(C.TEST_HOLES)
-# Known, documented mismatches between the card and the real tee boxes (courses/westmount/research/NOTES.md, QA round 1).
-# (hole, tee) -> max allowed |measured - card| in yards
-KNOWN_TEE_GAPS = {
-}
+# course.toml [tests] overrides these. known_tee_gaps: {"<hole>.<tee key>" = max |measured - card| yards}, for
+# documented mismatches between the card and the real tee boxes (say why in research/NOTES.md).
+LIMITS = dict(green_area=[120.0, 1300.0], fairway_min_area=1500.0, min_bunkers=40, bunker_hollow_frac=0.85,
+              green_slope_max=[7.0, 14.0], tee_gap=6.0, known_tee_gaps={})
+LIMITS.update(C.TESTS)
+KNOWN_TEE_GAPS = {(int(k.split(".")[0]), k.split(".")[1]): float(v) for k, v in LIMITS["known_tee_gaps"].items()}
 
 
 @pytest.fixture(scope="module")
@@ -57,21 +61,12 @@ def test_hole_has_green_tees_fairway(feats, hn):
     hf = [(g, p) for g, p in feats if p["hole"] == hn]
     greens = [g for g, p in hf if p["surface"] == "green"]
     assert len(greens) >= 1, f"hole {hn}: no green"
-    assert 120 < max(g.area for g in greens) < 1300, f"hole {hn}: implausible green size"
+    lo, hi = LIMITS["green_area"]
+    assert lo < max(g.area for g in greens) < hi, f"hole {hn}: implausible green size {max(g.area for g in greens):.0f} m2"
     assert any(p["surface"] == "tee" and g.area > 15 for g, p in hf), f"hole {hn}: no tee pad"
     if C.SCORECARD[hn][0] > 3:
-        assert sum(g.area for g, p in hf if p["surface"] == "fairway") > 1500, f"hole {hn}: no fairway"
+        assert sum(g.area for g, p in hf if p["surface"] == "fairway") > LIMITS["fairway_min_area"], f"hole {hn}: no fairway"
 
-
-def test_hole1_features(feats):
-    """Westmount #1 (par 5): a ~675 m2 green ringed by four bunkers, plus two fairway bunkers down the right."""
-    h1 = [(g, p) for g, p in feats if p["hole"] == 1]
-    green = max((g for g, p in h1 if p["surface"] == "green"), key=lambda g: g.area)
-    assert 450 < green.area < 900, f"hole 1 green {green.area:.0f} m2"
-    near_bunkers = [g for g, p in h1 if p["surface"] == "bunker" and g.distance(green) < 6]
-    assert len(near_bunkers) == 4, f"{len(near_bunkers)} greenside bunkers"
-    assert all(50 < b.area < 220 for b in near_bunkers), "bunker polygons should hug the sand"
-    assert len([g for g, p in h1 if p["surface"] == "bunker"]) >= 6
 
 
 def test_bunkers_are_depressions_in_lidar(feats, dem):
@@ -86,8 +81,8 @@ def test_bunkers_are_depressions_in_lidar(feats, dem):
         if p["surface"] == "bunker" and p["hole"] in PLAYABLE and g.area > 20:
             ring = g.buffer(2.5).difference(g.buffer(0.5))
             res.append(mean_h(g) < mean_h(ring))
-    assert len(res) >= (40 if FULL else 3)
-    assert np.mean(res) > 0.85, f"only {np.mean(res):.0%} of bunkers sit in LiDAR hollows"
+    assert len(res) >= (LIMITS["min_bunkers"] if FULL else 3)
+    assert np.mean(res) > LIMITS["bunker_hollow_frac"], f"only {np.mean(res):.0%} of bunkers sit in LiDAR hollows"
 
 
 def test_bunker_edges_are_sand_not_grass_faces(feats):
@@ -99,7 +94,7 @@ def test_bunker_edges_are_sand_not_grass_faces(feats):
     from skimage.color import rgb2lab
     edges = [g.difference(g.buffer(-1.0)) for g, p in feats
              if p["surface"] == "bunker" and p["hole"] in PLAYABLE and p.get("source") != "override" and g.area > 40]
-    assert len(edges) >= (40 if FULL else 3)
+    assert len(edges) >= (LIMITS["min_bunkers"] if FULL else 3)
     flagged = total = 0
     with rasterio.open(C.IMAGERY) as ds, rasterio.open(C.BUILD / "chm.tif") as ch:
         for e in edges:
@@ -145,19 +140,24 @@ def test_no_orphan_tees(feats):
     assert not orphans, f"{len(orphans)} tee patches belong to no hole: {orphans[:8]}"
 
 
-def test_water_hazard_on_hole3(holes):
-    if not FULL:
-        pytest.skip("hole 3 not in the test extent")
-    assert any(z["type"] == "water" for z in holes[3]["hazards"]), "the pond right of the 3rd (OSM 918946248) must be a water hazard"
-
 
 # ---------------------------------------------------------------- hole data vs scorecard
+def test_scorecard_is_consistent():
+    """Every hole has a par and one yardage per tee; the stroke indexes are permutations of the playable holes."""
+    for h in PLAYABLE:
+        assert len(C.SCORECARD[h]) == 1 + len(C.TEE_KEYS), f"hole {h}: card {C.SCORECARD[h]}"
+    n = len(C.PLAYABLE)
+    assert sorted(C.HANDICAP.values()) == list(range(1, n + 1))
+    if C.HANDICAP_WOMEN:
+        assert sorted(C.HANDICAP_WOMEN.values()) == list(range(1, n + 1))
+
+
 @pytest.mark.parametrize("hn", PLAYABLE)
 def test_tee_yardages_match_scorecard(holes, hn):
     h = holes[hn]
     assert len(h["tees"]) == len(C.TEES)
     for t in h["tees"]:
-        allowed = KNOWN_TEE_GAPS.get((hn, t["key"]), 6.0)
+        allowed = KNOWN_TEE_GAPS.get((hn, t["key"]), LIMITS["tee_gap"])
         assert abs(t["yards"] - t["scorecard_yards"]) <= allowed, f"hole {hn} {t['key']}: {t['yards']} vs card {t['scorecard_yards']}"
 
 
@@ -195,26 +195,9 @@ def test_green_surface_is_smooth(holes, hn):
     _, _, _, slope, inside, *_ = green_analysis(green, raw)
     raw_mean, raw_p95 = slope[inside].mean(), np.percentile(slope[inside], 95)
     assert s["mean"] <= raw_mean + 0.15 and s["p95"] <= raw_p95 + 0.3, f"hole {hn}: model {s} vs LiDAR {raw_mean:.2f}/{raw_p95:.2f}"
-    assert s["mean"] < 7.0 and s["p95"] < 14.0, f"hole {hn} green slope {s}"
+    assert s["mean"] < LIMITS["green_slope_max"][0] and s["p95"] < LIMITS["green_slope_max"][1], f"hole {hn} green slope {s}"
 
 
-def test_hole1_regression(holes):
-    h = holes[1]
-    ys = {t["key"]: t["yards"] for t in h["tees"]}
-    for k, card in zip(C.TEE_KEYS, C.SCORECARD[1][1:]):
-        assert abs(ys[k] - card) <= 4, f"hole 1 {k}: {ys[k]} vs {card}"
-    assert -8 < h["elevation_change_m"] < -3, "the 1st tee by the clubhouse sits ~6 m above the green"
-
-
-def test_scorecard_totals():
-    """Golf Canada card: par 73 (37 out / 36 in); each tee's holes add up to its published total; SI permutations."""
-    assert sum(v[0] for v in C.SCORECARD.values()) == 73
-    assert sum(C.SCORECARD[h][0] for h in range(1, 10)) == 37
-    for i, k in enumerate(C.TEE_KEYS):
-        assert sum(v[1 + i] for v in C.SCORECARD.values()) == C.RATINGS[k][4], k
-    assert [C.RATINGS[k][4] for k in C.TEE_KEYS] == [7018, 6550, 6143, 5432]
-    assert sorted(C.HANDICAP.values()) == list(range(1, 19))
-    assert sorted(C.HANDICAP_WOMEN.values()) == list(range(1, 19))
 
 
 # ---------------------------------------------------------------- mesh

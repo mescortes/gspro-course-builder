@@ -4,7 +4,7 @@ from rasterio.windows import from_bounds
 from rasterio.enums import Resampling
 from PIL import Image, ImageDraw
 from skimage.segmentation import find_boundaries
-sys.path.insert(0,'scripts'); import config as C
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent)); import config as C
 from qa_classes import PAL
 from qa_crops import grid
 

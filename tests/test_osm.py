@@ -71,8 +71,8 @@ def _fake_root(tmp_path, monkeypatch, calls):
 
 
 def test_fetch_osm_keeps_the_committed_snapshot(tmp_path, monkeypatch):
-    """The model is built from the OSM snapshot in courses/<slug>/research/: `fetch_data.py osm` must not overwrite it (README:
-    delete the files to refresh)."""
+    """The model is built from the OSM snapshot in courses/<slug>/research/: `fetch_data.py osm` must not overwrite it (course
+    README: delete the files to refresh)."""
     calls = []
     _fake_root(tmp_path, monkeypatch, calls)
     for n in ("osm_all.json", "osm_golf.json"):
