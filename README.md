@@ -54,7 +54,8 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
     Problems that recur across holes are fixed in the engine, with tests.
 12. **Export**: glTF, the OPCD package, FBX (headless Blender), yardage-book maps and viewer camera presets.
 
-`instructions.md` is the long-form playbook (being replaced by `docs/PLAYBOOK.md`).
+**[docs/PLAYBOOK.md](docs/PLAYBOOK.md) is the step-by-step guide to building a new course**; [docs/LESSONS.md](docs/LESSONS.md)
+explains why the engine works the way it does.
 
 ## Repository layout
 
