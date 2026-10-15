@@ -23,13 +23,13 @@ YD = 1 / 0.9144
 TEE_KEYS = C.TEE_KEYS        # back -> front, the order of the yardages in config.SCORECARD
 TEE_NAMES = C.TEE_NAMES
 # hand-checked aim points (course hole -> list of UTM points); default = interior vertices of the OSM line of play.
-# Per-hole QA overrides live in features/overrides/holeNN_meta.json:
+# Per-hole QA overrides live in courses/<slug>/features/overrides/holeNN_meta.json:
 #   {"aim_points_utm": [[e, n], ...], "tees_utm": {"<tee key>": [e, n], ...}, "notes": "..."}
 AIM_OVERRIDES = {}
 
 
 def hole_meta(h):
-    p = C.FEATURES / "overrides" / f"hole{h:02d}_meta.json"
+    p = C.SOURCES / "overrides" / f"hole{h:02d}_meta.json"
     return json.load(open(p)) if p.exists() else {}
 HANDICAP = {}  # filled from config.HANDICAP when available
 

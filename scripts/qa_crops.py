@@ -37,9 +37,9 @@ def grid(im, b, res, step=25):
 if __name__ == '__main__':
     b = tuple(map(float, sys.argv[1:5])); res = float(sys.argv[5]); tag = sys.argv[6]
     img = crop(C.IMAGERY, b, res, [1,2,3])
-    grid(Image.fromarray(np.moveaxis(img,0,-1)), b, res).save(f'build/crop_{tag}_img.png')
+    grid(Image.fromarray(np.moveaxis(img,0,-1)), b, res).save(C.BUILD / f'crop_{tag}_img.png')
     it = crop(C.BUILD/'intensity.tif', b, res, 1)
-    grid(Image.fromarray(norm(it, *np.nanpercentile(it,[2,98]))).convert('RGB'), b, res).save(f'build/crop_{tag}_int.png')
+    grid(Image.fromarray(norm(it, *np.nanpercentile(it,[2,98]))).convert('RGB'), b, res).save(C.BUILD / f'crop_{tag}_int.png')
     dem = crop(C.BUILD/'dem.tif', b, res, 1)
-    grid(Image.fromarray(norm(hillshade(dem, res, 315, 35), 0.2, 1)).convert('RGB'), b, res).save(f'build/crop_{tag}_hs.png')
+    grid(Image.fromarray(norm(hillshade(dem, res, 315, 35), 0.2, 1)).convert('RGB'), b, res).save(C.BUILD / f'crop_{tag}_hs.png')
     print(tag, img.shape)

@@ -386,7 +386,7 @@ def add_bridges(glb, root):
     print("bridges", nbr)
 
 
-PATIOS = C.ROOT / "features" / "patios.geojson"
+PATIOS = C.SOURCES / "patios.geojson"
 
 
 def patio_tables(poly, spacing=4.0, margin=1.4):
@@ -413,7 +413,7 @@ def patio_tables(poly, spacing=4.0, margin=1.4):
 
 
 def add_patios(glb, root):
-    """Curated paved terraces (features/patios.geojson): a paving slab 10 cm proud of the terrain, and dining tables
+    """Curated paved terraces (courses/<slug>/features/patios.geojson): a paving slab 10 cm proud of the terrain, and dining tables
     with chairs and umbrellas where tables=yes."""
     if not PATIOS.exists():
         return
@@ -477,7 +477,7 @@ def add_patios(glb, root):
     print("patios", k + 1)
 
 
-FOUNTAINS = C.ROOT / "features" / "fountains.geojson"
+FOUNTAINS = C.SOURCES / "fountains.geojson"
 
 
 def water_level_at(pt, planes):
@@ -514,7 +514,7 @@ def fountain_parts(c, level, height=2.5):
 
 
 def add_fountains(glb, root):
-    """Fountains (features/fountains.geojson points) on the pond they sit in; the jet height from the `height` tag."""
+    """Fountains (courses/<slug>/features/fountains.geojson points) on the pond they sit in; the jet height from the `height` tag."""
     wp = C.BUILD / "water_planes.json"
     if not (FOUNTAINS.exists() and wp.exists()):
         return

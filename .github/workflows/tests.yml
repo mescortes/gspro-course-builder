@@ -1,7 +1,8 @@
 name: unit tests
 
-# The unit tests need only the repository (features/, research/ OSM snapshot, scripts/). tests/test_course.py checks
-# a full build (data/, build/, output/: LiDAR, imagery, Blender) and runs locally after scripts/build_all.py.
+# The unit tests need only the repository (scripts/, courses/<slug>/: features, OSM snapshot). tests/test_course.py
+# checks a full build (data/<slug>/, build/<slug>/, output/<slug>/: LiDAR, imagery, Blender) and runs locally after
+# scripts/build_all.py, as does `scripts/fingerprint.py check`.
 on:
   push:
   pull_request:
@@ -17,4 +18,4 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install -r requirements.txt
-      - run: python -m pytest -q tests --ignore=tests/test_course.py
+      - run: python -m pytest -q tests --ignore=tests/test_course.py  # COURSE=westmount: tests/conftest.py

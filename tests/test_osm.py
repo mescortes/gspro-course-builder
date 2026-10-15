@@ -63,7 +63,7 @@ def test_split_bbox_tiles_cover_the_box():
 
 
 def _fake_root(tmp_path, monkeypatch, calls):
-    monkeypatch.setattr(fetch_data.C, "ROOT", tmp_path)
+    monkeypatch.setattr(fetch_data.C, "RESEARCH", tmp_path / "research")
     def fake_overpass(query, path):
         calls.append(path); Path(path).write_text('{"elements": []}'); return True
     monkeypatch.setattr(fetch_data, "overpass", fake_overpass)
@@ -71,7 +71,7 @@ def _fake_root(tmp_path, monkeypatch, calls):
 
 
 def test_fetch_osm_keeps_the_committed_snapshot(tmp_path, monkeypatch):
-    """The model is built from the OSM snapshot in research/: `fetch_data.py osm` must not overwrite it (README:
+    """The model is built from the OSM snapshot in courses/<slug>/research/: `fetch_data.py osm` must not overwrite it (README:
     delete the files to refresh)."""
     calls = []
     _fake_root(tmp_path, monkeypatch, calls)
@@ -88,3 +88,25 @@ def test_fetch_osm_downloads_when_the_snapshot_is_missing(tmp_path, monkeypatch)
     (tmp_path / "research/osm_golf.json").write_text('{"elements": []}')  # half a snapshot: refetch both
     fetch_data.fetch_osm()
     assert [Path(p).name for p in calls] == ["osm_all.json", "osm_golf.json"]
+
+
+def test_downloads_use_the_course_extent_in_the_test_profile(tmp_path, monkeypatch):
+    """The two profiles share data/<slug>/ and the OSM snapshot: fetching in the test profile (a small CORE) must
+    still cover the whole course, or the course build silently reuses a test-extent photo and snapshot."""
+    import fetch_imageserver
+    full = dict(fetch_data.C.FETCH_CORE)
+    monkeypatch.setattr(fetch_data.C, "CORE", dict(xmin=full["xmin"] + 300, ymin=full["ymin"] + 300,
+                                                    xmax=full["xmin"] + 600, ymax=full["ymin"] + 600))
+    monkeypatch.setattr(fetch_data.C, "IMAGERY_RAW", tmp_path / "photo.tif")
+    got = {}
+    monkeypatch.setattr(fetch_imageserver, "fetch", lambda *a, **k: got.update(bbox=a[:4]))
+    fetch_data.fetch_imagery()
+    assert got["bbox"] == (full["xmin"] - 20, full["ymin"] - 20, full["xmax"] + 20, full["ymax"] + 20)
+    assert fetch_data.lidar_tiles(fetch_data.C.FETCH_CORE) == fetch_data.lidar_tiles(full)
+    calls = []
+    _fake_root(tmp_path, monkeypatch, calls)
+    queries = []
+    monkeypatch.setattr(fetch_data, "overpass", lambda q, path: queries.append(q) or Path(path).write_text("{}") or True)
+    fetch_data.fetch_osm()
+    w, s, e, n = fetch_data.lonlat_bbox(full, 400)
+    assert f"{s},{w},{n},{e}" in queries[0]

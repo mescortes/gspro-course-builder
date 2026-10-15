@@ -73,12 +73,14 @@ def pass1(ext, res):
     tl = list(tiles(ext))
     buckets = {k: [] for k, _ in tl}
     nx = int(np.ceil((ext["xmax"] - ext["xmin"]) / C.TILE))
-    for f in C.LIDAR_TILES:
+    used = 0
+    for f in C.lidar_tiles():
         with laspy.open(f) as r:
             h = r.header
             if h.maxs[0] < ext["xmin"] - MARGIN or h.mins[0] > ext["xmax"] + MARGIN or \
                h.maxs[1] < ext["ymin"] - MARGIN or h.mins[1] > ext["ymax"] + MARGIN:
                 continue
+            used += 1
             t0 = time.time(); n_in = 0
             for ch in r.chunk_iterator(5_000_000):
                 x = ch.x.array * h.scales[0] + h.offsets[0]
@@ -138,6 +140,8 @@ def pass1(ext, res):
                 ok = (c2 >= 0) & (c2 < W2) & (r2 >= 0) & (r2 < H2)
                 np.maximum.at(dsm, r2[ok] * W2 + c2[ok], z[f1][ok].astype(np.float32))
             print(f"  {f.name}: {n_in:,} pts in {time.time() - t0:.0f}s", flush=True)
+    if not used:
+        sys.exit(f"no LiDAR tile covers {ext} (tiles in {C.DATA / 'lidar'})")
     return buckets, cnt.reshape(H, W), isum.reshape(H, W), dsm.reshape(H2, W2), bdsm.reshape(H2, W2)
 
 

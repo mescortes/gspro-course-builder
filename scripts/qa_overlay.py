@@ -14,7 +14,7 @@ def imagery(b, res):
         a=ds.read([1,2,3], window=from_bounds(*b, transform=ds.transform), out_shape=(3,H,W), resampling=Resampling.bilinear)
     return Image.fromarray(np.moveaxis(a,0,-1))
 
-def class_overlay(im, b, res, path='build/classes.tif'):
+def class_overlay(im, b, res, path=C.BUILD / 'classes.tif'):
     with rasterio.open(path) as ds:
         W, H = im.size
         c = ds.read(1, window=from_bounds(*b, transform=ds.transform), out_shape=(H,W), resampling=Resampling.nearest)

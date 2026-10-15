@@ -8,8 +8,8 @@ STEPS = [
     ("rasters",    "build_rasters.py"),      # LiDAR -> DEM / DSM / CHM / intensity
     ("paths",      "trace_paths.py"),        # cart-path centre lines from the photo (OSM maps none at Westmount)
     ("classify",   "surface_classify.py"),   # imagery + LiDAR per-pixel surfaces
-    ("vectorize",  "vectorize.py"),          # clean surface partition (features/auto_core.geojson)
-    ("assemble",   "assemble_features.py"),  # auto + manual overrides -> features/course_surfaces.geojson
+    ("vectorize",  "vectorize.py"),          # clean surface partition (build/<slug>/features/auto_core.geojson)
+    ("assemble",   "assemble_features.py"),  # auto + manual overrides -> build/<slug>/features/course_surfaces.geojson
     ("trees",      "detect_trees.py"),       # LiDAR tree detection + archetypes
     ("textures",   "make_textures.py"),      # procedural turf textures
     ("foliage",    "make_foliage.py"),       # foliage card atlases
@@ -23,11 +23,12 @@ STEPS = [
     ("prefabs",    "export_tree_prefabs.py"),  # Unity tree prefabs (LOD0-2) + reference sizes
     ("fbx",        None),                    # Blender: FBX meshes in the Unity terrain frame
     ("maps",       "make_maps.py"),          # yardage-book hole maps, green maps, course map
-    ("views",      "make_views.py"),         # viewer camera presets (viewer/views.json) from hole 1
+    ("views",      "make_views.py"),         # viewer camera presets (output/<slug>/views.json) from hole 1
 ]
 # headless Blender for the FBX step: $BLENDER, else `blender` on PATH
 BLENDER = os.environ.get("BLENDER") or shutil.which("blender") or "blender"
 names = [n for n, _ in STEPS]
+print(f"course {C.SLUG} ({C.COURSE_NAME}), profile {C.PROFILE}", flush=True)
 a = names.index(sys.argv[1]) if len(sys.argv) > 1 else 0
 b = names.index(sys.argv[2]) if len(sys.argv) > 2 else len(STEPS) - 1
 for n, script in STEPS[a:b + 1]:

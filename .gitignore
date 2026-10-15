@@ -4,16 +4,14 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
-# downloaded inputs (re-fetch with scripts/fetch_*.py) and build products (scripts/build_all.py)
+# per course: downloaded inputs (data/<slug>/, re-fetch with scripts/fetch_*.py) and build products (build/<slug>/,
+# build/<slug>-test/, output/<slug>/; scripts/build_all.py). courses/<slug>/ is source.
 data/
 build/
-build_test/
 output/
-
-# generated surface partition / trees (build_all.py vectorize, assemble, trees); features/overrides/ is source
-features/auto_core.geojson
-features/course_surfaces.geojson
-features/trees.geojson
+# left behind by checkouts made before the course folders (generated files at the root)
+/features/
+/build_test/
 
 # editors / OS
 .DS_Store

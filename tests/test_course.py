@@ -19,8 +19,8 @@ GLB = C.OUTPUT / f"{C.MODEL_NAME}.glb"
 HOLES = C.OUTPUT / "holes.json"
 GSPRO = C.OUTPUT / "gspro"
 FULL = C.PROFILE == "course"
-PLAYABLE = list(C.PLAYABLE) if FULL else [1, 2]
-# Known, documented mismatches between the card and the real tee boxes (research/NOTES.md, QA round 1).
+PLAYABLE = list(C.PLAYABLE) if FULL else list(C.TEST_HOLES)
+# Known, documented mismatches between the card and the real tee boxes (courses/westmount/research/NOTES.md, QA round 1).
 # (hole, tee) -> max allowed |measured - card| in yards
 KNOWN_TEE_GAPS = {
 }
@@ -603,7 +603,7 @@ def test_view_presets_are_not_inside_buildings():
     clubhouse is bigger than MountainGate's). No preset camera may be inside a building footprint."""
     from surface_classify import osm_geoms
     from shapely.geometry import Point
-    views = json.load(open(C.ROOT / "viewer/views.json"))
+    views = json.load(open(C.OUTPUT / "views.json"))
     blds = [g for _, t, g in osm_geoms() if "building" in t and g.geom_type == "Polygon"]
     for name, v in views.items():
         e, n = v["pos"][0] + C.ORIGIN_E, -v["pos"][2] + C.ORIGIN_N

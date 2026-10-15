@@ -48,9 +48,11 @@ import { Water } from 'three/addons/objects/Water.js';
 import { Grass } from './grass.js';
 
 const params = new URLSearchParams(location.search);
-const MODEL = params.get('model') || '../output/westmount.glb';
-const HOLES = params.get('holes') || '../output/holes.json';
-const GRASS_SPEC = params.get('grass') || '../output/gspro/grass_3dg.json';
+const COURSE = params.get('course') || 'westmount';         // output/<course>/ (course folder slug)
+const OUT = params.get('out') || `../output/${COURSE}/`;       // e.g. ?out=../build/westmount-test/output/
+const MODEL = params.get('model') || `${OUT}${COURSE}.glb`;
+const HOLES = params.get('holes') || `${OUT}holes.json`;
+const GRASS_SPEC = params.get('grass') || `${OUT}gspro/grass_3dg.json`;
 const LOD_DIST = parseFloat(params.get('lod') || '240');     // detailed trees within this distance (m)
 const LOD2_DIST = parseFloat(params.get('lod2') || '650');   // light trees within this, billboards beyond
 const canvas = document.getElementById('c');
@@ -128,7 +130,7 @@ const info = document.getElementById('info');
 
 // ---------------------------------------------------------------- views: static (views.json) + per hole (holes.json)
 let views = {};
-try { views = await (await fetch('views.json?' + Date.now())).json(); } catch (e) {}
+try { views = await (await fetch(`${OUT}views.json?` + Date.now())).json(); } catch (e) {}
 let holes = [], frame = null;
 try { const hj = await (await fetch(HOLES + '?' + Date.now())).json(); holes = hj.holes.filter(h => h.tees && h.tees.length); frame = hj.model_frame; } catch (e) {}
 let terrainMeshes = [];

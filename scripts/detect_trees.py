@@ -1,7 +1,7 @@
 """Individual tree detection from the LiDAR canopy height model.
 
 Tree tops = local maxima of the smoothed CHM with height-dependent non-maximum suppression; crowns = marker-controlled
-watershed. With leaf-off LiDAR (config.LIDAR_LEAF_OFF) the CHM is closed first so bare crowns are not split. Crown base and shape statistics come from the point cloud. Output: features/trees.geojson (UTM points)
+watershed. With leaf-off LiDAR (config.LIDAR_LEAF_OFF) the CHM is closed first so bare crowns are not split. Crown base and shape statistics come from the point cloud. Output: build/<slug>/features/trees.geojson (UTM points)
 with height, crown radius, crown base, archetype.
 """
 import sys, json
@@ -101,11 +101,11 @@ def off_surfaces(feats, polys, max_shift=4.0, clearance=0.75):
     return out
 
 
-CLEARED = C.ROOT / "features" / "trees_cleared.geojson"
+CLEARED = C.SOURCES / "trees_cleared.geojson"
 
 
 def drop_cleared(feats, pts, radius=1.5):
-    """Trees within `radius` m of a reviewed clearance point (features/trees_cleared.geojson): 2018 LiDAR
+    """Trees within `radius` m of a reviewed clearance point (courses/<slug>/features/trees_cleared.geojson): 2018 LiDAR
     trees the 2025 photo shows gone, cut down for the tees and paths built since (holes 5 and 8 Blue)."""
     if not len(pts):
         return feats
@@ -177,7 +177,7 @@ def crown_base(lab, T, n):
     hag_all = [[] for _ in range(n + 1)]
     out = np.full(n, np.nan)
     sums = []; gcount = []; acount = []
-    for f in C.LIDAR_TILES:
+    for f in C.lidar_tiles():
         with laspy.open(f) as rr:
             h = rr.header
             for ch in rr.chunk_iterator(5_000_000):
