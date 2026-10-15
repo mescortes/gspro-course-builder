@@ -1,0 +1,385 @@
+{
+ "source": "research agent, 2026-10-15",
+ "holes": [
+  {
+   "hole": 1,
+   "description": "Card (GolfNow feed, par 5) 531/496/414. Opening hole from an elevated tee just below the clubhouse, playing downhill to a long fairway set on an angle to the tee, so the player picks a line of carry over the rough (GCA profile compares it to the 1st at Machrihanish). Golfadelphia: the fairway falls away from the tee and turns left, with a gully down the right. A shallow but severe barranca (dry creek) crosses in front of the green and runs along its sides; Links and a GCA forum poster liken it to the burn at the Old Course 1st. Going for the green in two risks the creek short or running off the back (golfcourse.wiki). The green is large and saddle-shaped with ridges and hollows (GCA profile), with a centre ridge line and a sharp fall-off right of it (golfcourse.wiki) and a generous run-off at the back (Golfadelphia). One bunker on the left comes into play for a left-side lay-up (golfcourse.wiki text and diagram).",
+   "confidence": "sourced",
+   "shape": "Angled fairway that drifts left (Golfadelphia: falls away and glides left; GCA: fairway set at an angle, Machrihanish-style diagonal carry). Effectively a gentle dogleg left. No source gives a bend point.",
+   "elevation": "Elevated tee just below / beside the clubhouse; downhill hole (Links calls it a downhill par five; the 2020 Golf Course Architecture piece says the routing starts with a descent from the first hole).",
+   "green": "Large; saddle-shaped with distinct ridges and hollows, one of the most intricate on the course (GCA profile, GCA forum); centre ridge with the surface falling off sharply to the right of it (golfcourse.wiki); generous run-off at the rear (Golfadelphia). Barranca across the front and along the sides.",
+   "hazards": [
+    "Barranca / dry creek crossing short of the green and running along its sides (GCA profile, GCA forum, Golfadelphia, Links, golfcourse.wiki)",
+    "Gully on the right of the tee-shot zone (Golfadelphia); GCA puts a large hazard between the right edge of the 18th fairway and the 1st, i.e. the same strip between holes 1 and 18",
+    "One bunker on the left, in play for a left-side lay-up (golfcourse.wiki)",
+    "Native / prairie rough on the angled carry from the tee (GCA profile)"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73660.0",
+    "https://linksmagazine.com/first-peek-brambles/",
+    "https://www.golfcoursearchitecture.net/content/brambles-course-construction-on-track-for-2021-completion",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/1"
+   ]
+  },
+  {
+   "hole": 2,
+   "description": "Card (par 4) 450/392/339. Straight two-shotter heading toward the foothills. A ditch / barranca crosses the landing zone on a diagonal (GCA forum); a good drive from the right tee carries it, otherwise lay up short of it (Golfadelphia, golfcourse.wiki). The fairway carries on past the creek to a green set a little to the left (Golfadelphia). Green: potato-chip shaping with more slope at the front than it looks (GCA forum); contours fall away from the side nearest the player (golfcourse.wiki). No source mentions a bunker, and the golfcourse.wiki diagram draws none. GCA profile lists the 2nd among the barranca holes and has a photo from the 2nd looking toward the 11th and the 10th green.",
+   "confidence": "sourced",
+   "shape": "Straight (Golfadelphia: the tee shot goes straight out); green set slightly left.",
+   "elevation": "No source describes a notable elevation change.",
+   "green": "Potato-chip contours, more front slope than apparent (GCA forum); falls away from the near side (golfcourse.wiki); tricky to read (Golfadelphia).",
+   "hazards": [
+    "Barranca crossing the fairway on a diagonal in the drive zone (GCA forum, Golfadelphia, golfcourse.wiki, GCA profile)",
+    "No bunkers in any source; none in the golfcourse.wiki diagram"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/2"
+   ]
+  },
+  {
+   "hole": 3,
+   "description": "Card (par 3) 155/142/100. Short one-shotter to a green set above the tee and ringed by deep bunkers (GCA forum; golfcourse.wiki: deep bunkers all round; Golfadelphia: well-placed bunkers around it, the first hole where bunkers really matter). The green has a steep tiered ridge, falling hard from an upper back section (GCA profile and forum); high right side and general back-to-front movement (Golfadelphia); massive contours, back pins to be respected (golfcourse.wiki). Heinicke (Top100) singles out the 3rd green as the par 3 with real variety. golfcourse.wiki diagram: four bunkers, two left, one right, one short/front. GCA forum: the 14th green sits on a ridge close to the 3rd green.",
+   "confidence": "sourced",
+   "shape": "Par 3, straight.",
+   "elevation": "Green sits above the teeing area (Golfadelphia).",
+   "green": "Upper back tier above a steep ridge with a severe slope toward the front; high on the right, back-to-front overall.",
+   "hazards": [
+    "Deep bunkers around the green; golfcourse.wiki diagram shows four (two left, one right, one short)"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://www.top100golfcourses.com/golf-course/brambles/reviews/46044",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/3"
+   ]
+  },
+  {
+   "hole": 4,
+   "description": "Card (par 4) 471/440/351, stroke index 1. Long two-shotter that doglegs left. The course's deepest barranca runs down the left side of the fairway and on past the green, and a large valley oak stands on the inside of the dogleg with its trunk in that barranca (GCA profile and forum). A centre-line fairway bunker sits in the landing zone of long drives (GCA, Golfadelphia, Greber, golfcourse.wiki, Heinicke). The tee shot has to carry the barranca and native ground on the left; left of the bunker is shorter and riskier, right is safer but longer (Golfadelphia). Splitting the oak and the bunker gives a straight look up to the green (GCA). The green sits at the top of a gentle rise in an oak grove, with the grove behind and left of it (GCA, Golfadelphia); a bunker short-right of the green catches short attempts in two (golfcourse.wiki). The green tilts hard from back to front (Greber).",
+   "confidence": "sourced",
+   "shape": "Dogleg left: the valley oak is on the inside of the dogleg (GCA); fairway angled from the tee (Golfadelphia). No source gives the corner point; inferred from GCA, it is around the drive zone, where the oak (inside of the dogleg) and the centre-line bunker are.",
+   "elevation": "Uphill approach; green at the top of a gentle hill (Golfadelphia, GCA).",
+   "green": "Strong back-to-front tilt (Greber); uphill site in an oak grove (GCA). No size or tier details in any source.",
+   "hazards": [
+    "Deepest barranca on the course, along the left of the fairway to and beyond the green (GCA, golfcourse.wiki)",
+    "Valley oak at the inside of the dogleg, rooted in the barranca (GCA profile and forum)",
+    "Centre-line fairway bunker in the long-drive landing zone (GCA, Golfadelphia, Greber, golfcourse.wiki, Heinicke)",
+    "Bunker short-right of the green (golfcourse.wiki)",
+    "Oak grove behind and left of the green (Golfadelphia)",
+    "Native ground on the left to carry from the tee (Golfadelphia)"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://greebs.substack.com/p/brambles-golf",
+    "https://www.top100golfcourses.com/golf-course/brambles/reviews/46044",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/4"
+   ]
+  },
+  {
+   "hole": 5,
+   "description": "Card (par 4) 335/295/261. Drivable short par 4 over the property's most rambunctious ground (GCA profile); it runs along the top ridge at the base of the foothills (Golfadelphia). The tee shot is completely blind over a hill / ridge; players aim at a post (Heinicke). Past the crest the fairway drops hard to the left, with rollers to use (Golfadelphia, golfcourse.wiki). Too far right can leave the property; too far left reaches a dry creek bed (golfcourse.wiki). A cavernous, deep bunker guards short-left of the green, so the smart line is the high right hillside, letting the slopes feed the ball down (GCA, Golfadelphia). The green is benched into the hill and an over-aggressive pitch can run off the back (GCA); everything slopes hard left (golfcourse.wiki, which mentions two deep bunkers). The 2020 Golf Course Architecture piece calls it a blind, reachable hole of about 300 yards with a green sloping away. Golfadelphia has a photo of the 5th fairway seen from the 13th; GCA has one from the 5th fairway toward the 2nd and 14th greens.",
+   "confidence": "sourced",
+   "shape": "Blind tee shot over a ridge; beyond the crest the fairway falls hard left (Golfadelphia, golfcourse.wiki).",
+   "elevation": "Tee shot climbs over a ridge, then the fairway drops forward and left; green benched on the hillside, surface sloping away from the player (GCA 2020).",
+   "green": "Benched into the hillside; slopes hard left; balls can tumble over the back; cradle-like when approached from the high right (Golfadelphia).",
+   "hazards": [
+    "Deep, cavernous bunker short-left of the green; golfcourse.wiki says the complex has two deep bunkers",
+    "Property edge / out of bounds to the right (golfcourse.wiki)",
+    "Dry creek bed to the left (golfcourse.wiki)",
+    "Waste area a ball can feed into (Heinicke)"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://www.top100golfcourses.com/golf-course/brambles/reviews/46044",
+    "https://greebs.substack.com/p/brambles-golf",
+    "https://www.golfcoursearchitecture.net/content/brambles-course-construction-on-track-for-2021-completion",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/5"
+   ]
+  },
+  {
+   "hole": 6,
+   "description": "Card (par 4) 493/454/301. Very long par 4 that turns left. Chadwick (GCA forum) describes a significant bunker on the inside elbow of the dogleg and out of bounds along the whole right side, continuing on the 7th; he rates it and the 15th's as probably the largest bunkers on the course. Golfadelphia: the tee shot runs into the hillside and kicks back toward the centre, the approach is at or below the level of the green and invites running shots, and the left fairway bunkers are the thing to avoid. A grassed-over creek crosses the fairway, reminiscent of Pasatiempo's 14th (Greber); golfcourse.wiki: a couple of bunkers and a gully along the centre of the fairway, which tilts right to left. The green is very large (Greber) with dramatic contours that make some pins very hard (golfcourse.wiki); miss short rather than long (Greber). golfcourse.wiki diagram: two fairway bunkers left of centre, a creek line across the fairway near the green, one large bunker short-left of the green.",
+   "confidence": "sourced",
+   "shape": "Dogleg left (GCA forum), bunker on the inside of the elbow.",
+   "elevation": "Fairway tilts right to left; tee shot runs into the hillside and rolls back toward the centre; approach at or below the green's level (Golfadelphia).",
+   "green": "Very large (Greber; GolfNow GPS front-to-back points are about 48 m apart, my reading of layout.geojson); dramatic contours (golfcourse.wiki); long misses are worse than short.",
+   "hazards": [
+    "Large bunker(s) on the left / inside elbow of the dogleg (GCA forum, Golfadelphia, golfcourse.wiki)",
+    "Grassed-over creek / gully crossing the fairway (Greber, golfcourse.wiki)",
+    "Out of bounds along the entire right side (GCA forum)",
+    "Bunker short-left of the green (golfcourse.wiki diagram)"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://greebs.substack.com/p/brambles-golf",
+    "https://www.top100golfcourses.com/golf-course/brambles/reviews/45634",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/6"
+   ]
+  },
+  {
+   "hole": 7,
+   "description": "Card (par 5) 611/572/449, the longest hole. Out of bounds runs the whole right side along the property line: a fence per GCA, an old stone wall per Links (also Greber, golfcourse.wiki). Links: the hole bends right while the ground slopes left, with barrancas intruding. Golfadelphia: the tee shot has to clear trees on the right while the ground moves left; the second follows a ridge line between heavier vegetation; the fairway narrows and the ground gets more volatile near the green. GCA: generous width from the tee, tightening toward the green, a right-to-left slope with gentle rolls in the lay-up zone. golfcourse.wiki: a three-shot hole with deep gullies across a reverse-camber fairway (like Pasatiempo 14), a rapid series of gullies just short of the green; laying up short of them leaves about 150 yd, most of the deep ground is inside 100 yd. Green tucked to the left (Greber); tilts mostly back-right to front-left, with a prominent hollow / gully through the front-left; the front-left pin is a tiny tongue of green with hazard on three sides (GCA, golfcourse.wiki). Schoolfield (GCA forum, 2026) says the front centre-left channel is an existing arroyo tied into the green and arms of the creek run through the fairway short of it; shaper Ryan Farrow replied that those swales were almost exactly as found. No bunkers in any source or in the golfcourse.wiki diagram; a dry creek lies left of the green (golfcourse.wiki). See open_questions.hole7_yardage.",
+   "confidence": "sourced",
+   "shape": "Bends right while sloping left (Links); wide at the tee, narrowing toward the green (GCA, Golfadelphia). No source gives where it bends.",
+   "elevation": "Right-to-left side slope throughout; the second shot runs along a ridge line (Golfadelphia); rolling ground and gullies near the green.",
+   "green": "Back-right to front-left tilt; pronounced hollow / channel through the front-left; small front-left tongue pin surrounded by hazard; widely called one of the best greens on the property.",
+   "hazards": [
+    "Out of bounds (fence / old stone wall) along the entire right side",
+    "Several gullies / barranca arms crossing the fairway, densest inside about 100 yd of the green",
+    "Dry creek left of the green (golfcourse.wiki)",
+    "Trees on the right to clear from the tee (Golfadelphia)",
+    "Heavier vegetation on both sides of the second-shot corridor (Golfadelphia)",
+    "No bunkers"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://www.golfclubatlas.com/forum/index.php?topic=74856.0",
+    "https://linksmagazine.com/first-peek-brambles/",
+    "https://greebs.substack.com/p/brambles-golf",
+    "https://www.top100golfcourses.com/golf-course/brambles/reviews/46044",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/7"
+   ]
+  },
+  {
+   "hole": 8,
+   "description": "Card (par 3) 182/148/118. Mid-length par 3, back down off the foothills, with the green slightly below the tee (Golfadelphia). A raised berm / patch of rough in front hides part of the putting surface, so the hole is semi-blind (GCA forum, golfcourse.wiki). The fairway runs onto the green; the front is flush with the ground and the back is built up on fill, as much as about six feet (golfcourse.wiki, GCA forum). Right-to-left movement with subtle and pronounced mounding; widest at the back (Golfadelphia). The green pushes shots left toward a dangerous back-left bunker (golfcourse.wiki).",
+   "confidence": "sourced",
+   "shape": "Par 3.",
+   "elevation": "Green slightly below the tee (Golfadelphia); back of the green raised up to about 6 ft on fill (golfcourse.wiki, GCA forum).",
+   "green": "Flush at the front, raised at the back, widest at the rear; right-to-left movement with mounds.",
+   "hazards": [
+    "Raised berm / rough short of the green obscuring part of it",
+    "Back-left bunker (golfcourse.wiki)"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/8"
+   ]
+  },
+  {
+   "hole": 9,
+   "description": "Card (par 4) 399/374/358. Homage to North Berwick's Pit (13th), with a shallow but steep barranca in place of the stone wall (GCA profile, Greber, Golfadelphia; Chadwick also calls it a flatter Pasatiempo 11th). The ditch runs along the left of the fairway, then crosses and flanks the right side of the green, which sits on the left of it (GCA, Golfadelphia). The fairway cants right to left: the best line is left / left-centre near the ditch, and hedging right bounces into the long grass (Golfadelphia, golfcourse.wiki). The green is the only one James Duncan shaped himself: a St Andrews Road Hole homage turned about 45 degrees, so it runs front to back, with a deep road / lion's-mouth bunker on the left and the barranca on the right (GCA profile and forum). It sits against the creek bed and falls gently away from it (golfcourse.wiki; note that the wiki's hole-9 page text opens by calling it the tenth, but it plainly describes this hole). Links and Top100 call it a road hole in reverse. Bunker position: see open_questions.ninth_green_bunker.",
+   "confidence": "sourced",
+   "shape": "Straight; fairway cants right to left; ditch along the left crosses to the right of the green.",
+   "elevation": "No source describes a notable elevation change (flatter than Pasatiempo 11 per GCA forum).",
+   "green": "Long and narrow, oriented front to back (GolfNow GPS front-to-back points about 53 m apart, my reading of layout.geojson); falls gently away from the creek on its right; deep Road-Hole-style bunker on its left side.",
+   "hazards": [
+    "Barranca / ditch along the left of the fairway that crosses to flank the right side of the green",
+    "One deep Road-Hole / lion's-mouth pot bunker on the left side of the green",
+    "Long grass both sides of the fairway"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://www.golfclubatlas.com/forum/index.php?topic=74856.0",
+    "https://greebs.substack.com/p/brambles-golf",
+    "https://linksmagazine.com/first-peek-brambles/",
+    "https://www.top100golfcourses.com/golf-course/brambles",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/9"
+   ]
+  },
+  {
+   "hole": 10,
+   "description": "Card (par 4) 441/410/341. Uphill two-shotter with a large centre-line fairway bunker (GCA forum, Golfadelphia, golfcourse.wiki); Golfadelphia compares it with the 4th. Left of the bunker is the more direct line, right is easier but leaves a longer approach (Golfadelphia, golfcourse.wiki). Plays longer than the card because of the climb and the wind (Golfadelphia). The green is set up on a hill so short shots roll back; it has a false front, a lower front tier and a clearly higher back tier, and a backboard behind for back pins (golfcourse.wiki, Golfadelphia, GCA forum). golfcourse.wiki diagram: the centre-line bunker, a smaller bunker on the right further up the fairway, and two greenside bunkers, one each side. GCA profile has a photo captioned as the uphill tenth.",
+   "confidence": "sourced",
+   "shape": "Straight and uphill (no source mentions a bend).",
+   "elevation": "Uphill throughout; elevated green on a hill.",
+   "green": "Back to front; false front; lower front tier and upper rear tier; backboard behind.",
+   "hazards": [
+    "Large centre-line fairway bunker",
+    "Greenside bunkers (two in the golfcourse.wiki diagram)",
+    "Run-back off the front of the elevated green"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://www.top100golfcourses.com/golf-course/brambles/reviews/45634",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/10"
+   ]
+  },
+  {
+   "hole": 11,
+   "description": "Card (par 4) 336/300/264. Downhill short par 4 with a split fairway (GCA profile, GCA forum, Golfadelphia, golfcourse.wiki). The left fairway is the wider one and needs less club, but leaves a forced carry over long marsh grass; the right fairway runs almost up to the green, is slimmer and cants right, and ends at a creek that wanders just in front of the green (Golfadelphia); that creek blocks a run-up (golfcourse.wiki). Two fairway bunkers on the right catch the longest drives, and a greenside pot bunker back-right is in play from the left fairway (golfcourse.wiki). The green is wide but shallow with a thumbprint feature in the middle (GCA; golfcourse.wiki describes it as rising out of the centre), with back-to-front movement (Golfadelphia); pin position decides which fairway is better. GCA lists a barranca on 11.",
+   "confidence": "sourced",
+   "shape": "Split fairway, left and right options; the right one runs nearly to the green.",
+   "elevation": "Downhill (GCA forum).",
+   "green": "Wide and shallow; thumbprint contour in the middle; back to front.",
+   "hazards": [
+    "Creek / barranca just in front of the green",
+    "Long marsh grass to carry on the approach from the left fairway",
+    "Two fairway bunkers on the right (golfcourse.wiki)",
+    "Pot bunker back-right of the green (golfcourse.wiki)"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/11"
+   ]
+  },
+  {
+   "hole": 12,
+   "description": "Card (par 3) 206/163/110. Long par 3 with no bunkers (Golfadelphia; the golfcourse.wiki diagram draws none). A short carry over long grass to a large, broad-shouldered green that generally moves left to right; reading the contours is the main test (Golfadelphia). golfcourse.wiki calls it a relatively straightforward one-shotter; Chadwick notes it is over 200 yd from the back. Thin coverage overall.",
+   "confidence": "partial",
+   "shape": "Par 3.",
+   "elevation": "No source describes the elevation.",
+   "green": "Large, broad-shouldered, moving left to right (Golfadelphia). The golfcourse.wiki green diagram draws one closed inner contour toward the middle-right; it does not say whether it is a rise or a dip.",
+   "hazards": [
+    "Short carry over long grass",
+    "No bunkers"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/12"
+   ]
+  },
+  {
+   "hole": 13,
+   "description": "Card (par 5) 513/478/360, stroke index 2. Uphill three-shotter with a slight dogleg right; the fairway narrows at the turn, so the drive is played either short of or past it (Golfadelphia). A raised berm about 4 ft high crosses the middle of the fairway in the landing area (golfcourse.wiki; Chadwick: raised mounding pinches the fairway). Further up there is a dangerous washout on the left and a grass bunker on the right (golfcourse.wiki). The green is small and laid on the hillside, with two distinct tiers, bunkers both sides and a big backboard behind (golfcourse.wiki, Golfadelphia). It tilts diagonally, back to front and left to right, so short and right is a good miss (Golfadelphia); a massive bunker left of the green punishes the conservative left-side approach (GCA forum). Reachable downwind (GCA forum). Golfadelphia compares it with the 17th at The International. golfcourse.wiki diagram: one large bunker left of the green and two on the right.",
+   "confidence": "sourced",
+   "shape": "Slight dogleg right at the narrowing in the drive zone (Golfadelphia).",
+   "elevation": "Uphill throughout; green on the hillside.",
+   "green": "Small; two tiers; diagonal back-left to front-right fall; backboard behind.",
+   "hazards": [
+    "Cross berm / mounding in the drive zone",
+    "Washout on the left (golfcourse.wiki)",
+    "Grass bunker on the right (golfcourse.wiki)",
+    "Large bunker left of the green plus bunkers on the right (golfcourse.wiki: both sides)"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://www.top100golfcourses.com/golf-course/brambles/reviews/46044",
+    "https://www.top100golfcourses.com/golf-course/brambles/reviews/45634",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/13"
+   ]
+  },
+  {
+   "hole": 14,
+   "description": "Card (par 4) 325/279/248. Drivable short par 4 with the green below the tee and in view (Golfadelphia). The green sits on an intersecting ridge close to the 3rd green and the 4th tee, a short walk from the 15th tee (GCA forum). Plenty of fairway short of the green for a lay-up (Golfadelphia). Raised green guarded by deep bunkers in front; counts differ: two fronting bunkers (Chadwick), a couple at the front plus a small one at green level on the left (Golfadelphia), three large bunkers short and three small ones on the left (golfcourse.wiki). The green runs mostly back-left to front and drops sharply away at the back-right (golfcourse.wiki). Chadwick compares the 17th's second shot to an uphill version of this tee shot.",
+   "confidence": "sourced",
+   "shape": "Straight, short.",
+   "elevation": "Green below the tee (Golfadelphia) but raised above its fronting bunkers (GCA forum).",
+   "green": "Back-left to front tilt; sharp fall-off at the back-right (golfcourse.wiki).",
+   "hazards": [
+    "Deep bunkers short of / in front of the green (two or three, by source)",
+    "Small bunkers on the left of the green (one to three, by source)",
+    "Fall-off at the back-right"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/14"
+   ]
+  },
+  {
+   "hole": 15,
+   "description": "Card (par 4) 448/429/379. Blind or semi-blind tee shot over a ridge / sidehill to a fairway that cants hard left to right (Golfadelphia, GCA forum, golfcourse.wiki). A prominent mound on the right runs across the line of play with a bunker along the full width of its base; Chadwick thinks it is the largest bunker on the course along with the 6th's. Play left and let the ball run right. A fairly long approach climbs to an elevated green perched in the foothills, near the 4th and the oak groves (GCA forum); a fairway bunker short-left complicates a lay-up (golfcourse.wiki). The green has a false front, likely the most severe front fall-off on the course (GCA forum, golfcourse.wiki), a pot bunker short-right (Golfadelphia notes the green wraps over and past it), two bunkers long-left, a backboard long-right, and slopes mostly back-right to front-left (golfcourse.wiki). GCA profile: foothills behind the 15th.",
+   "confidence": "sourced",
+   "shape": "Fairway cants strongly left to right; no source describes a bend.",
+   "elevation": "Blind / semi-blind tee shot over a ridge; uphill approach to an elevated green.",
+   "green": "False front with a severe front fall-off; back-right to front-left slope; backboard long-right.",
+   "hazards": [
+    "Large cross-mound with a bunker along its base on the right of the drive zone",
+    "Fairway bunker short-left (golfcourse.wiki)",
+    "Pot bunker short / front-right of the green",
+    "Two bunkers long-left of the green (golfcourse.wiki; Golfadelphia: a couple on the left)"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/15"
+   ]
+  },
+  {
+   "hole": 16,
+   "description": "Card (par 3) 242/226/130, the longest one-shotter, a brute from the back and middle tees (GCA profile; Chadwick's 2024 forum post gives 246 from the back). A single huge bunker, a Carnoustie-scale wall, guards short-left, and its rising face hides the green from the tee (GCA, Golfadelphia, golfcourse.wiki). The ground in front kicks the ball toward that bunker, so running it on is hard; favour the right (golfcourse.wiki, Golfadelphia). Gargantuan green with big waves: a high back-right tier and a low front-left hollow, right-to-left movement, and steep fall-offs at the right and the back (GCA, Golfadelphia).",
+   "confidence": "sourced",
+   "shape": "Par 3; golfcourse.wiki calls it a one-to-two-shot hole with fairway short of the green that falls off left and right.",
+   "elevation": "No source gives an elevation change; the bunker face conceals the green from the tee.",
+   "green": "Very large and deep (GolfNow GPS front-to-back points about 47 m apart, my reading); high back-right tier, low front-left hollow; steep fall-off right and rear.",
+   "hazards": [
+    "Single large bunker short-left",
+    "Steep fall-off right of the green",
+    "Approach ground falls away left and right (golfcourse.wiki)"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/16"
+   ]
+  },
+  {
+   "hole": 17,
+   "description": "Card (par 5) 542/514/468. Reachable par 5 heading north toward the hills (Golfadelphia). A creek / barranca comes down from the high left and crosses the drive zone, splitting it into a nearer left fairway and a further right fairway; only a big drive reaches the second (Golfadelphia, golfcourse.wiki, GCA forum). The second plays uphill toward two large, deep bunkers about 50 yd short of the green, with Glider Port Road (a service road) crossing directly behind them (Golfadelphia, GCA forum, golfcourse.wiki; a lucky bounce off the road can run up toward the green). Rollers through the right fairway; the ideal spot is the left edge of the right fairway, which also takes a tree short-right of the green out of play (golfcourse.wiki). The green sits above the second fairway, is deep, and falls back to front gently and then steeply (Golfadelphia), with a backstop on its left (GCA forum). Heinicke lists the 17th among the best greens.",
+   "confidence": "sourced",
+   "shape": "Split fairway (left near, right far) divided by a diagonal creek; then uphill to the green.",
+   "elevation": "Uphill second shot; green above the second fairway.",
+   "green": "Deep; back to front, gentle then steep; backstop along the left.",
+   "hazards": [
+    "Barranca crossing / splitting the fairway in the drive zone",
+    "Two large deep cross bunkers about 50 yd short of the green",
+    "Glider Port Road just beyond those bunkers",
+    "A tree short-right of the green (golfcourse.wiki)"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://www.top100golfcourses.com/golf-course/brambles/reviews/46044",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/17"
+   ]
+  },
+  {
+   "hole": 18,
+   "description": "Card (par 4) 510/467/327. Uphill finishing par 4 back to the clubhouse (the Milking Parlor), which is in view from the tee. The drive must carry long grass, and the carry lengthens the further left you aim (Golfadelphia). Large landing area with fairway bunkers on the left and a gully on the right (golfcourse.wiki); a large hazard separates the right edge of the fairway from the 1st hole (GCA). The terrain pulls left to right. The green is raised on top of the hill, on the clubhouse terrace (Golfadelphia, GCA). It is enlarged to take in the practice putting area along its back (clubhouse side); the back half is not pinnable and is used as the practice green (GCA profile and forum, golfcourse.wiki, Greber). Right of the green: two very deep bunkers and a short-grass fall-off toward the 1st, with blind recoveries. A bunker cut into the front-left of the green complex (a fairway bunker short of the green per golfcourse.wiki) hides the safe short-left area and blocks a run-up. Green back to front and a little right to left (Golfadelphia).",
+   "confidence": "sourced",
+   "shape": "No source states a dogleg; diagonal carry over long grass off the tee (longer to the left).",
+   "elevation": "Uphill finisher; green at the top of the hill on the clubhouse terrace.",
+   "green": "Very large and long, including the practice putting area at its back (GolfNow GPS front-to-back points about 62 m apart, my reading); back to front and slightly right to left; ridges in the front half (golfcourse.wiki diagram).",
+   "hazards": [
+    "Long grass to carry from the tee, longer on the left",
+    "Fairway bunkers on the left of the landing area (golfcourse.wiki)",
+    "Gully / large hazard on the right between 18 and 1",
+    "Bunker short / front-left of the green complex",
+    "Two very deep bunkers and a short-grass fall-off right of the green"
+   ],
+   "source_urls": [
+    "https://golfadelphia.com/2026/08/20/brambles/",
+    "https://golfclubatlas.com/countries/brambles-2024/",
+    "https://www.golfclubatlas.com/forum/index.php?topic=73316.0",
+    "https://greebs.substack.com/p/brambles-golf",
+    "https://www.golfdigest.com/courses/ca/brambles-golf-brambles",
+    "https://golfcourse.wiki/course/brambles-middletown/holes/18"
+   ]
+  }
+ ],
+ "course_notes": "Design: Bill Coore and Ben Crenshaw, conceived and led by James Duncan; Coore finished the routing in 2019, construction began in 2020, the course opened officially in April 2024 (Golf Course Architecture 2020, GCM Feb 2025). Routing: out and back (Golf Course Architecture 2020, Global Golf Post 2021); it starts on the north side of the main valley, descends on the 1st, then climbs into oak trees and runs along the property edges (GCA 2020). The front nine works out to and along the foothills and back down (Golfadelphia); Bruce Bearer (Top100) notes several crossovers between the nines. Adjacencies stated in sources: 1st tee and 18th green steps from the clubhouse terrace (GGP, Golf Digest panelist); 18 and 1 run side by side separated by a hazard (GCA); 14 green on a ridge next to the 3 green and 4 tee, near the 15 tee (GCA forum). Scorecard: the club publishes no par (GCA, Golfadelphia, GGP, Greber); the pars in the GolfNow feed are unofficial. Holes are marked only by a small numbered wooden stump (Jeff Schley, GCA forum 2026). Tees: Greber says each teeing ground has a single tee to play beside, either side; Daryl David (GCA forum 2026) says there are no tee markers; GGP (2021) had reported that markers would be used. Turf: zoysia tee to green, Zeon on tees and fairways, Prizm on greens (GCM, Heinicke). Greens are not USGA-spec and read as natural extensions of the fairways (Joel Stewart, GCA forum). Rough: sheep-grazed native meadow, being reseeded with native perennials and fescue (GCA profile) with heather planted outside the fairways (Golf Digest panelists). The rough and hazards were bare and raw in October 2024 photos (GCA). Bunkers: few. Golfadelphia counts about 35; Coore wanted a modest number (GGP 2021). Some are huge (Carnoustie-size walls on 16, very large ones on 6 and 15), others are small pots; hard local sand, no rakes (Greber). There are also grass bunkers and moguls (Golf Digest panelist; golfcourse.wiki on 13). The golfcourse.wiki course map's sand layer has 49 separate shapes by my count of its drawing, which is more than Golfadelphia's estimate, so treat bunker totals as approximate. Barrancas (dry or wet drainage channels) cut through 1, 2, 4, 9, 11 and 17 (GCA profile), plus a grassed creek on 6 (Greber), gullies on 7 (golfcourse.wiki, Links), a dry creek left of 5 (golfcourse.wiki), a washout on 13 and a gully right of 18 (golfcourse.wiki). Mounding: GCA says berms appear here and there on the meadow-floor holes (examples: 8 front, 13 cross berm, 15 cross mound); Golfadelphia says there is no artificial mounding used to separate holes. Out of bounds: right of 5 (property edge), the whole right side of 6 and 7 (fence; an old stone wall per Links). Glider Port Road crosses 17 just behind the cross bunkers. Trees: sources disagree on how treeless the site is (Links: treeless; Heinicke: only one tree on the property; GCA: meadow dotted with specimen oaks). Trees named per hole: the valley oak inside the 4th dogleg, an oak grove behind and left of the 4 green, trees right of the 7th tee shot, a tree short-right of the 17 green, oak groves near the 15 green. Sources and caveats: golfcourse.wiki has a hole-by-hole page plus hand-drawn Inkscape diagrams of every hole and green and a course map (rendered for this note; schematic, not survey-accurate); its hole-9 text opens with 'tenth' by mistake. The Top100 Brambles pages also carry unrelated text (Riviera's 6th with a bunker in the green, PGA West's island 17th); it does not describe Brambles. Jeff Schley (GCA forum, July 2026) says a front-nine par 3 played about 235, which matches no front-nine card yardage (155, 182). Site size is given as 600, 660 or 670 acres depending on the source. Card yardages on golfcourse.wiki, the GCA profile (8 holes) and Golfadelphia (all 18) match the GolfNow feed.",
+ "open_questions": {
+  "hole7_yardage": "No source explains the 611. The same 611/572/449 appears in the GolfNow feed, golfcourse.wiki, the GCA profile (March 2025) and Golfadelphia (August 2026), and none of them mentions a tee behind the normal back tee, an alternate tee, or the hole wrapping around anything. Shape clues: Links (Winter 2023, before opening) says it bends right while sloping left, with barrancas intruding and an old stone wall marking out of bounds on the right; GCA says out of bounds runs the entire right side and the fairway is wide from the tee and tightens toward the green; Golfadelphia says the tee shot has to clear trees on the right and the second follows a ridge line; golfcourse.wiki calls it a three-shot hole along the right property line where a lay-up short of the gullies leaves about 150 yd. My own check against layout.geojson (not a source): card minus straight tee-to-green distance is +69, +68 and +62 yd for the back, middle and front tees, about the same for all three sets. A back tee missing from the data would not explain the middle and front gaps. The 8th back tee is about 24 m past the 7th green centre and the listed 7th back tee is about 23 m from the 10th green centre, so the green cannot sit much further east, and a back tee about 60 m further back along the line of play would land in the 6th / 10th green area. That leaves a measuring line that bends well away from the straight line (a sideways offset of roughly 120 m would be needed), or a card figure that does not match the ground. The golfcourse.wiki hole diagram draws a long, narrow, nearly straight corridor drifting slightly left, with the green at the top left. Unresolved.",
+  "hole1_yardage": "Every source uses 531 (GolfNow feed, GCA profile, Golfadelphia, golfcourse.wiki); none gives a different back tee or any location detail beyond this: the tee is elevated, just below / beside the clubhouse (GCA profile and forum), the round starts a few steps from the clubhouse (Golfadelphia), and the 1st tee and 18th green are steps from the clubhouse terrace (GGP 2021, Golf Digest panelist). The fairway is angled and drifts left (Golfadelphia, GCA), so a measuring line that follows the fairway is longer than the straight line. My check (not a source): card minus straight tee-to-green distance is +31 / +26 / +10 yd for back / middle / front. A back tee a little closer to or higher by the clubhouse than the 18Birdies point would fit the sources but is not stated anywhere. Unresolved.",
+  "ninth_green_bunker": "No source puts a bunker in the middle of the 9th green. Every source describes one deep Road-Hole-style (lion's-mouth / road) bunker on the left side of a green that runs front to back, with the barranca on the right: GCA profile (Road Hole 17 homage turned about 45 degrees, road bunker in play for a leftward miss, barranca for a rightward one), GCA forum (left-erring approaches must deal with a lion's mouth / road hole bunker), Golfadelphia (bunker at the front left, like the Road bunker), Jeff Schley on the GCA forum (bunker middle left that swallows left approaches from the angle you come in; he was unsure whether it was hole 8 or 9, but describes the North Berwick Pit homage, which is 9), golfcourse.wiki (pins next to the deep bunker; short is the best miss). In the golfcourse.wiki hole and green diagrams the single bunker bites into the green's left edge at about half its depth, with putting surface in front of and behind it (a kidney-shaped green wrapping around it). So it is a bunker cut into the side of the green, middle-left, not one surrounded by green. Caution: the Top100 Brambles pages carry unrelated text about Riviera's 6th (a bunker set into the green); that is not Brambles.",
+  "shared_greens_tees": "The only shared surface any source mentions is the 18th green and the practice putting green: the 18th green is enlarged to take in the practice putting area along its back, next to the clubhouse, and that back half is not used for pins (GCA profile, GCA forum, golfcourse.wiki, Greber). No source mentions a double green, a shared fairway or a shared tee anywhere else. Stated close quarters: 14 green on a ridge next to the 3 green and 4 tee, near the 15 tee (GCA forum); 18 and 1 run side by side, split by a hazard (GCA); 1st tee and 18th green both by the clubhouse terrace (GGP); out of bounds runs down the right of both 6 and 7 (GCA forum). No text source describes the 6 green / 10 green / 11 tees / 7 tees cluster. In the golfcourse.wiki course map (my reading of the rendered drawing; it is schematic) the 6th and 10th greens are two separate greens side by side in one continuous short-grass area, each with its own bunkers. The map draws 18 separate greens in all.",
+  "practice_area": "The only practice facility any source places is the practice putting green, which is the back (clubhouse) end of the 18th green (GCA profile and forum, golfcourse.wiki, Greber). Heinicke (Top100, April 2026) says there was no driving range or chipping green, that the putting green was poor, and that a range was planned once the turf matured. GGP (2021) reported plans for a range, a short course and a putting green, with no location. GolfPass's directory lists a driving range, chipping area and putting green with no detail or location, and it contradicts the 2026 review, so treat it as unreliable. No source says where a range is or will be."
+ }
+}

@@ -67,7 +67,9 @@ leaf_off = false  # late September: the oaks are in leaf
 raw = "naip2024_course.tif"
 registered = "naip2024_course_reg.tif"
 res = 0.6
-shift = [0.0, 0.0]  # measure_registration.py after the first build
+# NAIP 2024 vs the 2023 LiDAR (measure_registration.py, 49 bunkers: photo sand vs LiDAR hollows): dx +0.75 m (MAD 1.0),
+# dy 0.00 m (MAD 1.0); north / south / east / west agree within 0.25 m (0.6 m pixels)
+shift = [0.75, 0.0]  # metres +E/+N applied to the photo
 leaf_off = false
 credit = "USDA NAIP 2024 orthoimagery (public domain)"
 

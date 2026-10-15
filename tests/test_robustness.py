@@ -157,3 +157,13 @@ def test_a_backdrop_dem_can_name_its_real_datum(tmp_path):
     with rasterio.open(tmp_path / "out.tif") as d:
         a = d.read(1)
     assert np.isfinite(a).all() and abs(float(a[0, 0]) - (10 * 40 + 10 + 0.5 + 0.5 * 40)) < 1e-3
+
+
+def test_gkd_ratings_take_women_only_and_unrated_tees():
+    """Brambles' Front tee is rated for women only (no men's rating): the GreenKeeper export crashed formatting the
+    missing men's value. Each slot gets the strings it has; an unrated tee gets none."""
+    import export_gspro as X
+    ratings = {"back": (73.1, 141, None, None, 7190), "front": (None, None, 71.5, 127, 5318),
+               "middle": (None, None, None, None, 6579)}
+    slots = {"back": "Black", "middle": "White", "front": "Red"}
+    assert X.gkd_ratings(ratings, slots) == {"BlackSR": "73.1/141", "RedSR_women": "71.5/127"}
