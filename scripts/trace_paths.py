@@ -10,7 +10,7 @@ too). Candidates are cleaned, skeletonised and kept as centre lines where the st
 
 Output: build/<slug>/paths_detected.geojson (LineStrings, properties golf=cartpath, source=trace_paths) in config.CRS.
 surface_classify.osm_geoms() reads it like OSM paths, so classification, vectorize and the cart-path surfaces use it.
-QA overrides correct what this misses.
+QA overrides correct what this misses. A photo without a NIR band has no NDVI: the file is written empty.
 """
 import json, sys
 from pathlib import Path
@@ -160,9 +160,25 @@ def bridge(lines, max_gap=MAX_GAP, max_angle=MAX_ANGLE, ok=None):
     return _merge(list(lines) + conn)
 
 
+def write(lines):
+    feats = [{"type": "Feature", "geometry": mapping(g), "properties": {"golf": "cartpath", "source": "trace_paths",
+                                                                        "length_m": round(g.length, 1)}} for g in lines]
+    OUT.parent.mkdir(exist_ok=True)
+    json.dump({"type": "FeatureCollection", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::" + C.CRS.split(":")[1]}},
+               "features": feats}, open(OUT, "w"))
+    print(f"traced {len(lines)} path lines, {sum(g.length for g in lines):.0f} m -> {OUT}")
+
+
 def main():
     from skimage.color import rgb2lab
-    from surface_classify import grid, read_imagery_window, read_nir_window, osm_geoms
+    from surface_classify import grid, has_nir, read_imagery_window, read_nir_window, osm_geoms
+    if not has_nir():
+        # the paths are NDVI ridges: without NIR nothing is traced, and the empty file replaces any older trace
+        print("trace_paths: the photo has no NIR band (paths are traced from NDVI), so no cart path is traced: map them "
+              f"in OSM or the course overrides, or set [tuning] trace_paths = false in courses/{C.SLUG}/course.toml",
+              flush=True)
+        write([])
+        return
     W, H, T = grid()
     G = [x for x in osm_geoms() if x[1].get("source") != "trace_paths"]
     def burn(geoms):
@@ -186,8 +202,6 @@ def main():
         r1 = min(H, r0 + 1024); p0, p1 = max(0, r0 - pad), min(H, r1 + pad)
         rgb = read_imagery_window(T, p0, p1, 0, W)
         nir = read_nir_window(T, p0, p1, 0, W)
-        if nir is None:
-            raise SystemExit("trace_paths needs a 4-band (RGB + NIR) photo")
         ndvi = (nir - rgb[0]) / (nir + rgb[0] + 1e-3)
         ridge = ndvi_ridges(ndvi, C.DEM_RES)
         L = ndimage.gaussian_filter(rgb2lab(np.moveaxis(rgb, 0, -1))[..., 0], 1.0)
@@ -203,12 +217,7 @@ def main():
     lines = bridge(lines)
     lines = bridge([g for g in lines if g.length >= 6.0], LONG_GAP, LONG_ANGLE, ok=clear)
     lines = [g for g in lines if g.length >= MIN_LEN]
-    feats = [{"type": "Feature", "geometry": mapping(g), "properties": {"golf": "cartpath", "source": "trace_paths",
-                                                                        "length_m": round(g.length, 1)}} for g in lines]
-    OUT.parent.mkdir(exist_ok=True)
-    json.dump({"type": "FeatureCollection", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::" + C.CRS.split(":")[1]}},
-               "features": feats}, open(OUT, "w"))
-    print(f"traced {len(lines)} path lines, {sum(g.length for g in lines):.0f} m -> {OUT}")
+    write(lines)
 
 
 if __name__ == "__main__":

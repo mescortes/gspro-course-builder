@@ -124,6 +124,7 @@ TILE = float(_frame.get("tile", 256.0))  # processing tile size (m); rasters are
 # Unity/GSPro terrain square (2048 m gives a 4097^2 heightmap at 0.5 m) centred on CORE; cells outside CORE come from
 # the backdrop DEM
 TERRAIN = dict(_frame["terrain"])
+FETCH_TERRAIN = dict(TERRAIN)  # in both profiles: the backdrop DEM (data/<slug>/, shared) covers its GSPro outer plot
 PLAYABLE = _holes(_holes_t.get("playable", "1-18"))
 _tp = _T.get("test_profile", {})
 TEST_HOLES = _holes(_tp.get("holes", PLAYABLE))  # the holes the test profile covers

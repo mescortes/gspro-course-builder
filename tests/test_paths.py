@@ -79,6 +79,27 @@ def test_long_bridges_need_facing_ends_and_a_clear_corridor():
     assert sorted(round(g.length) for g in out) == [60, 65, 65]
 
 
+def test_a_photo_without_nir_traces_no_paths_and_says_so(tmp_path, monkeypatch, capsys):
+    """The paths are traced from NDVI. With a 3-band photo (most RGB-only orthophoto services) the step stopped the
+    build ('needs a 4-band photo') although the classifier copes without NIR: it now traces nothing, says so once
+    (naming the [tuning] key that skips the step), and leaves an empty file so a stale trace is not reused."""
+    import json
+    import surface_classify as S
+    monkeypatch.setattr(S, "has_nir", lambda: False)
+    monkeypatch.setattr(S, "grid", lambda: (400, 400, T))
+    monkeypatch.setattr(S, "osm_geoms", lambda: [])
+    monkeypatch.setattr(S, "read_imagery_window", lambda T, r0, r1, c0, c1: np.full((3, r1 - r0, c1 - c0), 0.4, np.float32))
+    monkeypatch.setattr(S, "read_nir_window", lambda *a: None)
+    out = tmp_path / "paths_detected.geojson"
+    out.write_text(json.dumps({"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {},
+                                                                           "geometry": None}]}))   # an older trace
+    monkeypatch.setattr(P, "OUT", out)
+    P.main()
+    assert json.load(open(out))["features"] == []
+    said = capsys.readouterr().out
+    assert said.count("NIR") == 1 and "trace_paths = false" in said
+
+
 def test_centrelines_take_a_width_range():
     """Brambles' gravel tracks are 3-6 m wide (NAIP 0.6 m): a 5 m strip is no path at the default 0.6-4.5 m range,
     but is one with width=(1.5, 7.0)."""

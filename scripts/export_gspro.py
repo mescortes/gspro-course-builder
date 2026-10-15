@@ -1,7 +1,8 @@
 """GSPro / OPCD hand-off package (output/gspro/) for the terrain square config.TERRAIN.
 
-  heightmap_<N>.raw      Unity terrain heightmap, 16-bit little-endian ("Windows" byte order), N x N (N = 2^k + 1),
-                         north row first. Inside the build extent: the course DEM; outside: the 1-2 m backdrop DEM (feathered).
+  heightmap_<N>.raw      Unity terrain heightmap, 16-bit little-endian ("Windows" byte order), N x N (N = 2^k + 1, 0.5 m
+                         spacing up to Unity 2018's 4097: a terrain over 2048 m is coarser), north row first. Inside the
+                         build extent: the course DEM; outside: the 1-2 m backdrop DEM (feathered).
   heightmap_<N>.png      same data as 16-bit greyscale PNG
   terrain.json           size, height range, origin, import settings, Unity <-> UTM transform
   overlay_8192.jpg       satellite overlay for the Inkscape tracing layer (north-up, covers the terrain exactly)
@@ -28,7 +29,16 @@ import config as C
 OUT = C.OUTPUT / "gspro"
 TE = C.TERRAIN
 SIZE = TE["xmax"] - TE["xmin"]
-N = 2 ** int(math.ceil(math.log2(SIZE / 0.5))) + 1  # 2048 m -> 4097 (0.5 m spacing)
+MAX_N = 4097  # Unity 2018's largest heightmapResolution (2^12 + 1): an 8193^2 RAW cannot be imported
+
+
+def heightmap_resolution(size, spacing=0.5):
+    """Heightmap samples a side, 2^k + 1: `spacing` m where that fits (2048 m -> 4097, 640 m -> 2049); a wider terrain
+    keeps MAX_N samples at a coarser spacing (2560 m -> 0.625 m, 4096 m -> 1 m), recorded in terrain.json."""
+    return min(2 ** int(math.ceil(math.log2(size / spacing))) + 1, MAX_N)
+
+
+N = heightmap_resolution(SIZE)
 SINK = 0.05  # m the Unity terrain sits below the course meshes inside the build extent
 OPCD = {  # surface -> (OPCD palette name, fill hex, stacking order)
     "rough": ("Rough", "#278438", 0), "deeprough": ("Deep Rough", "#164B20", 1), "native": ("Pinestraw", "#BE751D", 2),
@@ -55,6 +65,8 @@ def heightmap():
     e = C.CORE
     inside = (X > e["xmin"]) & (X < e["xmax"]) & (Y > e["ymin"]) & (Y < e["ymax"])
     if not inside.all() and (C.DATA / "dem/backdrop_dem.tif").exists():
+        from build_backdrop import require_cover
+        require_cover(C.DATA / "dem/backdrop_dem.tif", TE, "the GSPro terrain")
         zb = sample(C.DATA / "dem/backdrop_dem.tif", X, Y)
         # feather over 25 m inside the build extent so the seam has no step
         d = np.minimum.reduce([X - e["xmin"], e["xmax"] - X, Y - e["ymin"], e["ymax"] - Y])
@@ -88,16 +100,21 @@ def heightmap():
 OUTER_SINK = 2.0   # m: the outer plot sits this far below the inner terrain inside the inner square (inner always wins)
 
 
-def outer_extent():
-    """OPCD 'Plot (Outer)': a second Unity terrain twice the inner size, centred on it, for the mountain background."""
-    cx, cy = (TE["xmin"] + TE["xmax"]) / 2, (TE["ymin"] + TE["ymax"]) / 2
-    return dict(xmin=cx - SIZE, ymin=cy - SIZE, xmax=cx + SIZE, ymax=cy + SIZE)
+def outer_extent(te=None):
+    """OPCD 'Plot (Outer)': a second Unity terrain twice the inner size, centred on it, for the mountain background.
+    `te` is the inner terrain (default config.TERRAIN); build_backdrop sizes the backdrop DEM to cover this."""
+    te = te or TE
+    size = te["xmax"] - te["xmin"]
+    cx, cy = (te["xmin"] + te["xmax"]) / 2, (te["ymin"] + te["ymax"]) / 2
+    return dict(xmin=cx - size, ymin=cy - size, xmax=cx + size, ymax=cy + size)
 
 
 def outer_terrain(n=4097, px=8192):
     """Outer plot heightmap (16-bit RAW, 4097^2 over 2x the inner size) + 8192 px overlay, as in the OPCD outer-plot
     recipe (research/GSPRO_COSMETICS.md). Inside the inner square it is sunk OUTER_SINK m (feathered over 10 m)."""
     oe = outer_extent()
+    from build_backdrop import require_cover   # past the DEM's border sample() would repeat its edge heights
+    require_cover(C.DATA / "dem/backdrop_dem.tif", oe, "the GSPro outer plot")
     xs = oe["xmin"] + np.arange(n) * (oe["xmax"] - oe["xmin"]) / (n - 1)
     ys = oe["ymax"] - np.arange(n) * (oe["ymax"] - oe["ymin"]) / (n - 1)
     X, Y = np.meshgrid(xs, ys)
@@ -362,6 +379,9 @@ def main():
     json.dump(meta, open(OUT / "terrain.json", "w"), indent=1)
     nh = greenkeeper(hmin)
     print(f"gspro package: heightmap {N}^2 over {SIZE:.0f} m ({hmin}..{hmax} m), svg shapes {n}, trees {nt}, holes {nh}")
+    if SIZE / (N - 1) > 0.5:
+        print(f"   heightmap spacing {SIZE / (N - 1):.3g} m: Unity 2018 takes at most {MAX_N}^2 samples (terrain.json "
+              "sample_spacing_m); the course meshes keep their own detail")
 
 
 if __name__ == "__main__":

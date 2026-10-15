@@ -216,9 +216,34 @@ NAMES_BASE = ["L", "A", "B", "L4", "A4", "B4", "L12", "A12", "B12", "Lstd2", "Ls
 NAMES_NIR = ["N", "NDVI", "NDVI4", "NDVI12", "Nstd3"]
 
 
+_PHOTO = {}   # (path, mtime) -> band 4 is NIR
+
+
 def has_nir():
-    with rasterio.open(C.IMAGERY) as ds:
-        return ds.count >= 4
+    """True when band 4 of the photo is near-infrared. Exits on a photo that is not 8-bit R, G, B: every reader scales
+    0-255 to 0-1. GDAL flags the 4th band of any 4-band 8-bit GeoTIFF as alpha (the engine's own downloads too), so
+    the flag says nothing: an alpha mask (a GDAL warp, a tile export) holds only 0 and 255, a NIR band a full range."""
+    from rasterio.windows import Window
+    if not C.IMAGERY.exists():
+        sys.exit(f"{C.IMAGERY}: missing: run fetch_data.py imagery (or put the photo at {C.IMAGERY_RAW}), then build_all.py")
+    key = (str(C.IMAGERY), C.IMAGERY.stat().st_mtime_ns)
+    if key not in _PHOTO:
+        with rasterio.open(C.IMAGERY) as ds:
+            if ds.count < 3 or ds.dtypes[0] != "uint8":
+                sys.exit(f"{C.IMAGERY}: {ds.count} band(s) of {ds.dtypes[0]}, but the engine reads an 8-bit R, G, B (+ NIR) "
+                         f"photo. Convert {C.IMAGERY_RAW.name} in {C.IMAGERY_RAW.parent}, e.g. gdal_translate -ot Byte "
+                         "-scale <min> <max> 0 255 -b 1 -b 2 -b 3 [-b <NIR band>] in.tif out.tif, and build from 'register'")
+            nir = False
+            if ds.count >= 4:   # a central block is enough to tell a mask from a photo band
+                w = Window(max(0, ds.width // 2 - 1024), max(0, ds.height // 2 - 1024), min(2048, ds.width), min(2048, ds.height))
+                b = ds.read(4, window=w)
+                v = b[b > 0]
+                nir = bool(v.size) and float((v == 255).mean()) < 0.99
+                if not nir:
+                    print(f"photo: band 4 of {C.IMAGERY.name} holds only 0 and 255 (an alpha mask, not NIR): built without NIR",
+                          flush=True)
+        _PHOTO[key] = nir
+    return _PHOTO[key]
 
 
 def feature_names():
@@ -252,6 +277,7 @@ def read_window(path, pr0, pr1, pc0, pc1, scale=1, fill=0.0):
 
 
 def read_imagery_window(T, pr0, pr1, pc0, pc1):
+    has_nir()  # the photo is 8-bit RGB (or the build stops here, saying how to convert it)
     x0 = T.c + pc0 * T.a; x1 = T.c + pc1 * T.a; y1 = T.f + pr0 * T.e; y0 = T.f + pr1 * T.e
     with rasterio.open(C.IMAGERY) as ds:
         a = ds.read([1, 2, 3], window=from_bounds(x0, y0, x1, y1, transform=ds.transform),
@@ -260,11 +286,11 @@ def read_imagery_window(T, pr0, pr1, pc0, pc1):
 
 
 def read_nir_window(T, pr0, pr1, pc0, pc1):
-    """NIR band (0..1) on the DEM grid, or None for a 3-band photo."""
+    """NIR band (0..1) on the DEM grid, or None for a photo without one (3 bands, or R, G, B + alpha)."""
+    if not has_nir():
+        return None
     x0 = T.c + pc0 * T.a; x1 = T.c + pc1 * T.a; y1 = T.f + pr0 * T.e; y0 = T.f + pr1 * T.e
     with rasterio.open(C.IMAGERY) as ds:
-        if ds.count < 4:
-            return None
         a = ds.read(4, window=from_bounds(x0, y0, x1, y1, transform=ds.transform), out_shape=(pr1 - pr0, pc1 - pc0),
                     resampling=Resampling.average, boundless=True, fill_value=0)
     return a.astype(np.float32) / 255.0
