@@ -159,7 +159,9 @@ classify, vectorize, export and the first backdrop (it downloads a 5 km photo; s
 ```
 
 Put the shift in `[imagery] shift` (metres east, north) when the quarters agree, then rebuild from `register`
-(and redraft, §4, if the features were drafted from the photo). Westmount: 0.25 m south; Brambles: 0.75 m east;
+(and redraft, §4, if the features were drafted from the photo). The printed `shift = [...]` line is the shift the
+registered photo already carries plus the measurement, so it stays right when you measure again; a `!!` line says
+when course.toml's shift has changed since `register` last ran. Westmount: 0.25 m south; Brambles: 0.75 m east;
 Whistle Bear: 0.25 m east.
 
 **Checkpoint:** `build_all.py` ends without error; `measure_registration.py` shows no shift beyond a pixel.

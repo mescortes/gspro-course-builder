@@ -36,10 +36,23 @@ def best_shift(a, b, mask_win):
     return best[0], best[1], best[2], s0
 
 
+def applied_shift(raw=None, registered=None, fallback=None):
+    """The shift (m, +E/+N) the registered photo on disk carries: its origin minus the raw photo's, as
+    register_imagery.py writes it. That photo is the one measured, so the new shift adds the measurement to this one:
+    course.toml's [imagery] shift differs from it when the shift was changed after build_all.py register ran, and adding
+    to it counted the measurement twice. `fallback` (course.toml's shift) when either photo is missing."""
+    from pathlib import Path
+    raw, registered = Path(raw or C.IMAGERY_RAW), Path(registered or C.IMAGERY)
+    if not (raw.exists() and registered.exists()):
+        return tuple(C.IMAGERY_SHIFT if fallback is None else fallback)
+    with rasterio.open(registered) as d, rasterio.open(raw) as s:
+        return (round(d.transform.c - s.transform.c, 3), round(d.transform.f - s.transform.f, 3))
+
+
 def bunker_shift(A, core, shift):
     """(report lines, the new [imagery] shift or None) from the per-bunker offsets A (x, y, dx, dy, score rows). The
-    photo measured is the registered one, so the new shift is the course's current one plus the median offset. Fewer
-    than MIN_BUNKERS bunkers used to crash (IndexError) instead of saying so."""
+    photo measured is the registered one, so the new shift is the one it carries (applied_shift) plus the median
+    offset. Fewer than MIN_BUNKERS bunkers used to crash (IndexError) instead of saying so."""
     if len(A) < MIN_BUNKERS:
         return [f"!! {len(A)} bunker(s) pass the sand and hollow tests, {MIN_BUNKERS} are needed for a photo shift: if "
                 "the sand is not the usual tan (white, grey), set course.toml [tuning.sand] (the bunker sand colour rule, "
@@ -59,7 +72,7 @@ def bunker_shift(A, core, shift):
     stats(A[:, 0] < cx, "west")
     stats(A[:, 0] >= cx, "east")
     new = (round(shift[0] + float(np.median(A[:, 2])), 2), round(shift[1] + float(np.median(A[:, 3])), 2))
-    lines.append(f"shift = [{new[0]:.2f}, {new[1]:.2f}]  # course.toml [imagery]: the current shift "
+    lines.append(f"shift = [{new[0]:.2f}, {new[1]:.2f}]  # course.toml [imagery]: the registered photo's shift "
                  f"[{shift[0]:.2f}, {shift[1]:.2f}] plus this measurement; then rebuild (build_all.py register)")
     return lines, new
 
@@ -92,7 +105,13 @@ def main():
         out.append((c.x, c.y, dx * RES, -dy * RES, sc / max(s0, 1)))
     A = np.array(out).reshape(-1, 5)
     print(f"bunkers used: {len(A)}")
-    lines, _ = bunker_shift(A, C.CORE, C.IMAGERY_SHIFT)
+    shift = applied_shift()
+    if any(abs(a - b) > 1e-3 for a, b in zip(shift, C.IMAGERY_SHIFT)):
+        print(f"!! the registered photo ({C.IMAGERY.name}) carries shift [{shift[0]:.2f}, {shift[1]:.2f}], course.toml "
+              f"[imagery] shift is [{C.IMAGERY_SHIFT[0]:.2f}, {C.IMAGERY_SHIFT[1]:.2f}]: build_all.py register has not "
+              "run since the shift changed. This measures the registered photo, so the new shift below adds to its "
+              "shift; run build_all.py register (and the steps after it) to build with course.toml's")
+    lines, _ = bunker_shift(A, C.CORE, shift)
     for x in lines:
         print(x)
     np.save(C.BUILD / "registration_bunkers.npy", A)
