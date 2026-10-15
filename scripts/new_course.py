@@ -1,6 +1,6 @@
 """Start a new course: courses/<slug>/course.toml with the frame, extents and likely data sources filled in.
 
-  new_course.py <slug> "Course name" --region <region> (--osm way/123 [--osm way/456] | --bbox w,s,e,n) [--force]
+  new_course.py <slug> "Course name" --region <region> (--osm way/123 [--osm way/456] | --bbox=w,s,e,n) [--force]
 
 --osm names the course's OSM leisure=golf_course outline(s) (a practice area can be a second one); --bbox (lon/lat)
 stands in for a course OSM does not map. The region file's [scaffold] table gives the datum, the providers and the

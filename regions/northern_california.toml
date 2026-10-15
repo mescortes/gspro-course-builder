@@ -1,0 +1,252 @@
+# Northern California oak woodland and grassland (Brambles, Middletown, Lake County): warm-season zoysia tee to green,
+# dry summer rough and native meadow, valley / live oak and gray pine around it, chaparral on the slopes; leaf-on
+# summer photo (NAIP) and leaf-on LiDAR (USGS 3DEP). Values are first estimates, tuned on Brambles' first build.
+# A course.toml table of the same name overrides this file key by key.
+
+[region]
+name = "Northern California"
+
+# Turf colour of the glTF / viewer textures (sRGB): irrigated zoysia in summer; the rough is dry, golden native grass.
+[turf_tint]
+green = [100, 128, 70]
+fringe = [98, 122, 68]
+fairway = [108, 126, 70]
+tee = [106, 126, 72]
+semirough = [112, 120, 72]
+rough = [146, 136, 92]
+bunker = [208, 190, 154]
+
+# Oak-woodland archetypes: valley oak (big, broad, deciduous), live / blue oak (smaller, dense), gray pine (tall, narrow,
+# sparse grey-green needles), shrub (chamise / manzanita chaparral under 4.5 m). Leaf-on data: crown form decides.
+[trees]
+archetypes = ["valley_oak", "live_oak", "gray_pine", "shrub"]
+needles = { gray_pine = "pine" }
+classifier = "leaf_on_woodland"
+bark = { valley_oak = "jolcham_oak_bark_01", live_oak = "bark_brown_01", gray_pine = "pine_bark", shrub = "bark_brown_01" }
+backdrop = { kinds = ["live_oak", "valley_oak", "gray_pine"], share = [0.5, 0.35, 0.15], crown = [0.35, 0.8, 2.0, 9.0] }
+
+[trees.leaf_on_woodland]
+shrub_h = 4.5
+pine_min_h = 10.0
+pine_max_ratio = 0.22
+pine_min_pen = 0.35
+big_h = 12.0
+names = { shrub = "shrub", pine = "gray_pine", big = "valley_oak", other = "live_oak" }
+
+[trees.shapes.valley_oak]
+H = 16.0
+R = 9.0
+crown = ["ellipsoid", 0.24, 1.0]
+trunk = 0.22
+attract = 1100
+seg = 0.5
+infl = 3.8
+kill = 0.95
+tropism = [0, 0.06, 0]
+tip_r = 0.012
+exp = 2.05
+cards = 1100
+card = [1.3, 2.0]
+lean = 0.12
+nsides = 10
+up_bias = 0.65
+trunk_r = 0.38
+clumps = 18
+clump_sd = 0.24
+
+[trees.shapes.live_oak]
+H = 9.0
+R = 5.0
+crown = ["ellipsoid", 0.15, 1.0]
+trunk = 0.15
+attract = 1100
+seg = 0.45
+infl = 3.6
+kill = 0.9
+tropism = [0, 0.18, 0]
+tip_r = 0.012
+exp = 2.05
+cards = 1150
+card = [1.3, 1.9]
+lean = 0.1
+nsides = 10
+up_bias = 0.6
+trunk_r = 0.34
+clumps = 24
+clump_sd = 0.27
+
+[trees.shapes.gray_pine]
+H = 16.0
+R = 4.0
+crown = ["irregular", 0.45, 1.0]
+trunk = 0.42
+attract = 700
+seg = 0.55
+infl = 5.0
+kill = 0.9
+tropism = [0, 0.12, 0]
+tip_r = 0.014
+exp = 2.05
+cards = 600
+card = [1.5, 2.2]
+lean = 0.12
+nsides = 9
+clumps = 11
+clump_sd = 0.14
+up_bias = 0.7
+trunk_r = 0.36
+tip_depth = 3
+
+[trees.shapes.shrub]
+H = 2.6
+R = 1.8
+crown = ["ellipsoid", 0.05, 1.0]
+trunk = 0.05
+attract = 260
+seg = 0.25
+infl = 1.5
+kill = 0.4
+tropism = [0, 0.1, 0]
+tip_r = 0.008
+exp = 2.1
+cards = 260
+card = [0.8, 1.2]
+lean = 0.0
+nsides = 6
+up_bias = 0.5
+trunk_r = 0.06
+
+# Leaf cards: olive summer oak leaves; gray pine as procedural needle cards (src "", [trees] needles).
+[foliage.valley_oak]
+src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg"
+hsv = [0.21, 0.42, 0.34]
+n = 300
+scale = [0.05, 0.075]
+twig = [72, 60, 48]
+alt = [[[0.19, 0.38, 0.4], 0.2]]
+
+[foliage.live_oak]
+src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg"
+hsv = [0.24, 0.48, 0.24]
+n = 260
+scale = [0.04, 0.06]
+twig = [95, 82, 66]
+alt = [[[0.22, 0.42, 0.3], 0.15]]
+
+[foliage.gray_pine]
+src = ""
+hsv = [0.27, 0.22, 0.42]
+n = 0
+scale = [0, 0]
+twig = [92, 74, 58]
+alt = []
+
+[foliage.shrub]
+src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg"
+hsv = [0.2, 0.36, 0.3]
+n = 380
+scale = [0.035, 0.055]
+twig = [80, 70, 55]
+alt = [[[0.16, 0.3, 0.38], 0.2]]
+
+[grass]
+about = "3D grass settings per OPCD surface. 3dg = Stix Games DirectX 11 Grass Shader material settings to start from (estimates, tune in Unity); viewer = our three.js preview. Masks: FBX colour layer 'Col' (R = grass type 1 density, G = grass type 2 / dry, B = 0) for 3DG 'Vertex density' mode."
+
+[grass.3dg.common]
+"Density Mode" = "Vertex density"
+"Grass Types" = "2 textures (type 1 = green blades, type 2 = dry blades)"
+layer = "600m cull"
+"Density Falloff Start" = 12.0
+"Grass Fade End" = 90.0
+"Lighting Mode" = "Default PBR"
+notes = "Target Density: smaller number = denser grass (Stix docs)"
+
+[grass.3dg.SemiRough]
+blade_height_m = [0.025, 0.045]
+blade_width_m = 0.006
+relative_density = 1.0
+
+[grass.3dg.Rough]
+blade_height_m = [0.045, 0.085]
+blade_width_m = 0.007
+relative_density = 0.9
+
+[grass.3dg.DeepRough]
+blade_height_m = [0.12, 0.32]
+blade_width_m = 0.008
+relative_density = 0.55
+
+[grass.viewer]
+radius_m = 55
+full_density_m = 22
+far_density = 0.18
+tile_m = 6
+max_instances = 400000
+
+[grass.viewer.wind]
+strength = 0.35
+speed = 1.0
+
+[grass.viewer.surfaces.SemiRough]
+height = [0.03, 0.05]
+width = 0.008
+density = 45
+blades = 8
+colour_tip = [1.06, 1.1, 1.02]
+dry = 0.0
+
+[grass.viewer.surfaces.Rough]
+height = [0.05, 0.09]
+width = 0.009
+density = 40
+blades = 9
+colour_tip = [1.07, 1.12, 1.02]
+dry = 0.25
+
+[grass.viewer.surfaces.DeepRough]
+height = [0.14, 0.32]
+width = 0.01
+density = 14
+blades = 9
+colour_tip = [1.22, 1.12, 0.84]
+dry = 0.6
+
+[grass.viewer.surfaces.Pinestraw]
+height = [0.22, 0.45]
+width = 0.008
+density = 7
+blades = 10
+colour_tip = [1.22, 1.12, 0.82]
+dry = 0.75
+
+# Wall tints (on the white stucco texture: warm white, beige and tan stucco, grey, wood brown, barn red), backdrop roofs
+# (grey metal, brown, terracotta), US parking stalls (9 x 18 ft, 24 ft aisle), more SUVs and pickups.
+[buildings]
+wall_palette = [[0.97, 0.93, 0.84], [0.9, 0.84, 0.72], [0.82, 0.74, 0.6], [0.74, 0.72, 0.68], [0.55, 0.4, 0.3], [0.45, 0.22, 0.18]]
+roof_palette = [[0.42, 0.43, 0.44], [0.3, 0.27, 0.24], [0.55, 0.33, 0.24], [0.5, 0.48, 0.44]]
+parking_stall = [2.74, 5.49, 7.3]
+suv_share = 0.55
+
+# Summer photo: no grading (the hills stay golden).
+[backdrop]
+summer_grade = false
+summer_green = [120, 116, 70]
+ndvi = [0.08, 0.22]
+
+[materials]
+deeprough = "forest_leaves_02"
+native = "withered_grass"
+
+[viewer]
+species_tint = { valley_oak = [0.95, 0.96, 0.82], live_oak = [0.78, 0.86, 0.8], gray_pine = [0.88, 0.94, 0.92], shrub = [0.95, 0.94, 0.84] }
+sky = [[0.0, "#3a78c0"], [0.3, "#6aa0d6"], [0.45, "#b2cde4"], [0.5, "#e2e4de"], [0.53, "#cfc29a"], [1.0, "#9a8a5a"]]
+
+# new_course.py: NAD83(2011) UTM, NAVD88 heights, USGS 3DEP LiDAR and 1 m DEM, NAIP 2024 (pinned: the USDA service
+# keeps only the latest year per state).
+[scaffold]
+datum = "NAD83(2011)"
+vertical = "NAVD88"
+imagery_res = 0.6
+lidar = { provider = "usgs_3dep" }
+backdrop = { provider = "cog_dem" }
+imagery = { provider = "arcgis_imageserver", url = "https://apps.geo.fpac.usda.gov/geo-imagery/rest/services/naip/conus_naip/ImageServer", mosaic_rule = { mosaicMethod = "esriMosaicNorthwest", where = "Name LIKE 'm%2024____'" }, bands = [0, 1, 2, 3], max_chunk_m = 1500.0 }

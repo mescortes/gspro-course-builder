@@ -198,12 +198,13 @@ RATINGS = {t: (*r.get("men", (None, None)), *r.get("women", (None, None)), r.get
 
 # LiDAR tree archetypes (detect_trees.assign_archetypes)
 TREE_ARCHETYPES = tuple(REGION.get("trees", {}).get("archetypes", ("maple", "oak", "pine", "spruce", "shrub")))
-PARKING = tuple(_T.get("structures", {}).get("parking", ()))
+PARKING = tuple(_T.get("structures", {}).get("parking", ()))  # OSM amenity=parking ids that get parked cars
 _osm = _T.get("osm", {})
 _osm_ref = lambda s: (s.partition("/")[0], int(s.partition("/")[2]))   # "way/152133739" -> ("way", 152133739)
 OSM_OUTLINE = tuple(_osm_ref(s) for s in _osm.get("outline", ()))  # the course's leisure=golf_course outline(s)
 OSM_EXCLUDE = {_osm_ref(s) for s in _osm.get("exclude", ())}       # OSM elements left out (a disused runway ...)
-DATA_SOURCES = _T.get("sources", {})  # [sources.lidar], [sources.imagery], [sources.backdrop]: scripts/sources  # OSM amenity=parking ids that get parked cars
+DATA_SOURCES = _T.get("sources", {})  # [sources.lidar], [sources.imagery], [sources.backdrop]: scripts/sources
+DRAFT = _T.get("draft", {})  # draft_features.py thresholds (sections turf, green, tee, sand, water, outline)
 
 
 def to_model(e, n, h):
