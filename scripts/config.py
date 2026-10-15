@@ -358,41 +358,58 @@ def lidar_tile_frame(f):
         out["notes"].append((why != "not given", f"CRS {why}: read as {CRS} ({toml} [frame] crs), not checked; {fix}"))
         return out
     frame = _CRS(CRS)
-    hc = tc.sub_crs_list[0] if tc.is_compound else tc
-    v = tc.sub_crs_list[1] if tc.is_compound and len(tc.sub_crs_list) > 1 else None
-    if v is None and 1024 <= keys.get(4096, 0) <= 32766:   # the vertical GeoTIFF key, which laspy leaves out
+    # A WKT1 TOWGS84 clause binds a CRS to WGS 84 (a BoundCRS: no EPSG code, not equal to the frame): the CRS it binds
+    # is compared with the frame; a transformation keeps the clause (the shift the tile's writer gives)
+    unbind = lambda c: c.source_crs if c is not None and c.is_bound else c
+    bound = tc.sub_crs_list[0] if tc.is_compound else tc
+    hc = unbind(bound)
+    v = unbind(tc.sub_crs_list[1]) if tc.is_compound and len(tc.sub_crs_list) > 1 else None
+    vkey = None   # the vertical GeoTIFF key (4096), which laspy leaves out; only a vertical CRS counts
+    if v is None and 1024 <= keys.get(4096, 0) <= 32766:
         try:
-            v = _CRS.from_epsg(keys[4096])
+            vkey = _CRS.from_epsg(keys[4096])
         except CRSError:
             pass
+        vkey = vkey if vkey is not None and vkey.is_vertical and vkey.axis_info else None
     code = hc.to_epsg()
     in_frame = hc.equals(frame, ignore_axis_order=True) or (code is not None and code == frame.to_epsg())
     ellipsoidal = len(hc.axis_info) > 2     # a 3D CRS: heights above the ellipsoid
-    # the height unit: the vertical CRS's, a 3D CRS's third axis, the GeoTIFF height-unit key; with none of them, a
-    # projected CRS's horizontal unit (US tiles in feet have their heights in feet)
+    # the height unit: a compound CRS record's vertical CRS, a 3D CRS's third axis, the GeoTIFF height-unit key (4099),
+    # which gives the unit over the vertical key's CRS (GeoTIFF / GDAL: older USGS tiles name NAVD88 height, a metre
+    # CRS, with heights in US survey feet), the vertical key's CRS; with none of them, a projected CRS's horizontal
+    # unit (US tiles in feet have their heights in feet)
     units = {u.code: u for u in get_units_map(auth_name="EPSG", category="linear").values()}
-    zf, zu, guessed = 1.0, "metre", False
+    unit_key = units.get(str(keys.get(4099)))
+    zf, zu, guessed, over = 1.0, "metre", False, ""
     if v is not None and v.axis_info:
         zf, zu = v.axis_info[0].unit_conversion_factor, v.axis_info[0].unit_name
     elif ellipsoidal:
         zf, zu = hc.axis_info[2].unit_conversion_factor, hc.axis_info[2].unit_name
-    elif str(keys.get(4099)) in units:
-        zf, zu = units[str(keys[4099])].conv_factor, units[str(keys[4099])].name
+    elif unit_key is not None:
+        zf, zu = unit_key.conv_factor, unit_key.name
+        if vkey is not None and not math.isclose(vkey.axis_info[0].unit_conversion_factor, zf):
+            over = (f"its GeoTIFF height-unit key (4099) gives {zu}, over the {vkey.axis_info[0].unit_name} of "
+                    f"{vkey.name!r}")
+    elif vkey is not None:
+        zf, zu = vkey.axis_info[0].unit_conversion_factor, vkey.axis_info[0].unit_name
     elif hc.is_projected and hc.axis_info[0].unit_conversion_factor != 1.0:
         zf, zu, guessed = hc.axis_info[0].unit_conversion_factor, hc.axis_info[0].unit_name, True
+    v = v if v is not None else vkey
     label = tc.name if v is None or tc.is_compound else f"{tc.name} + {v.name}"
     vcode = v.to_epsg() if v is not None else None
     codes = f" (EPSG:{code}{f'+{vcode}' if vcode else ''})" if code else ""
     note = _datum_note(v, ellipsoidal)
     if in_frame and zf == 1.0:
         out["how"] = "frame"
-        out["notes"] += [(True, note)] if note else []
+        out["notes"] += ([(False, f"in the course frame, heights read in {zu}: {over}")] if over else []) + \
+            ([(True, note)] if note else [])
         return out
-    tr = None
+    tr, shift = None, None
     if not in_frame:
         fix = f"if the record is wrong, set [lidar] crs in {toml} to the tiles' CRS (the project's metadata names it)"
+        src = bound.to_2d() if ellipsoidal else bound
         try:
-            tr = Transformer.from_crs(hc.to_2d() if ellipsoidal else hc, frame, always_xy=True)
+            tr = Transformer.from_crs(src, frame, always_xy=True)
             b = tr.transform_bounds(*box, densify_pts=21)
         except (CRSError, ProjError) as e:
             out["problem"] = f"in {label!r}{codes}: pyproj cannot transform it to the course frame {CRS} ({e}); {fix}"
@@ -402,14 +419,90 @@ def lidar_tile_frame(f):
                               f"{label!r}{codes} projects to the course frame {CRS}; {fix}")
             return out
         out["bounds"] = tuple(b)
-    heights = f"heights {zu} -> metres" if zf != 1.0 else ""
+        shift = _datum_shift_note(src, frame, tr, box)
+    heights = f"heights {zu} -> metres" if zf != 1.0 else f"heights in {zu}" if over else ""
+    heights += f"; {over}" if over else ""
     if guessed:
+        vert = _metre_vertical(VERTICAL_DATUM)
         heights += (f"; it names no vertical CRS, so its heights are taken in {zu} like its horizontal axes: if they "
-                    f"are metres, set [lidar] crs = \"EPSG:{code or '<horizontal>'}+<vertical>\" in {toml}")
+                    f"are metres, set [lidar] crs = \"EPSG:{code or '<horizontal>'}+{vert or '<vertical>'}\" in {toml}"
+                    + ("" if vert else " (<vertical>: the EPSG code of the vertical CRS of its metre heights, which "
+                       "the project's metadata names; 5703 for NAVD88 height)"))
     what = (f"in {label!r}{codes}, reprojected to {CRS} when read" + (f" ({heights})" if heights else "")
-            if tr is not None else f"in the course frame, {heights}: converted when read")
-    out.update(how="reproject", transform=_to_frame(tr, zf), notes=[(guessed, what)] + ([(True, note)] if note else []))
+            if tr is not None else f"in the course frame, converted when read ({heights})")
+    out.update(how="reproject", transform=_to_frame(tr, zf),
+               notes=[(guessed, what)] + ([shift] if shift else []) + ([(True, note)] if note else []))
     return out
+
+
+def _metre_vertical(name):
+    """EPSG code of the metre heights on the vertical datum `name` (the region's [scaffold] vertical: NAVD88 -> 5703,
+    CGVD2013 -> 6647; an EPSG code as it is), or None."""
+    from pyproj import CRS as _CRS
+    from pyproj.exceptions import CRSError
+    for s in (name, f"{name} height") if name else ():
+        try:
+            c = _CRS(s)
+        except CRSError:
+            continue
+        if c.is_vertical and c.axis_info and c.axis_info[0].unit_conversion_factor == 1.0 and c.to_epsg():
+            return c.to_epsg()
+    return None
+
+
+_SHIFTS = {}   # (tile CRS, frame, limit) -> _datum_shift_note: the tiles of a project share it
+
+
+def _datum_shift_note(src, frame, tr, box):
+    """(attention, text) on the horizontal datum change from the tile's CRS src to the frame, None when src is on the
+    frame's datum (a conversion: exact). PROJ runs offline, with the grids it has: without them it may pick a shift good
+    to metres (NAD83 (1986) to NAD83(2011): a null shift good to 6 m, the real one about 1 m in California). The note
+    names the operation and its accuracy, flagged when that is unknown or worse than [tuning] lidar_datum_shift_warn_m,
+    with the grids a better one needs."""
+    import warnings
+    from pyproj import Transformer
+    from pyproj.aoi import AreaOfInterest
+    from pyproj.exceptions import ProjError
+    from pyproj.transformer import TransformerGroup
+    a, b = src.geodetic_crs, frame.geodetic_crs
+    if a is None or b is None or a.datum == b.datum:
+        return None
+    limit = tuning("lidar_datum_shift_warn_m", 0.1)
+    key = (src.srs, frame.srs, limit)
+    if key in _SHIFTS:
+        return _SHIFTS[key]
+    cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+    try:   # with several candidates, PROJ picks one per point: the one it used at the tile's centre
+        tr.transform(cx, cy)
+        op = tr.get_last_used_operation()
+    except ProjError:
+        op = tr
+    acc = op.accuracy
+    flag = acc < 0 or acc > limit
+    how = repr(op.description) if op is not tr or "unavailable" not in tr.description else "one of several operations"
+    text = (f"horizontal datum {a.datum.name}, the frame's {b.datum.name}: PROJ shifts it with {how} "
+            f"({f'accurate to {acc:g} m' if acc >= 0 else 'accuracy unknown'})")
+    if flag:
+        grids = []
+        try:
+            lon, lat = Transformer.from_crs(src, a, always_xy=True).transform(cx, cy)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")   # "Best transformation is not available": the note says it
+                g = TransformerGroup(src, frame, always_xy=True, area_of_interest=AreaOfInterest(lon, lat, lon, lat))
+            if not g.best_available and g.unavailable_operations:
+                grids = [x.short_name for x in g.unavailable_operations[0].grids if not x.available]
+        except (ProjError, ValueError):
+            pass
+        text += (f", so the LiDAR may sit {f'up to {acc:g} m' if acc >= 0 else 'an unknown distance'} from where the "
+                 "frame's other sources (OSM, the backdrop DEM) put the same ground; the photo is registered onto the "
+                 "LiDAR either way. " + (
+                     f"PROJ lacks the grid{'s' * (len(grids) > 1)} of a better shift ({', '.join(grids)}): fetch "
+                     f"{'each' if len(grids) > 1 else 'it'} once with .venv/bin/pyproj sync --file <name> and rebuild "
+                     "(or build with PROJ_NETWORK=ON: PROJ then fetches what it needs from cdn.proj.org)"
+                     if grids else "PROJ knows no better shift between these datums") +
+                 f" (flagged above [tuning] lidar_datum_shift_warn_m = {limit:g} m)")
+    _SHIFTS[key] = (flag, text)
+    return _SHIFTS[key]
 
 
 def _to_frame(tr, zf):

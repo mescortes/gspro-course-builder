@@ -81,10 +81,12 @@ course and what changed on the course since the LiDAR was flown.
 It writes `courses/<slug>/course.toml`: the frame (UTM CRS from the region's datum, origin, base height, build extent
 CORE = outline + 100 m in 256 m tiles, the 2048 m GSPro terrain square) and the likely `[sources]`. `--crs EPSG:<code>`
 sets another frame, such as the national metre grid the LiDAR is delivered in. It is written as its EPSG code. A
-compound CRS, Web Mercator, or a grid whose metres are more than 0.5 % off ground metres at the course is refused
+compound CRS, Web Mercator, a grid in feet (the frame is in metres; LiDAR in State Plane feet is reprojected as it is
+read, section 3), or a grid whose metres are more than 0.5 % off ground metres at the course is refused
 (`new_course.py` MAX_SCALE_ERROR: yardages would be off by as much). With `nrcan_copc`
 the frame must be a UTM zone (NRCan names its tiles by zone): near a zone boundary, `--crs` the neighbouring zone's EPSG
-code if the project is delivered in that zone.
+code if the project is delivered in that zone. When it finds no tiles, `new_course.py` names that code: for a course in
+zone 17 near 78 W, `--crs EPSG:2959` (NAD83(CSRS) / UTM zone 18N).
 
 **A region** (`regions/<name>.toml`) holds what is true of a whole area: tree archetypes and the rules that sort LiDAR
 crowns into them, foliage cards, 3D grass, the turf colour target, building palettes, backdrop vegetation, viewer sky,
@@ -160,7 +162,14 @@ allow it in course.toml. These keys only accept or refuse a fetch, so changing o
 **LiDAR in another CRS.** Tiles need not be in the course frame (`[frame] crs`): a project in State Plane feet (many
 California 3DEP projects, e.g. NAD83(2011) / California zone 2 (ftUS) + NAVD88 height (ftUS)) or in the neighbouring
 UTM zone is reprojected as it is read, heights converted to metres. check_course's data section lists which tiles are
-reprojected and from what. The engine converts height units, not vertical datums: heights on another datum than the
+reprojected and from what. The heights' unit is the vertical CRS's; in GeoTIFF keys (LAS 1.2 tiles) the height-unit key
+(4099) wins over the vertical CRS key (4096), as in GDAL: older USGS tiles name NAVD88 height (metres) with heights in
+US survey feet, and the note says so. A tile in feet that names no vertical CRS has its heights taken in feet too
+(flagged `!!`, with the `[lidar] crs` to set if they are metres). A tile on another horizontal datum than the frame
+(NAD83 (1986) tiles in a NAD83(2011) frame) is shifted with what PROJ has offline, often a null shift good only to
+metres: the note names the operation and its accuracy, flagged (`!!`) when that is unknown or worse than
+`[tuning] lidar_datum_shift_warn_m` (0.1 m), with the PROJ grids a better shift needs (`.venv/bin/pyproj sync --file
+<name>`, then rebuild). The engine converts height units, not vertical datums: heights on another datum than the
 region's `[scaffold] vertical` are read as they are and flagged (`!!`). A tile whose header names no CRS is read as the
 frame, as is one whose CRS record cannot be read (flagged `!!`); for those, or for tiles whose header names a wrong
 CRS, give the project's CRS in course.toml:
@@ -226,6 +235,7 @@ one). A mistyped key or a value that is not a number stops `check_course.py` wit
 | `[tuning.road_half_width]` `<highway class> = m` | motorway 7 ... service 3, track 1.5 | Road surfaces too narrow or too wide; add a class, or `0` drops one. Inside the course a `highway=track` becomes a 2.8 m cart path: `track = 0` when OSM's tracks there are grass maintenance routes. |
 | `[tuning] lidar_vegetation_classes` | `[1, 3, 4, 5]` | The ASPRS classes of the tree returns (the trees step stops when most crowns have none, listing the classes found). |
 | `[tuning] lidar_vegetation_min_share` | 0.5 | That stop: the share of crowns that must hold 8 vegetation returns; `0` for sparse LiDAR whose classes are right. |
+| `[tuning] lidar_datum_shift_warn_m` | 0.1 | LiDAR on another horizontal datum than the frame: the accuracy of PROJ's shift above which (or unknown) check_course and the rasters step flag it (section 3). |
 | `[tuning] backdrop_datum_warn_m`, `backdrop_datum_max_m` | 0.3, 3 | The backdrop DEM's height offset from the LiDAR round the course: a warning, then a stop. The fix is `[sources.backdrop] z_offset` (the value the message gives); raise the stop only for a real step (a cliff or a quarry at the edge). |
 
 **Checkpoint:** `build_all.py` ends without error; `measure_registration.py` shows no shift beyond a pixel.

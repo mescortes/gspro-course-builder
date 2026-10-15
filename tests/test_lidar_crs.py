@@ -16,12 +16,13 @@ SAC = (630000.0, 4270000.0)      # EPSG:6339 (NAD83(2011) / UTM zone 10N), in Ca
 ZONE_EDGE = (720000.0, 4900000.0)  # EPSG:2958 (NAD83(CSRS) / UTM zone 17N), 2 deg from the zone 18 edge
 
 
-def _geokeys(projected=None, geographic=None, vertical_units=None):
-    """A GeoTIFF key directory (LAS 1.2 tiles): model type, projected / geographic EPSG code, height unit (4099)."""
+def _geokeys(projected=None, geographic=None, vertical_units=None, vertical=None):
+    """A GeoTIFF key directory (LAS 1.2 tiles): model type, projected / geographic EPSG code, vertical CRS (4096),
+    height unit (4099)."""
     from laspy.vlrs.known import GeoKeyDirectoryVlr, GeoKeyEntryStruct
     keys = [GeoKeyEntryStruct(1024, 0, 1, 1 if projected else 2)]
     keys += [GeoKeyEntryStruct(k, 0, 1, v)
-             for k, v in ((2048, geographic), (3072, projected), (4099, vertical_units)) if v]
+             for k, v in ((2048, geographic), (3072, projected), (4096, vertical), (4099, vertical_units)) if v]
     d = GeoKeyDirectoryVlr()
     d.geo_keys_header.number_of_keys = len(keys)
     d.geo_keys = keys
@@ -91,6 +92,12 @@ CASES = {  # frame, the tiles' CRS, how the CRS is stored
         "EPSG:6339", SAC, "EPSG:6418+6360", dict(version="1.2", keys=_geokeys(6418, vertical_units=9003))),
     "neighbouring UTM zone (GeoTIFF keys)": ("EPSG:2958", ZONE_EDGE, "EPSG:2959", dict(version="1.2")),
     "the frame with heights in ftUS": ("EPSG:6339", SAC, "EPSG:6339+6360", dict()),
+    # older USGS LAS 1.2 deliveries: the vertical key names NAVD88 height (a metre CRS), the height-unit key US survey
+    # feet, and the heights are feet (GeoTIFF / GDAL: the unit key gives the unit)
+    "state plane ftUS, GeoTIFF keys NAVD88 height + the height unit ftUS": (
+        "EPSG:6339", SAC, "EPSG:6418+6360", dict(version="1.2", keys=_geokeys(6418, vertical=5703, vertical_units=9003))),
+    "the frame in GeoTIFF keys, NAVD88 height + the height unit ftUS": (
+        "EPSG:6339", SAC, "EPSG:6339+6360", dict(version="1.2", keys=_geokeys(6339, vertical=5703, vertical_units=9003))),
 }
 
 
@@ -112,6 +119,86 @@ def test_tiles_in_another_crs_are_reprojected_into_the_frame(tmp_path, monkeypat
     assert np.array_equal(np.isfinite(got[3]), fin) and np.abs(got[3][fin] - ref[3][fin]).max() < 0.003   # DSM
     assert len(notes) == 1 and "other.las" in notes[0], notes                       # said once
     assert "reprojected" in notes[0] or "converted" in notes[0], notes
+
+
+def test_the_height_unit_key_gives_the_unit_and_a_stray_vertical_key_is_ignored(tmp_path, monkeypatch):
+    """GeoTIFF keys 4096 = NAVD88 height (metres) with 4099 = US survey foot gave metre heights (3.28 times too high
+    rasters, then build_backdrop blamed the backdrop DEM): the height-unit key gives the unit, and the note says it
+    overrides the vertical CRS's. A 4096 that is no vertical CRS (4326) made the degree the height unit."""
+    monkeypatch.setattr(C, "CRS", "EPSG:6339"); monkeypatch.setattr(C, "VERTICAL_DATUM", "NAVD88")
+    x, y, z, cls, _ = _ground_and_trees(*SAC)
+    feet = _tile(tmp_path / "feet.las", x, y, z, "EPSG:6339+6360", version="1.2", cls=cls,
+                 keys=_geokeys(6339, vertical=5703, vertical_units=9003))
+    stray = _tile(tmp_path / "stray.las", x, y, z, "EPSG:6339", version="1.2", cls=cls,
+                  keys=_geokeys(6339, vertical=4326))
+    fr, st = C.lidar_tile_frames([feet, stray])
+    assert fr["how"] == "reproject" and abs(fr["transform"](0.0, 0.0, 100.0)[2] - 30.48006) < 1e-4
+    (a, text), = fr["notes"]          # NAVD88 height is the course's datum: no datum note
+    assert not a and "US survey foot -> metres" in text and "4099" in text and "NAVD88 height" in text, text
+    assert st["how"] == "frame" and st["transform"] is None and st["notes"] == [], st
+
+
+def test_a_horizontal_datum_shift_says_what_proj_does_and_how_well(tmp_path, monkeypatch):
+    """Tiles labelled NAD83 (1986), read into a NAD83(2011) frame: PROJ, offline and without its grids, picks a null
+    shift good to 6 m (the real shift is about 1 m there), and the note only said 'reprojected'. Tiles on the frame's
+    datum (State Plane feet, the neighbouring zone) get no such note."""
+    monkeypatch.setattr(C, "CRS", "EPSG:6339"); monkeypatch.setattr(C, "VERTICAL_DATUM", "NAVD88")
+    x, y, z, cls, _ = _ground_and_trees(*SAC)
+    old = _tile(tmp_path / "old.las", x, y, z, "EPSG:2226+6360", cls=cls)
+    same = _tile(tmp_path / "same.las", x, y, z, "EPSG:6418+6360", cls=cls)
+    notes = C.lidar_crs_notes(C.lidar_tile_frames([old, same]))
+    att = [t for a, t in notes if a]
+    assert len(att) == 1 and "old.las" in att[0], notes
+    t = att[0]
+    assert "North American Datum 1983" in t and "2011" in t and "NAD83 to WGS 84" in t and "6 m" in t, t
+    assert "nadcon5" in t and "pyproj sync" in t and "PROJ_NETWORK=ON" in t, t
+    assert "lidar_datum_shift_warn_m" in t, t
+    assert not any("same.las" in t for a, t in notes if a), notes
+    monkeypatch.setattr(C, "tuning", lambda k, d: 10.0 if k == "lidar_datum_shift_warn_m" else d)
+    notes = C.lidar_crs_notes(C.lidar_tile_frames([old]))
+    assert any("NAD83 to WGS 84" in t and not a for a, t in notes), notes   # within the limit: said, not flagged
+
+
+def test_a_wkt_bound_to_wgs84_names_the_frame(tmp_path, monkeypatch):
+    """A WKT1 record of the frame with TOWGS84[0,0,0,0,0,0,0] parses as a BoundCRS: no EPSG code and not equal to the
+    frame, so tiles in the frame were reprojected and said to be 'in NAD83(CSRS) / UTM zone 17N, reprojected to
+    EPSG:2958'."""
+    from laspy.vlrs.known import WktCoordinateSystemVlr
+    from pyproj import CRS
+    import laspy
+    monkeypatch.setattr(C, "CRS", "EPSG:2958"); monkeypatch.setattr(C, "VERTICAL_DATUM", None)
+    x, y, z, cls, _ = _ground_and_trees(*ZONE_EDGE)
+    wkt = CRS("EPSG:2958").to_wkt("WKT1_GDAL")
+    wkt = wkt.replace('AUTHORITY["EPSG","7019"]]', 'AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0]', 1)
+    assert CRS(wkt).is_bound
+    t = _tile(tmp_path / "bound.las", x, y, z, frame="EPSG:2958", cls=cls)
+    las = laspy.read(t); las.header.vlrs.append(WktCoordinateSystemVlr(wkt)); las.write(t)
+    fr = C.lidar_tile_frames([t])[0]
+    assert fr["how"] == "frame" and fr["transform"] is None and fr["notes"] == [], fr
+    zone18 = CRS("EPSG:2959").to_wkt("WKT1_GDAL")   # the neighbouring zone, bound the same way: reprojected
+    zone18 = zone18.replace('AUTHORITY["EPSG","7019"]]', 'AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0]', 1)
+    from pyproj import Transformer
+    zx, zy = Transformer.from_crs("EPSG:2958", "EPSG:2959", always_xy=True).transform(x, y)
+    t = _tile(tmp_path / "bound18.las", zx, zy, z, frame="EPSG:2958", cls=cls)
+    las = laspy.read(t); las.header.vlrs.append(WktCoordinateSystemVlr(zone18)); las.write(t)
+    fr = C.lidar_tile_frames([t])[0]
+    (a, text), = fr["notes"]
+    assert fr["how"] == "reproject" and not a and "EPSG:2959" in text, fr["notes"]
+    gx, gy, _ = fr["transform"](zx[:5], zy[:5], z[:5])
+    assert np.abs(gx - x[:5]).max() < 1e-3 and np.abs(gy - y[:5]).max() < 1e-3
+
+
+def test_feet_heights_guessed_from_the_horizontal_unit_name_the_metre_alternative(tmp_path, monkeypatch):
+    """A State Plane feet tile with no vertical CRS: its heights are taken in feet, and the note asked for
+    [lidar] crs = "EPSG:6418+<vertical>" without saying what <vertical> is. The course's datum (NAVD88) names it."""
+    monkeypatch.setattr(C, "CRS", "EPSG:6339"); monkeypatch.setattr(C, "VERTICAL_DATUM", "NAVD88")
+    x, y, z, cls, _ = _ground_and_trees(*SAC)
+    t = _tile(tmp_path / "guess.las", x, y, z, "EPSG:6418", cls=cls)
+    (a, text), = C.lidar_tile_frames([t])[0]["notes"]
+    assert a and '[lidar] crs = "EPSG:6418+5703"' in text and "<vertical>" not in text, text
+    monkeypatch.setattr(C, "VERTICAL_DATUM", None)
+    (a, text), = C.lidar_tile_frames([t])[0]["notes"]
+    assert a and '"EPSG:6418+<vertical>"' in text and "vertical CRS" in text, text
 
 
 def test_tiles_in_the_frame_are_read_as_they_are(tmp_path, monkeypatch, capsys):
@@ -198,10 +285,11 @@ def test_heights_on_another_datum_are_reported(tmp_path, monkeypatch):
     navd = _tile(tmp_path / "navd.las", x, y, z, "EPSG:2958+5703", frame="EPSG:2958", cls=cls)
     ell = _tile(tmp_path / "ell.las", x, y, z, "EPSG:4979", frame="EPSG:2958", cls=cls, scale=(1e-7, 1e-7, 0.001))
     notes = C.lidar_crs_notes(C.lidar_tile_frames([same, navd, ell]))
-    assert len(notes) == 3, notes   # navd: datum; ell: reprojected + ellipsoidal heights
+    assert len(notes) == 4, notes   # navd: datum; ell: reprojected + WGS 84 shift + ellipsoidal heights
     att = [t for a, t in notes if a]
     assert any("navd.las" in t and "NAVD88" in t and "CGVD2013" in t and "[scaffold] vertical" in t for t in att), att
     assert any("ell.las" in t and "ellipsoid" in t for t in att), att
+    assert any("ell.las" in t and "horizontal datum World Geodetic System 1984" in t for t in att), att
     assert not any("cgvd.las" in t for _, t in notes)
 
 
@@ -300,3 +388,28 @@ def test_nrcan_tiles_are_searched_in_the_frames_utm_zone(monkeypatch, capsys):
     assert seen[-1][0] == 17 and seen[-1][1] > 500000 and t["sources"]["lidar"]["zone"] == 17
     with pytest.raises(SystemExit, match="UTM"):
         N.main(args + ["--crs", "EPSG:3161"])
+
+
+def test_new_course_names_the_metre_frame_and_the_neighbouring_zone(monkeypatch):
+    """A feet frame was refused with 'reproject the LiDAR to it' (the rasters step does that, and PDAL is not
+    installed); the NRCan messages said 'the neighbouring zone's EPSG code' without giving it."""
+    import new_course as N
+    with pytest.raises(SystemExit) as e:
+        N.check_frame_crs("EPSG:6418", -121.5, 38.6)
+    msg = str(e.value)
+    assert "reproject the LiDAR" not in msg and "reprojected as it is read" in msg and "EPSG:6339" in msg, msg
+    with pytest.raises(SystemExit, match="leave out --crs"):
+        N.check_frame_crs("EPSG:2227")
+    sc = {"datum": "NAD83(CSRS)", "lidar": {"provider": "nrcan_copc", "province": "ON"},
+          "backdrop": {"provider": "cog_dem", "url": "x"}}
+    fr = {"core": dict(xmin=0.0, ymin=0.0, xmax=256.0, ymax=256.0)}
+    monkeypatch.setattr(N, "nrcan_projects", lambda core, zone, province: [])
+    with pytest.raises(SystemExit) as e:   # zone 17, 0.05 deg from the zone 18 boundary
+        N.discover_sources(sc, fr, (-78.06, 44.0, -78.04, 44.02), "EPSG:2958", 17)
+    assert "--crs EPSG:2959" in str(e.value) and "UTM zone 18N" in str(e.value), str(e.value)
+    with pytest.raises(SystemExit) as e:   # framed in zone 18 already: the other side is zone 17
+        N.discover_sources(sc, fr, (-78.06, 44.0, -78.04, 44.02), "EPSG:2959", 18)
+    assert "--crs EPSG:2958" in str(e.value), str(e.value)
+    with pytest.raises(SystemExit) as e:   # a frame that is not a UTM zone: the course's own zone's code
+        N.discover_sources(sc, fr, (-80.5, 43.4, -80.4, 43.5), "EPSG:3161", None)
+    assert "EPSG:2958" in str(e.value), str(e.value)
