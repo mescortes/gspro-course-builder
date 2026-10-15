@@ -10,7 +10,9 @@ can be run by hand.
 ## 0. Setup (once)
 
 * Python 3.12 and [uv](https://github.com/astral-sh/uv); headless Blender 4.2 LTS for the FBX step (`BLENDER=` its
-  binary). About 15 GB of RAM at peak and 5-10 GB of disk per course.
+  binary; without it `build_all.py` looks on PATH, then in `/Applications/Blender.app` or the Windows installer's
+  folder). The build prints the Blender it uses, with a `!!` line when it is not 4.2. About 15 GB of RAM at peak and
+  5-10 GB of disk per course.
 * `uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements-lock.txt` (the exact
   packages of the golden Westmount build; `requirements.txt` lists the direct dependencies unpinned)
 * `COURSE= .venv/bin/python -m pytest -q tests --ignore=tests/test_course.py` must pass (no data needed).

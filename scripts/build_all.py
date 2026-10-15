@@ -1,5 +1,5 @@
 """Run the whole pipeline (or a sub-range of steps). Usage: build_all.py [first_step] [last_step] | --list"""
-import os, platform, shutil, subprocess, sys, time
+import os, platform, re, shutil, subprocess, sys, time
 from pathlib import Path
 S = Path(__file__).parent
 sys.path.insert(0, str(S)); import config as C
@@ -28,6 +28,9 @@ STEPS = [
 names = [n for n, _ in STEPS]
 
 
+BLENDER_LTS = "4.2"  # the Blender the FBX step is made and checked with (export_fbx_blender.py, glb_to_fbx_blender.py)
+
+
 def blender_defaults():
     """Where Blender installs itself when it is not on PATH: the macOS app bundle; on Windows the installer's folders,
     4.2 LTS first."""
@@ -35,8 +38,39 @@ def blender_defaults():
         return ("/Applications/Blender.app/Contents/MacOS/Blender",)
     if platform.system() == "Windows":
         found = sorted(map(str, Path("C:/Program Files/Blender Foundation").glob("Blender*/blender.exe")), reverse=True)
-        return tuple(sorted(found, key=lambda p: "Blender 4.2" not in p))
+        return tuple(sorted(found, key=lambda p: f"Blender {BLENDER_LTS}" not in p))
     return ()
+
+
+def blender_version(exe):
+    """Blender's version from where it is installed, without starting it (a sandboxed macOS shell crashes Blender at
+    start): the macOS app bundle's Info.plist, else a version in the folder names (Windows "Blender 4.2", the Linux
+    archive "blender-4.2.23-linux-x64", also through a symlink); None when neither says."""
+    import plistlib
+    for p in dict.fromkeys((Path(exe), Path(exe).resolve())):
+        app = next((d for d in p.parents if d.suffix == ".app"), None)
+        if app is not None:
+            try:
+                with open(app / "Contents/Info.plist", "rb") as f:
+                    return plistlib.load(f).get("CFBundleShortVersionString")
+            except (OSError, plistlib.InvalidFileException):
+                pass
+        m = re.search(r"blender[ _-]?(\d+\.\d+(?:\.\d+)?)", p.as_posix(), re.I)
+        if m:
+            return m.group(1)
+    return None
+
+
+def blender_note(exe):
+    """The line build_all.py prints about the Blender it uses: '!!' when it is not BLENDER_LTS."""
+    v = blender_version(exe)
+    if v is None:
+        return f"Blender: {exe} (version not known without starting it; the FBX step is made with {BLENDER_LTS} LTS)"
+    if v == BLENDER_LTS or v.startswith(BLENDER_LTS + "."):
+        return f"Blender {v}: {exe}"
+    return (f"!! Blender {v}: {exe}. The FBX step is made and checked with Blender {BLENDER_LTS} LTS; another version's "
+            f"FBX exporter can write different files: set BLENDER to a {BLENDER_LTS} LTS executable (blender.org "
+            f"download archive; tools/setup_linux.sh installs one on Linux)")
 
 
 def step_range(args):
@@ -79,6 +113,8 @@ def main(argv=None):
                      "/Applications/Blender.app/Contents/MacOS/Blender), or build without it: "
                      "build_all.py register prefabs, then build_all.py maps views")
     print(f"course {C.SLUG} ({C.COURSE_NAME}), profile {C.PROFILE}", flush=True)
+    if blender is not None:
+        print(blender_note(blender), flush=True)
     for n, script in STEPS[a:b + 1]:
         if script is None:
             t = time.time(); print(f"== {n}", flush=True)

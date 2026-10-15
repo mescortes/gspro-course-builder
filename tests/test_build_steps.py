@@ -44,6 +44,42 @@ def test_a_missing_blender_stops_the_build_before_the_first_step(monkeypatch, tm
     assert [Path(c[1]).name for c in runs] == ["make_maps.py", "make_views.py"]
 
 
+def _fake_blender_app(tmp_path, version):
+    import plistlib
+    app = tmp_path / "Blender.app/Contents"
+    (app / "MacOS").mkdir(parents=True)
+    exe = app / "MacOS/Blender"; exe.write_text("#!/bin/sh\n"); exe.chmod(0o755)   # prints no version when started
+    with open(app / "Info.plist", "wb") as f:
+        plistlib.dump({"CFBundleShortVersionString": version}, f)
+    return str(exe)
+
+
+def test_the_build_says_which_blender_it_uses_and_warns_on_another_version(monkeypatch, tmp_path, capsys):
+    """find_blender falls back to /Applications/Blender.app: a Mac with Blender 4.5 there built the FBX with another
+    exporter without a word, and fingerprint.py, which looked only at BLENDER and PATH, recorded no Blender at all.
+    The version is read without starting Blender (a sandboxed macOS shell crashes it at start)."""
+    import build_all as B, fingerprint as FP
+    exe = _fake_blender_app(tmp_path, "4.5.3")
+    assert B.blender_version(exe) == "4.5.3"
+    assert B.blender_version("C:/Program Files/Blender Foundation/Blender 4.2/blender.exe") == "4.2"
+    assert B.blender_version("/opt/blender-4.2.23-linux-x64/blender") == "4.2.23"
+    assert B.blender_version("/usr/bin/blender") is None
+    note = B.blender_note(exe)
+    assert note.startswith("!!") and exe in note and "4.5.3" in note and "4.2 LTS" in note and "BLENDER" in note
+    assert not B.blender_note("/opt/blender-4.2.23-linux-x64/blender").startswith("!!")
+    assert "version" in B.blender_note("/usr/bin/blender") and not B.blender_note("/usr/bin/blender").startswith("!!")
+    real_run = B.subprocess.run
+    monkeypatch.setattr(B.subprocess, "run", lambda cmd, **k: None)
+    monkeypatch.setattr(B, "find_blender", lambda: exe)
+    B.main(["fbx", "fbx"])
+    out = capsys.readouterr().out
+    assert out.index("4.5.3") < out.index("== fbx")                       # said before the first step
+    monkeypatch.setattr(B.subprocess, "run", real_run)
+    assert FP._blender() == "4.5.3"                                        # the program the build uses
+    monkeypatch.setattr(B, "find_blender", lambda: sys.exit("BLENDER=/x is not a program"))
+    assert FP._blender() is None
+
+
 def test_registration_with_too_few_bunkers_says_so_and_prints_the_shift_to_paste():
     """No bunker passing the sand gate (white sand) crashed with IndexError: too many indices for array."""
     import measure_registration as M

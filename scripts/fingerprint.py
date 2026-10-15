@@ -13,7 +13,7 @@ Summaries (surface counts and areas, trees per archetype, hole yards, glTF objec
 environment (machine, OS, package versions, Blender) is recorded; a different one is a note, not a failure, but
 floating-point results are only expected to match on the machine and packages that wrote the golden file.
 """
-import hashlib, json, os, platform, re, shutil, struct, subprocess, sys
+import hashlib, json, os, platform, re, struct, subprocess, sys
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -211,15 +211,23 @@ def _machine():
 
 
 def _blender():
-    exe = os.environ.get("BLENDER") or shutil.which("blender")
+    """The version of the Blender build_all.py's fbx step uses (build_all.find_blender: BLENDER, PATH, then the usual
+    install folders), as `blender --version` prints it, else as its install says (build_all.blender_version)."""
+    import build_all
+    try:
+        exe = build_all.find_blender()
+    except SystemExit:  # BLENDER names no program: the build would stop too
+        return None
     if not exe:
         return None
     try:
         out = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=120).stdout
         m = re.search(r"^Blender (.+)$", out, re.M)
-        return m.group(1).strip() if m else None
+        if m:
+            return m.group(1).strip()
     except (OSError, subprocess.SubprocessError):
-        return None
+        pass
+    return build_all.blender_version(exe)
 
 
 def environment():
