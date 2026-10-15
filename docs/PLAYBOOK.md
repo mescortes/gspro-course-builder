@@ -116,7 +116,9 @@ Fill in `course.toml` by hand from the research:
   ground under canopy is treated, and the region's tree classifier expects one of them.
 * `[tuning.level_tees] enabled = false` when the LiDAR was flown after every tee was built (compare the flight date
   with the course's opening and tee works). The engine gives tees with no deck in the LiDAR a synthetic one; on a
-  course whose decks are all in the LiDAR (Brambles) it cuts and fills tee polygons that take in banks instead.
+  course whose decks are all in the LiDAR (Brambles) it cuts and fills tee polygons that take in banks instead. The
+  `mesh` step prints a `level_tees: ... step` line for each synthetic deck that ends in a step of more than
+  `warn_step` (0.1 m) where it meets a path, green, bunker, road, building or water (they keep their height).
 * `[structures] parking`: OSM parking ids that get parked cars.
 
 ```bash
@@ -205,7 +207,9 @@ Draw the lines of play and draft the rest (Brambles):
    paths and the course outline into golf.geojson (tagged `draft=yes`; hand-drawn features are kept) and review sheets
    to `build/<slug>/draft/hole_NN.jpg`. Thresholds are in `[draft]` (see `draft_features.DEFAULTS`); tune them on
    the sheets, then commit the draft. It only has to be good enough to train the classifier: the QA rounds correct
-   the model.
+   the model. Drafted bunkers are not survey data: the vectorize step gives them the LiDAR test of unmapped bunkers
+   (a closed hollow, on the course, clear of roads), so bare soil drafted as sand in a channel or a road cut is
+   dropped. Draw a bunker by hand (no `draft` tag) to keep it whatever the LiDAR says.
 4. Set `[tuning] trace_paths = false` if the photo's path tracer follows turf edges instead of paths (look at
    `build/<slug>/paths_detected.geojson` after the paths step).
 
@@ -260,9 +264,11 @@ one). A mistyped key or a value that is not a number stops `check_course.py` wit
 
 Read failures as data: a tee yardage gap means a wrong or missing pad, or a card that disagrees with the ground; a
 green size or slope failure means a green outline that takes in banks or misses half the putting surface; "no
-fairway" means a fairway that carries another hole's number (a fairway polygon several lines of play run through is
-split between their corridors; one that misses its own line goes to the nearest one); a step around a green is
-usually the bank of a synthetic tee deck nearby (§2, `[tuning.level_tees]`). Course-dependent limits go in
+fairway" means a fairway that carries another hole's number (a fairway polygon several lines of play run along is
+split between their corridors, a line that only crosses it takes none; one that misses its own line goes to the
+nearest one); a step around a green is
+usually the bank of a synthetic tee deck nearby (§2, `[tuning.level_tees]`; the `mesh` step's `level_tees: ... step`
+lines say which). Course-dependent limits go in
 `course.toml [tests]` (`green_area`, `min_bunkers`, `green_slope_max`, `known_tee_gaps = { "7.back" = 40 }` with the
 reason in research/NOTES.md); fix the rest. A course with few bunkers needs `min_bunkers` (the bunker tests count
 the bunkers over 20 m2 and the automatic ones over 40 m2).
@@ -291,14 +297,15 @@ Engine settings for problems QA finds on many holes (`course.toml [tuning]`, def
 
 | Problem | Setting |
 |---|---|
-| Bare soil in channels, ditches or path cuts kept as unmapped bunkers | `[tuning.bunker_hollow]`: an unmapped bunker must hold `pond` m (0.05) of water on `pond_frac` (0.2) of its area, or lie `face` m (0.35) below the ground around it; `pond_frac = 0` turns the test off |
+| Bare soil in channels, ditches or path cuts kept as unmapped bunkers | `[tuning.bunker_hollow]`: an unmapped bunker must hold `pond` m (0.05) of water on `pond_frac` (0.2) of its area, or lie `face` m (0.35) below the ground around it without being open at both ends like a channel (an outlet: ground less than `open` m (0.2) above the floor next to it, leading out over `outlet` m2 (4); two outlets on opposite sides); `pond_frac = 0` turns the test off |
 | Bunkers spilling onto their grass faces with a coarse photo | `[tuning.bunker_trim]`: with a photo of `photo_res` m (0.3) or coarser, bunkers are cut to their LiDAR pans (`radius` 5 m rim search, `depth` 0.08 m, `lip` 0.5 m); `photo_res = 100` turns it off |
-| A shared fairway split badly between holes | `shared_fairway_min_part` (150 m2): the smallest part a hole takes from a fairway another line of play also runs through |
-| Two tee sets on one marker | `tee_marker_gap` (2 m): a set never takes a spot this close to another set's while another pad is free; the gap is reported |
+| A shared fairway split badly between holes | A fairway several lines of play run along is split between their corridors. `shared_fairway_min_part` (150 m2): the smallest part a hole takes; `shared_fairway_min_run` (80 m) and `shared_fairway_green_reach` (30 m): a line runs along a fairway when that much of it lies inside, or its green end is that close (a par 3's green surround); a line that only crosses it (a tee shot over another hole's fairway or green surround) takes none |
+| Two tee sets on one marker | `tee_marker_gap` (2 m): a set never takes a spot this close to another set's while another pad is free, unless their cards are this close too (two sets with the same yardage share a box); the gap is reported |
 | Holes in the terrain at tees, steps around greens | `[tuning.level_tees] enabled = false` when the LiDAR shows every tee (§2) |
 
-Tracks inside the course mapped `surface=grass / ground / dirt / earth` or `tracktype=grade4 / grade5` are turf;
-other tracks and service roads there are cart paths.
+Tracks and service ways inside the course mapped `surface=grass / ground / dirt / earth / mud` or
+`tracktype=grade4 / grade5` are turf (mown maintenance routes; the classifier's training labels never call them
+road); other tracks and service roads there are cart paths.
 
 **Checkpoint:** every hole scores at least 8 of 10 from its verifier; the tests pass or each failure is documented.
 

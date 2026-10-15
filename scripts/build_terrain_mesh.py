@@ -210,15 +210,17 @@ def height_field():
 
 def level_tees(dem, T, tees, max_slope=0.01, deck_tol=0.06, deck_slope=0.035, max_area=500.0, bank=1 / 3,
                max_feather=8.0, flat_frac=0.8, protect=None, holes=None, neighbour_m=40.0, max_lift=2.5,
-               enabled=True):
+               enabled=True, warn_step=0.1):
     """In place: tees that are not decks in the LiDAR (built after the survey, e.g. Westmount's 2023 / 2025 back tees on
     holes 5, 8 and 11) get a synthetic deck - a plane of at most `max_slope` at the tee's mean height - blended into the
     surrounding ground. The feather (up to `max_feather` m) is wide enough that the banks are at most `bank` (rise / run)
     steeper than the ground (the smoothstep's peak gradient is 1.5x its mean); it never reaches into `protect` (a bool
     raster of paths, roads, buildings, greens, bunkers and water, which keep their height: QA round 2, hole 8).
-    enabled=False ([tuning.level_tees] enabled = false): no synthetic decks at all, for a LiDAR flown after every tee was
-    built (Brambles, 2023). There the drafted tee polygons take in the banks of the real decks, fail the deck tests and
-    were cut and filled up to 1.5 m: by the 10th green the bank of the hole-7 tee ended in a 1.0 m step at the fringe.
+    Where the feather stops at a protected surface the bank ends in a step: one over `warn_step` m is reported (the tee,
+    its height, and the setting below). enabled=False ([tuning.level_tees] enabled = false): no synthetic decks at all,
+    for a LiDAR flown after every tee was built (Brambles, 2023). There the drafted tee polygons take in the banks of the
+    real decks, fail the deck tests and were cut and filled up to 1.5 m: by the 10th green the bank of the hole-7 back
+    tee ended in a 1.0 m step at the fringe.
 
     Left alone:
     * a tee whose DEM already fits a plane within `deck_tol` m (std) and `deck_slope` (real decks fall 1.5-3 % for
@@ -292,7 +294,18 @@ def level_tees(dem, T, tees, max_slope=0.01, deck_tol=0.06, deck_slope=0.035, ma
         w = np.clip(1 - d / feather, 0, 1); w = w * w * (3 - 2 * w)   # smoothstep feather
         w = np.maximum(ndimage.gaussian_filter(w, 0.35 / r, truncate=2.0), inside)   # no radial streaks (distance transform)
         if protect is not None:
-            w[protect[r0:r1, c0:c1] & ~inside] = 0.0
+            pr = protect[r0:r1, c0:c1]
+            w[pr & ~inside] = 0.0
+            # the cells beside a protected one carry the bank's change in height; the protected cell keeps its own
+            edge = ~pr & ndimage.binary_dilation(pr)
+            step = float((np.abs(plane - sub) * w)[edge].max()) if edge.any() else 0.0
+            if step > warn_step:
+                print(f"level_tees: {'hole ' + str(hn) + ' ' if hn is not None else ''}tee at {p.centroid.x:.0f},"
+                      f"{p.centroid.y:.0f}: its synthetic deck ends in a {step:.2f} m step where it meets a path, green, "
+                      f"bunker, road, building or water (they keep their height). Check the tee outline in the QA "
+                      f"images (one that takes in a bank is cut and filled); a course whose LiDAR was flown after every "
+                      f"tee was built needs no synthetic decks: [tuning.level_tees] enabled = false in course.toml",
+                      flush=True)
         dem[r0:r1, c0:c1] = sub * (1 - w) + plane * w
     return dem
 
