@@ -224,9 +224,10 @@ def crown_base(lab, T, n):
 
 def crown_colour(lab, T, n, W, H):
     """Mean Lab colour and mean NDVI (NaN without a NIR band) of each crown in the photo."""
+    from surface_classify import has_nir   # band 4 may be an alpha mask, not NIR
     e = C.CORE
+    bands = [1, 2, 3, 4] if has_nir() else [1, 2, 3]
     with rasterio.open(C.IMAGERY) as ds:
-        bands = [1, 2, 3, 4] if ds.count >= 4 else [1, 2, 3]
         a = ds.read(bands, window=from_bounds(e["xmin"], e["ymin"], e["xmax"], e["ymax"], transform=ds.transform),
                     out_shape=(len(bands), H, W), resampling=Resampling.average).astype(np.float32) / 255
     Lab = rgb2lab(np.moveaxis(a[:3], 0, -1))
