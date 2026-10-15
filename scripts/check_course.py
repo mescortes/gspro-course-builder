@@ -100,14 +100,37 @@ def _leaf_problems(c):
     return p
 
 
+def _passed_keys(call, defs):
+    """The keys a table passed as **table to `call` can hold: the keyword parameters of the function it calls (found
+    by name among `defs`) that the call does not fill itself; None when that function is not in the scripts, an
+    empty set when it takes **kwargs (any key)."""
+    import ast
+    fn = defs.get(ast.unparse(call.func).split(".")[-1])
+    if fn is None:
+        return None
+    a = fn.args
+    if a.kwarg is not None:
+        return frozenset()
+    params = [x.arg for x in a.posonlyargs + a.args]
+    named = [x.arg for x in a.args + a.kwonlyargs]
+    filled = set(params[:len(call.args)]) | {k.arg for k in call.keywords if k.arg}
+    return frozenset(k for k in named if k not in filled)
+
+
 def tuning_keys(scripts=Path(__file__).parent):
     """{name: None for a value, else the keys of its table} of every [tuning] name the engine reads: the literal first
     arguments of the config.tuning() and surface_classify.tuned() calls in the scripts. A table's keys come from its
-    default (dict(...) or {...}); an empty default, such as road_half_width's, takes any key (an empty set)."""
+    default (dict(...) or {...}); a table passed as keyword arguments, f(..., **C.tuning("level_tees", {})), takes
+    the keyword parameters of f that the call does not fill itself (any other key stops the build with a TypeError);
+    any other empty default, such as road_half_width's, takes any key (an empty set)."""
     import ast
+    trees = [ast.parse(p.read_text(encoding="utf-8")) for p in sorted(Path(scripts).rglob("*.py"))]
+    defs = {n.name: n for t in trees for n in ast.walk(t) if isinstance(n, ast.FunctionDef)}
     out = {}
-    for p in sorted(Path(scripts).rglob("*.py")):
-        for n in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
+    for t in trees:
+        passed = {id(k.value): n for n in ast.walk(t) if isinstance(n, ast.Call) for k in n.keywords if k.arg is None}
+        local = dict(defs, **{n.name: n for n in ast.walk(t) if isinstance(n, ast.FunctionDef)})  # this file's first
+        for n in ast.walk(t):
             if not (isinstance(n, ast.Call) and ast.unparse(n.func).split(".")[-1] in ("tuning", "tuned") and n.args
                     and isinstance(n.args[0], ast.Constant) and isinstance(n.args[0].value, str)):
                 continue
@@ -118,6 +141,9 @@ def tuning_keys(scripts=Path(__file__).parent):
                 keys = frozenset(k.arg for k in d.keywords if k.arg)
             else:
                 keys = None
+            if id(n) in passed and not keys:
+                keys = _passed_keys(passed[id(n)], local)
+                keys = frozenset() if keys is None else keys
             if out.get(n.args[0].value) is None:
                 out[n.args[0].value] = keys
     return out
@@ -145,6 +171,28 @@ def tuning_problems(c=C, keys=None):
                         out.append(f"[tuning.{k}] {s} ({where}): not a key of the table" + (
                             f": did you mean {m[0]}?" if m else "") + f" (its keys: {', '.join(sorted(keys[k]))})")
     return out
+
+
+def frame_crs_report(c=C):
+    """[frame] crs checked as new_course.py checks the CRS it writes (new_course.frame_crs_problems: a projected metre
+    grid with an EPSG code, not compound, not Web Mercator, ground metres at the frame's centre), and written as its
+    EPSG:<code>: the engine reads the code after 'EPSG:' (fetch_data.py imagery, the feature files' crs name), so a
+    hand-edited CRS name or URN stopped the photo download with IndexError or ValueError."""
+    import new_course
+    crs = getattr(c, "CRS", None)
+    if crs is None:
+        return []
+    toml = f"courses/{getattr(c, 'SLUG', '<slug>')}/course.toml"
+    box = getattr(c, "CORE", None) or getattr(c, "TERRAIN", None)
+    xy = ((box["xmin"] + box["xmax"]) / 2, (box["ymin"] + box["ymax"]) / 2) if box else None
+    where = f"[frame] crs = {crs!r}"
+    fix = (f"set {toml} [frame] crs to the EPSG code of the course's UTM zone (new_course.py writes it) or of the "
+           "national metre grid the LiDAR is delivered in, with the [frame] coordinates in that CRS")
+    p, code = new_course.frame_crs_problems(crs, xy=xy, where=where, fix=fix, set_as=toml + ' [frame] crs = "{}"')
+    if not p and code != crs:
+        p = [f'{where}: write it as "{code}" in {toml}: the engine reads the EPSG code after "EPSG:" (the photo '
+             "request, the feature files' crs name)"]
+    return p
 
 
 def course_report(c=C):
@@ -204,6 +252,7 @@ def course_report(c=C):
     if cls is not None and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", cls + "Setup"):
         p.append(f"[course] unity_script {c.UNITY_SCRIPT!r}: class {cls}Setup is not a C# name (letters, digits and _, "
                  "not starting with a digit)")
+    p += frame_crs_report(c)
     if getattr(c, "FETCH_CORE", None) and getattr(c, "DEM_RES", None) is not None:  # build_rasters stops on these late
         p += C.grid_problems(c.FETCH_CORE, c.DEM_RES)
         p += C.grid_problems(c.TEST_CORE, None, "test_profile") if getattr(c, "TEST_CORE", None) else []
@@ -338,8 +387,13 @@ def feature_files_report(c=C):
             out.append(f"{name}: not a JSON file ({e}): fix it, or export it again (QGIS: Export > Save Features As, "
                        "GeoJSON)")
             continue
-        if not (isinstance(fc, dict) and fc.get("type") == "FeatureCollection"
-                and isinstance(fc.get("features"), list)):
+        if isinstance(fc, dict) and fc.get("type") == "FeatureCollection" and not isinstance(fc.get("features"), list):
+            out.append(f"{name}: its \"features\" is " + ("missing" if "features" not in fc else
+                       f"a {type(fc['features']).__name__}, not a list") + ": the build reads the FeatureCollection's "
+                       "features list, \"features\": [{\"type\": \"Feature\", ...}, ...]: fix it, or export it again "
+                       "(QGIS: Export > Save Features As, GeoJSON)")
+            continue
+        if not (isinstance(fc, dict) and fc.get("type") == "FeatureCollection"):
             kind = fc.get("type") if isinstance(fc, dict) else type(fc).__name__
             out.append(f"{name}: a {kind or 'JSON object'}, not a FeatureCollection: the build reads a "
                        "FeatureCollection's features, so wrap it: "
