@@ -101,7 +101,7 @@ def draw_hole(im, b, res, h):
     for t in h["tees"]:
         x, y = px(b, res, *t["utm"][:2]); c = TEE_COL[t["key"]]
         d.ellipse([x - 6, y - 6, x + 6, y + 6], fill=c, outline=(0, 0, 0))
-        d.text((x + 8, y - 6), f"{t['key'][0].upper()} {t['yards']:.0f}/{t['scorecard_yards']}", fill=c)
+        d.text((x + 8, y - 6), f"{C.TEE_LABEL[t['key']]} {t['yards']:.0f}/{t['scorecard_yards']}", fill=c)
     for p in h["pins"]:
         x, y = px(b, res, *p["utm"][:2])
         d.ellipse([x - 4, y - 4, x + 4, y + 4], fill=(255, 0, 0) if p["name"] != "osm" else (160, 0, 255))

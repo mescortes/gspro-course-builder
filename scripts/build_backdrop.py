@@ -1,21 +1,48 @@
-"""Backdrop terrain: a 5 km square of the backdrop DEM (2 m grid) around the detailed core, draped with the course photo.
+"""Backdrop terrain: a square of the backdrop DEM (2 m grid) around the detailed core, draped with the course photo:
+5 km (ORIGIN +/- 2500 m), larger when the GSPro outer plot of a wide terrain needs it (far_extent).
 
 The inner boundary reuses the exact boundary vertices (and heights) of the core terrain mesh, so the join is
-watertight. Two rings: near (core + 640 m, finer mesh, 0.5 m imagery) and far (to 2.5 km, 1.2 m imagery).
+watertight. Two rings: near (core + 640 m, finer mesh, 0.5 m imagery) and far (to the square's edge, 1.25 m imagery).
 Output: build/backdrop_mesh.npz, data/imagery/backdrop_near_<extent>.jpg, data/imagery/backdrop_far_<extent>.jpg
 """
-import sys
+import json, math, sys
+from pathlib import Path
 import numpy as np
 import rasterio
 import triangle
 from scipy.interpolate import RegularGridInterpolator
 from PIL import Image
 
-sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent))
 import config as C
 
-FAR = dict(xmin=C.ORIGIN_E - 2500, ymin=C.ORIGIN_N - 2500, xmax=C.ORIGIN_E + 2500, ymax=C.ORIGIN_N + 2500)
-NEAR = dict(xmin=C.CORE["xmin"] - 640, ymin=C.CORE["ymin"] - 640, xmax=C.CORE["xmax"] + 640, ymax=C.CORE["ymax"] + 640)
+NEAR_RING = 640.0   # m the near ring (finer mesh, 0.5 m photo) reaches past the core
+MARGIN = 100.0      # m of backdrop kept past the GSPro outer plot and the near ring
+
+
+def near_extent(core):
+    return dict(xmin=core["xmin"] - NEAR_RING, ymin=core["ymin"] - NEAR_RING, xmax=core["xmax"] + NEAR_RING,
+                ymax=core["ymax"] + NEAR_RING)
+
+
+def far_extent():
+    """The backdrop square ORIGIN +/- R: the backdrop DEM (fetch_backdrop.py), the far photo and the far ring. R is
+    [tuning] backdrop_half_m (2500 m, a 5 km square) unless the GSPro outer plot (export_gspro.outer_extent, twice the
+    terrain: a terrain over about 2.2 km) or the near ring (a core over about 3.7 km) comes within MARGIN of its edge;
+    then R is the next whole 100 m past them. The course profile's frame counts in both profiles, so the test profile
+    reads the course's backdrop DEM (data/<slug>/ is shared)."""
+    from export_gspro import outer_extent
+    reach = max(max(C.ORIGIN_E - e["xmin"], e["xmax"] - C.ORIGIN_E, C.ORIGIN_N - e["ymin"], e["ymax"] - C.ORIGIN_N)
+                for core, te in ((C.FETCH_CORE, C.FETCH_TERRAIN), (C.CORE, C.TERRAIN))
+                for e in (outer_extent(te), near_extent(core)))
+    half = C.tuning("backdrop_half_m", 2500.0)
+    if reach + MARGIN > half:
+        half = math.ceil((reach + MARGIN) / 100.0) * 100.0
+    return dict(xmin=C.ORIGIN_E - half, ymin=C.ORIGIN_N - half, xmax=C.ORIGIN_E + half, ymax=C.ORIGIN_N + half)
+
+
+FAR = far_extent()
+NEAR = near_extent(C.CORE)
 # imagery files are keyed by extent so different build profiles never reuse a mismatched image
 NEAR_IMG = C.DATA / "imagery" / f"backdrop_near_{int(NEAR['xmin'])}_{int(NEAR['ymin'])}_{int(NEAR['xmax'])}_{int(NEAR['ymax'])}.jpg"
 FAR_IMG = C.DATA / "imagery" / f"backdrop_far_{int(FAR['xmin'])}_{int(FAR['ymin'])}_{int(FAR['xmax'])}_{int(FAR['ymax'])}.jpg"
@@ -30,6 +57,87 @@ def core_boundary():
     b = e[cnt[inv] == 1]
     vid = np.unique(b)
     return V[vid], b, vid
+
+
+def _rel(p):
+    try:
+        return Path(p).relative_to(C.ROOT)
+    except ValueError:
+        return Path(p)
+
+
+def require_cover(path, ext, what, step=20.0):
+    """Exit unless the raster `path` covers `ext` with heights: past its border the samplers repeat its edge heights
+    (flat smeared bands with no message), e.g. a backdrop DEM fetched before the [frame] terrain grew; inside it a cell
+    without data (sampled every `step` m) became a NaN backdrop vertex, or a flat plateau at the DEM's mean height in
+    the GSPro outer plot."""
+    if not Path(path).exists():
+        sys.exit(f"{_rel(path)}: missing (the backdrop DEM): run scripts/fetch_backdrop.py")
+    span = f"E {ext['xmin']:.0f}-{ext['xmax']:.0f} N {ext['ymin']:.0f}-{ext['ymax']:.0f}"
+    with rasterio.open(path) as ds:
+        b = ds.bounds
+        if b.left > ext["xmin"] + 1e-6 or b.right < ext["xmax"] - 1e-6 or b.bottom > ext["ymin"] + 1e-6 or b.top < ext["ymax"] - 1e-6:
+            sys.exit(f"{_rel(path)} covers E {b.left:.0f}-{b.right:.0f} N {b.bottom:.0f}-{b.top:.0f}, but {what} needs "
+                     f"{span}: run scripts/fetch_backdrop.py again (it sizes the backdrop to the course.toml [frame] "
+                     "terrain), then build_all.py backdrop")
+        from rasterio.windows import from_bounds
+        shape = (max(1, int((ext["ymax"] - ext["ymin"]) / step)), max(1, int((ext["xmax"] - ext["xmin"]) / step)))
+        z = ds.read(1, window=from_bounds(ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], transform=ds.transform),
+                    out_shape=shape, masked=True)
+    gap = float((np.ma.getmaskarray(z) | ~np.isfinite(z.filled(0))).mean())
+    if gap:
+        sys.exit(f"{_rel(path)}: {gap:.1%} of {what} ({span}) has no height (cells without data): the DEMs listed in "
+                 f"[sources.backdrop] dtm of courses/{C.SLUG}/course.toml do not cover it all. Add one that does and run "
+                 "scripts/fetch_backdrop.py again (it fills small gaps up to [sources.backdrop] max_missing), then "
+                 "build_all.py backdrop")
+
+
+def datum_offset(dem, backdrop, core, band=(10.0, 50.0), res=2.0):
+    """(median, MAD, cells) of backdrop minus LiDAR DEM heights (m) on `res` m cells `band` m inside the build extent
+    `core`, where both are bare ground and the course's own edits (water levels, built-up tees) are further in; None
+    when no cell has both."""
+    from rasterio.enums import Resampling
+    from rasterio.windows import from_bounds
+    W, H = int(round((core["xmax"] - core["xmin"]) / res)), int(round((core["ymax"] - core["ymin"]) / res))
+    z = []
+    for p in (dem, backdrop):
+        with rasterio.open(p) as ds:
+            z.append(ds.read(1, window=from_bounds(core["xmin"], core["ymin"], core["xmax"], core["ymax"], transform=ds.transform),
+                             out_shape=(H, W), resampling=Resampling.average, boundless=True, fill_value=np.nan).astype(np.float64))
+    x, y = (np.arange(W) + 0.5) * res, (np.arange(H) + 0.5) * res
+    d = np.minimum(np.minimum(x, W * res - x)[None, :], np.minimum(y, H * res - y)[:, None])
+    diff = (z[1] - z[0])[(d >= band[0]) & (d <= band[1])]
+    diff = diff[np.isfinite(diff)]
+    if not diff.size:
+        return None
+    med = float(np.median(diff))
+    return med, float(np.median(np.abs(diff - med))), int(diff.size)
+
+
+def check_datum(dem, backdrop, core):
+    """The backdrop DEM's offset from the LiDAR DEM round the build extent. Another vertical datum (ellipsoidal vs
+    orthometric heights, an older national datum) or unit (feet) would leave a wall or a berm all round the course:
+    a warning above [tuning] backdrop_datum_warn_m (0.3 m), a stop above backdrop_datum_max_m (3 m). The z_offset
+    suggested is the one that removes the offset: the measured DEM already carries any [sources.backdrop] z_offset
+    (fetch_backdrop adds it), so suggesting -median sent a wrong sign round in a loop (+30 -> -60 -> +30 ...)."""
+    r = datum_offset(dem, backdrop, core)
+    if r is None:
+        print("!! backdrop DEM vs LiDAR DEM: no cell near the edge of the build extent has both heights", flush=True)
+        return
+    med, mad, n = r
+    msg = f"backdrop DEM - LiDAR DEM, 10-50 m inside the build extent: median {med:+.2f} m, MAD {mad:.2f} m ({n} cells)"
+    now = float(C.DATA_SOURCES.get("backdrop", {}).get("z_offset", 0.0))
+    fix = (f"[sources.backdrop] z_offset = {round(now - med, 2):.2f} in courses/{C.SLUG}/course.toml"
+           + (f" (now {now:g}: the offset is measured on the DEM it already moved)" if now else "")
+           + ", then run scripts/fetch_backdrop.py again and build_all.py backdrop")
+    if abs(med) > C.tuning("backdrop_datum_max_m", 3.0):
+        sys.exit(f"{msg}. The backdrop DEM ([sources.backdrop]) is on another vertical datum than the point cloud "
+                 "([sources.lidar]), or in feet. Use a backdrop DEM in metres on the LiDAR's datum, or for a constant "
+                 f"datum offset set {fix}. If the step is real (the build extent ends at a cliff or a quarry), raise "
+                 f"[tuning] backdrop_datum_max_m above {abs(med):.1f}")
+    warn = abs(med) > C.tuning("backdrop_datum_warn_m", 0.3)
+    print(("!! " if warn else "") + msg + (f": a step round the course (another vertical datum?): {fix}" if warn else ""),
+          flush=True)
 
 
 def lift_shadows(a, knee=40.0, keep=0.6, chroma=1.25):
@@ -89,35 +197,91 @@ def summer_tif(path):
     return path.with_name(path.stem + "_summer.tif")
 
 
+_NOTED = set()
+
+
+def note(msg):
+    """Print `msg` once per run (the near and the far photo share their notes)."""
+    if msg not in _NOTED:
+        _NOTED.add(msg)
+        print(msg, flush=True)
+
+
+def grade_key(ndvi):
+    """What the graded photos depend on besides the photo, its NIR band and this file: the region / course [backdrop]
+    grade, and whether there is a NIR band to grade by. Kept in <stem>_summer.tif's tags: a changed grade is redone."""
+    return json.dumps({"backdrop": _GRADE, "ndvi": bool(ndvi)}, sort_keys=True)
+
+
+def _grade_of(p):
+    try:
+        with rasterio.open(p) as ds:
+            return ds.tags().get("BACKDROP_GRADE")
+    except rasterio.errors.RasterioIOError:
+        return None
+
+
 def imagery(ext, res, path):
-    """<stem>.tif: the photo's RGB; <stem>_nir.tif: its NIR band (same grid); <stem>_summer.tif: RGB after summer_grade
-    (read by the GSPro outer overlay); <stem>.jpg: the summer RGB with lift_shadows (viewer / glTF drape)."""
+    """<stem>.tif: the photo's RGB; <stem>_nir.tif: its NIR band (same grid), when [sources.imagery] bands has one;
+    <stem>_summer.tif: RGB after summer_grade (read by the GSPro outer overlay); <stem>.jpg: the summer RGB with
+    lift_shadows (viewer / glTF drape). Without NIR there is no NDVI to find the vegetation by: no grade."""
     tif, nir, summer = path.with_suffix(".tif"), path.with_name(path.stem + "_nir.tif"), summer_tif(path)
     raw = path.with_name(path.stem + "_raw.jpg")
     import sources
     mod, spec = sources.provider("imagery")
+    nir_band = tuple(spec["bands"][3:4])   # bands = R, G, B[, NIR]
     if not tif.exists():
         mod.fetch(spec, ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], res, tif, bands=tuple(spec["bands"][:3]))
-    if not nir.exists():
-        mod.fetch(spec, ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], res, nir, bands=tuple(spec["bands"][3:4]))
+    if not nir_band:
+        nir = None
+        if _GRADE["summer_grade"]:
+            note(f"backdrop: [sources.imagery] bands = {list(spec['bands'])} has no NIR band, so the backdrop photos keep "
+                 "their own colours (the summer grade finds the vegetation by NDVI)")
+    elif not nir.exists():
+        mod.fetch(spec, ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], res, nir, bands=nir_band)
+    key = grade_key(nir is not None)
     if summer.exists() and path.exists() and min(summer.stat().st_mtime, path.stat().st_mtime) > max(
-            tif.stat().st_mtime, nir.stat().st_mtime, __import__("os").stat(__file__).st_mtime):
+            p.stat().st_mtime for p in (tif, nir, Path(__file__)) if p is not None) and _grade_of(summer) == key:
         return
     from scipy import ndimage
     with rasterio.open(tif) as ds:
         a = np.moveaxis(ds.read(), 0, -1); prof = ds.profile
-    with rasterio.open(nir) as ds:
-        n = ds.read(1).astype(np.float32)
-    r = a[..., 0].astype(np.float32)
-    ndvi = ndimage.gaussian_filter((n - r) / np.maximum(n + r, 1), 1.0)
-    g = summer_grade(a, ndvi) if _GRADE["summer_grade"] else a
+    g = a
+    if _GRADE["summer_grade"] and nir is not None:
+        with rasterio.open(nir) as ds:
+            n = ds.read(1).astype(np.float32)
+        r = a[..., 0].astype(np.float32)
+        ndvi = ndimage.gaussian_filter((n - r) / np.maximum(n + r, 1), 1.0)
+        g = summer_grade(a, ndvi)
     with rasterio.open(summer, "w", **dict(prof, compress="deflate")) as ds:
         ds.write(np.moveaxis(g, -1, 0))
+        ds.update_tags(BACKDROP_GRADE=key)
     Image.fromarray(a).save(raw, quality=88)
     Image.fromarray(lift_shadows(g)).save(path, quality=88)
 
 
+def dem_heights(dem, xy, o):
+    """Heights of the GeoTIFF `dem` at the points `xy` (n x 2, metres from the origin `o`), bilinear. Exits on a point
+    next to a cell without data (a gap between require_cover's samples): it became a NaN vertex in
+    backdrop_mesh.npz, the glTF and the FBX."""
+    with rasterio.open(dem) as ds:
+        Z = ds.read(1).astype(np.float64); T = ds.transform
+    xs = T.c + (np.arange(Z.shape[1]) + 0.5) * T.a - o[0]; ys = T.f + (np.arange(Z.shape[0]) + 0.5) * T.e - o[1]
+    f = RegularGridInterpolator((ys[::-1], xs), Z[::-1], bounds_error=False, fill_value=None)
+    z = f(np.c_[xy[:, 1], xy[:, 0]])
+    if not np.isfinite(z).all():
+        bad = xy[~np.isfinite(z)] + o
+        sys.exit(f"{_rel(dem)}: {len(bad)} backdrop vertices have no height (a gap in the DEM near E {bad[0, 0]:.0f} "
+                 f"N {bad[0, 1]:.0f}): the DEMs listed in [sources.backdrop] dtm of courses/{C.SLUG}/course.toml do not "
+                 "cover it all. Add one that does and run scripts/fetch_backdrop.py again, then build_all.py backdrop")
+    return z
+
+
 def main():
+    dem = C.DATA / "dem/backdrop_dem.tif"
+    require_cover(dem, FAR, "the far backdrop ring")
+    if (C.BUILD / "dem_final.tif").exists():
+        check_datum(C.BUILD / "dem_final.tif", dem, C.CORE)
     PV, PB, vid = core_boundary()
     remap = {v: i for i, v in enumerate(vid)}
     o = np.array([C.ORIGIN_E, C.ORIGIN_N])
@@ -144,13 +308,8 @@ def main():
                         [FAR["xmin"] - o[0] + 5, FAR["ymin"] - o[1] + 5, 2, 250.0]])  # far ring
     tri = triangle.triangulate({"vertices": P, "segments": S, "regions": regions, "holes": core_c[None]}, "pq28Aa")
     Vt = tri["vertices"]; Ft = tri["triangles"]; ring = tri["triangle_attributes"][:, 0].astype(int)
-    with rasterio.open(C.DATA / "dem/backdrop_dem.tif") as ds:
-        Z = ds.read(1).astype(np.float64); T = ds.transform
-    xs = T.c + (np.arange(Z.shape[1]) + 0.5) * T.a - o[0]; ys = T.f + (np.arange(Z.shape[0]) + 0.5) * T.e - o[1]
-    f = RegularGridInterpolator((ys[::-1], xs), Z[::-1], bounds_error=False, fill_value=None)
-    z = f(np.c_[Vt[:, 1], Vt[:, 0]])
     # seam vertices keep the exact core heights
-    z[:n0] = PV[:, 2]
+    z = np.r_[PV[:, 2], dem_heights(dem, Vt[n0:], o)]
     V = np.c_[Vt + o, z]
     np.savez_compressed(C.BUILD / "backdrop_mesh.npz", V=V, F=Ft.astype(np.int32), ring=ring, n_seam=n0)
     print("backdrop triangles", len(Ft), "near", (ring == 1).sum(), "far", (ring == 2).sum())

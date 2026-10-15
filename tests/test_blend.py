@@ -197,3 +197,14 @@ def test_new_tee_is_never_dug_down_to_a_lower_neighbour():
     out = level_tees(dem.copy(), T, [old, new], holes=[11, 11])
     m = rasterize([(new.buffer(-0.3), 1)], out_shape=dem.shape, transform=T).astype(bool)
     assert abs(out[m].mean() - dem[m].mean()) < 0.02
+
+
+def test_synthetic_decks_can_be_turned_off():
+    """A course whose LiDAR was flown after every tee was built (Brambles, 2023) has no deck-less new tees; its drafted
+    tee polygons take in the banks, and a synthetic deck would cut and fill them (up to 0.8 m by the 10th green).
+    [tuning.level_tees] enabled = false leaves the DEM as it is."""
+    from build_terrain_mesh import level_tees
+    dem, T, c = _plane(slope=0.06)
+    tee = Point(c, c).buffer(5.0)
+    assert np.abs(level_tees(dem.copy(), T, [tee], enabled=False) - dem).max() == 0.0
+    assert np.abs(level_tees(dem.copy(), T, [tee]) - dem).max() > 0.1

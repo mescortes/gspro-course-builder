@@ -1,4 +1,5 @@
-"""Regenerate the per-hole table in README.md from output/holes.json (between the holes-table markers)."""
+"""Regenerate the per-hole table in courses/<slug>/README.md from output/<slug>/holes.json (between the holes-table
+markers)."""
 import sys, json, re
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
@@ -32,12 +33,12 @@ def table():
 
 
 def main():
-    p = C.ROOT / "README.md"
+    p = C.COURSE_DIR / "README.md"
     s = p.read_text()
     new = f"{BEGIN}\n{table()}\n{END}"
     s2 = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), lambda m: new, s, flags=re.S)
     if s2 == s and BEGIN not in s:
-        raise SystemExit("README.md has no holes-table markers")
+        raise SystemExit(f"{p} has no holes-table markers")
     p.write_text(s2)
     print(table())
 

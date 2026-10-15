@@ -1,22 +1,39 @@
-"""Backdrop DEM: a 5 km square around the course at 2 m from the course's [sources.backdrop] provider (cloud-optimised
-GeoTIFFs read by HTTP range requests, reprojected to config.CRS). Output: data/<slug>/dem/backdrop_dem.tif and, when the
-course lists one, the matching surface model (DSM: trees, roofs) data/<slug>/dem/backdrop_dsm.tif for the backdrop
-trees and buildings (backdrop_objects.py).
+"""Backdrop DEM: the backdrop square (build_backdrop.FAR: 5 km around the course, more when the GSPro outer plot of a
+wide terrain needs it) at 2 m from the course's [sources.backdrop] provider (cloud-optimised GeoTIFFs read by HTTP range
+requests, reprojected to config.CRS). Output: data/<slug>/dem/backdrop_dem.tif and, when the course lists one, the
+matching surface model (DSM: trees, roofs) data/<slug>/dem/backdrop_dsm.tif for the backdrop trees and buildings
+(backdrop_objects.py).
+
+[sources.backdrop] z_offset = <m> (optional) is added to both: for a backdrop DEM on another vertical datum than the
+point cloud, which build_backdrop.check_datum measures round the course.
 """
 import sys
 from pathlib import Path
 
+import numpy as np
+import rasterio
+
 sys.path.insert(0, str(Path(__file__).parent)); import config as C
 import sources
+from build_backdrop import FAR as B
 
-B = dict(xmin=C.ORIGIN_E - 2500, ymin=C.ORIGIN_N - 2500, xmax=C.ORIGIN_E + 2500, ymax=C.ORIGIN_N + 2500)
 RES = 2.0
+
+
+def shift(path, dz):
+    """Add `dz` m to every height of the GeoTIFF `path` (no-data stays no-data)."""
+    with rasterio.open(path, "r+") as ds:
+        z = ds.read(1)
+        ds.write(np.where(np.isfinite(z), z + dz, z).astype(z.dtype), 1)
+    print(f"{Path(path).name}: z_offset {dz:+.2f} m added", flush=True)
 
 
 def main():
     mod, spec = sources.provider("backdrop")
-    mod.fetch(spec, "dtm", B, RES, C.DATA / "dem" / "backdrop_dem.tif")
-    mod.fetch(spec, "dsm", B, RES, C.DATA / "dem" / "backdrop_dsm.tif")
+    for kind, name in (("dtm", "backdrop_dem.tif"), ("dsm", "backdrop_dsm.tif")):
+        out = C.DATA / "dem" / name
+        if mod.fetch(spec, kind, B, RES, out) and spec.get("z_offset"):
+            shift(out, float(spec["z_offset"]))
 
 
 if __name__ == "__main__":

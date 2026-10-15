@@ -16,7 +16,7 @@ from shapely import make_valid
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
-from surface_classify import CLASSES, CID, osm_geoms, grid
+from surface_classify import CLASSES, CID, osm_geoms, grid, ROAD_HALF_WIDTH, is_water, SAND, SHADOW_SAND, TURF, tuned
 
 RES = C.DEM_RES
 # OSM/override water outranks everything (dark water is easily mistaken for green by the classifier)
@@ -26,10 +26,18 @@ STROKE = {"green": "#BCE5A4", "fringe": "#A4C88F", "fairway": "#43E561", "semiro
           "road": "#555555", "building": "#C83C3C", "court": "#3355AA", "water": "#0000C0"}
 FORWARD_TEE_FRAC = C.tuning("forward_tee_frac", 0.45)   # tee pads past this fraction of a hole are not its tees (Westmount <= 0.35)
 BUNKER_CLEARANCE = C.tuning("bunker_clearance", (1.0, 10.0))  # unmapped bunkers: m clear of roads / of buildings
+SHARED_FAIRWAY_MIN_PART = C.tuning("shared_fairway_min_part", 150.0)  # m2: smallest part of a shared fairway a hole takes
 MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 150, "cartpath": 6, "native": 25, "road": 25,
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
-ROAD_HALF_WIDTH = {"motorway": 7.0, "secondary": 6.0, "secondary_link": 4.0, "tertiary": 5.0, "residential": 4.0,
-                   "unclassified": 3.5, "service": 3.0}
+# Photo colour rules SAND, SHADOW_SAND and TURF ([tuning.sand], [tuning.shadow_sand], [tuning.turf]): surface_classify.py
+# An unmapped bunker's LiDAR hollow must be closed or faced ([tuning.bunker_hollow], closed_hollow; pond_frac = 0 turns
+# the test off) ...
+BUNKER_HOLLOW_DEFAULT = dict(pond=0.05, pond_frac=0.2, face=0.35)
+BUNKER_HOLLOW = tuned("bunker_hollow", BUNKER_HOLLOW_DEFAULT)
+# ... and with a photo of photo_res m or coarser the bunkers are cut to their LiDAR pans ([tuning.bunker_trim],
+# bunker_bowls; photo_res = 0 always, a large value never)
+BUNKER_TRIM_DEFAULT = dict(photo_res=0.3, radius=5.0, depth=0.08, lip=0.5, seed=0.02, seed_area=1.0)
+BUNKER_TRIM = tuned("bunker_trim", BUNKER_TRIM_DEFAULT)
 
 
 def under_canopy_labels(lab, canopy, leaf_off_photo):
@@ -88,20 +96,74 @@ def bunker_ok(p, osm_bunk, course, is_hollow, paved=None, buildings=None, kerb=1
     return (course.is_empty or course.intersection(p).area >= 0.5 * p.area) and is_hollow(p)
 
 
+def held_water(z, basin):
+    """Depth (m) of the water each cell of the DEM window z holds before it spills over the lowest way out of `basin`
+    (bool; the cells outside it are outlets, and the window border is one)."""
+    from skimage.morphology import reconstruction
+    ok = np.isfinite(z)
+    z = np.where(ok, z, z[ok].min() if ok.any() else 0.0)   # no ground: an outlet
+    basin = basin.copy(); basin[[0, -1], :] = False; basin[:, [0, -1]] = False
+    return reconstruction(np.where(basin, z.max(), z), z, method="erosion") - z
+
+
+def closed_hollow(z, inside, basin, sunk, H=None):
+    """Is an unmapped bunker's hollow closed or faced? At least H pond_frac of the polygon (`inside`, on the DEM window
+    z) holds `pond` m of water before it spills out of `basin` (a bowl), or the polygon lies `face` m or more below the
+    ring around it (`sunk`, m: a bunker cut into a slope is open on its low side but has a real face). An open channel
+    (barranca floor, drainage ditch, path cut) drains along its length and is only 0.03-0.3 m below its banks (Brambles
+    QA round 1). H: BUNKER_HOLLOW ([tuning.bunker_hollow]); pond_frac 0 turns the test off."""
+    H = BUNKER_HOLLOW if H is None else H
+    if H["pond_frac"] <= 0 or sunk >= H["face"]:
+        return True
+    return bool(inside.any()) and float(np.mean(held_water(z, basin)[inside] >= H["pond"])) >= H["pond_frac"]
+
+
+def bunker_bowls(z, inside, basin, res, T=None):
+    """The pans of a bunker polygon (bool mask of `inside` on the DEM window z), or None to leave it as it is: the
+    cells below the rim around them (a grey closing with a `radius` m disc, minus the DEM, at least `depth` m) in the
+    bowls that hold water (`seed` m before it spills out of `basin`, on seed_area m2 or more), widened by `lip` m up
+    the faces. A bunker that holds no water (cut into a slope, open on its low side) has no pan to trim it to.
+    T: BUNKER_TRIM ([tuning.bunker_trim]). For photos too coarse to separate the sand from the grass faces (Brambles'
+    0.6 m NAIP: the 18th greenside polygon held two pans and the steep face above them)."""
+    T = BUNKER_TRIM if T is None else T
+    seeds = inside & (held_water(z, basin) >= T["seed"])
+    lab, n = ndimage.label(seeds)
+    if n:
+        big = ndimage.sum(seeds, lab, range(1, n + 1)) * res * res >= T["seed_area"]
+        seeds = np.r_[False, big][lab]
+    if not seeds.any():
+        return None
+    rpx = max(1, int(round(T["radius"] / res)))
+    yy, xx = np.mgrid[-rpx:rpx + 1, -rpx:rpx + 1]
+    below = ndimage.grey_closing(z, footprint=xx * xx + yy * yy <= rpx * rpx) - z >= T["depth"]
+    lab, n = ndimage.label(inside & (below | seeds))
+    floor = ndimage.binary_fill_holes(np.isin(lab, np.unique(lab[seeds])))
+    return ndimage.binary_dilation(floor, iterations=max(1, int(round(T["lip"] / res)))) & inside
+
+
 def sand_mask(L, a, b, ndvi=None, green=None, parts=False):
     """Bunker sand in the photo: bright, slightly yellow, low chroma - or, with a NIR band, bare (NDVI ~0) and not black,
     which also catches sand in the branch shadows of a leaf-off photo (NDVI is a band ratio, shadows barely move it).
     Shadow sand is only kept where it connects to sunlit sand (hysteresis): alone, the shadow rule also takes bare soil,
     shaded roofs and pavement (build 4: 61 off-course 'bunkers'). Dormant greens are pale too, but NDVI ~0.05-0.14: kept
-    out by the NDVI cut and the mapped-green mask. parts=True returns (sunlit, shadow) for a hysteresis over a mosaic."""
-    strong = (L > 66) & (a > -12) & (b > 8.5) & (b < 26)
+    out by the NDVI cut and the mapped-green mask. parts=True returns (sunlit, shadow) for a hysteresis over a mosaic.
+    Thresholds: SAND and SHADOW_SAND ([tuning.sand], [tuning.shadow_sand])."""
+    s, w = SAND, SHADOW_SAND
+    strong = (L > s["L_min"]) & (a > s["a_min"]) & (b > s["b_min"]) & (b < s["b_max"])
     weak = np.zeros_like(strong)
     if ndvi is not None:
-        strong &= ndvi < 0.12
-        weak = (ndvi < 0.02) & (L > 25) & (a > -8) & (b > 2)
+        strong &= ndvi < s["ndvi_max"]
+        weak = (ndvi < w["ndvi_max"]) & (L > w["L_min"]) & (a > w["a_min"]) & (b > w["b_min"])
     if green is not None:
         strong &= ~green; weak &= ~green
     return (strong, weak) if parts else sand_hysteresis(strong, weak)
+
+
+def turf_mask(a, ndvi=None):
+    """Clearly green turf (bunker grass faces) or tree crowns in the photo: sand sits near a* -3. In a spring photo turf
+    is rarely that green, but live turf is NDVI > 0.25 and sand ~0. Thresholds: TURF ([tuning.turf])."""
+    m = a < TURF["a_max"]
+    return m | (ndvi > TURF["ndvi_min"]) if ndvi is not None else m
 
 
 def sand_hysteresis(strong, weak):
@@ -111,6 +173,111 @@ def sand_hysteresis(strong, weak):
         return strong.copy()
     keep = np.zeros(n + 1, bool); keep[np.unique(lab[strong])] = True; keep[0] = False
     return keep[lab]
+
+
+def split_shared_greens(greens, ends, pins, reach=4.0, pin_near=8.0):
+    """[(green polygon, hole)] in the order of `greens`. A green belongs to the hole whose line of play ends in it
+    (within `reach` m, or a golf=pin in it within pin_near m of the end); one that holds the ends of several holes (a
+    double green, or neighbouring greens the classifier joined: Brambles 3 and 14) is split between them along the
+    Voronoi cells of their ends. No end: hole 99. ends: {hole: Point}."""
+    from shapely.geometry import MultiPoint
+    from shapely.ops import voronoi_diagram
+    out = []
+    for p in greens:
+        zone = p.buffer(reach)
+        mine = [(ref, e) for ref, e in sorted(ends.items())
+                if zone.contains(e) or any(zone.contains(q) and q.distance(e) < pin_near for q in pins)]
+        if len(mine) < 2:
+            out.append((p, mine[-1][0] if mine else 99))
+            continue
+        cells = voronoi_diagram(MultiPoint([e for _, e in mine]), envelope=p.envelope.buffer(50))
+        for ref, e in mine:
+            cell = next(c for c in cells.geoms if c.contains(e))
+            for q in polys_of(p.intersection(cell)):
+                out.append((q, ref))
+    return out
+
+
+def split_shared_fairways(fairways, lines, min_part=None, step=2.0):
+    """[(fairway polygon, hole or None)] in the order of `fairways`. A fairway polygon that the lines of play of several
+    holes run through (connected zoysia: Brambles' 13th polygon also held the whole 14th and 5th fairways, and its 18th
+    fairway was part of the 1st's) is split between them along the boundaries of their corridors, the Voronoi cells of
+    the lines (points every `step` m), each part to its hole. A line whose part would be under `min_part` m2 (a green
+    or tee beside the fairway, default [tuning] shared_fairway_min_part) takes none. None: at most one line runs
+    through the polygon; it is assigned as before, to the nearest line. lines: {course hole: LineString}."""
+    from shapely.geometry import MultiPoint
+    from shapely.ops import voronoi_diagram
+    from shapely import STRtree, segmentize
+    min_part = SHARED_FAIRWAY_MIN_PART if min_part is None else min_part
+    out = []
+    for p in fairways:
+        cand = {h: l for h, l in sorted(lines.items()) if l.intersects(p) and l.intersection(p).length > 0}
+        parts = {}
+        while len(cand) >= 2:
+            pts, own = [], []
+            for h, l in cand.items():
+                for c in segmentize(l, step).coords:
+                    pts.append(Point(c)); own.append(h)
+            tree = STRtree(pts)
+            cells = {h: [] for h in cand}
+            for c in voronoi_diagram(MultiPoint(pts), envelope=p.envelope.buffer(50)).geoms:
+                i = tree.query(c, predicate="contains")
+                if len(i):
+                    cells[own[min(i)]].append(c)
+            parts = {h: p.intersection(unary_union(cs)) for h, cs in cells.items()}
+            small = min(parts, key=lambda h: parts[h].area)
+            if parts[small].area >= min_part:
+                break
+            del cand[small]; parts = {}
+        if len(parts) < 2:
+            out.append((p, None))
+            continue
+        # a shard the corridor boundary cuts off a ragged edge (smaller than any fairway part vectorize keeps) joins
+        # the piece it shares the longest edge with
+        speck = 0.25 * MIN_AREA["fairway"]
+        pieces = sorted(((r, h) for h, q in parts.items() for r in polys_of(q)), key=lambda x: -x[0].area)
+        keep = [[r, h] for r, h in pieces if r.area >= speck]
+        for r, h in pieces:
+            if r.area >= speck:
+                continue
+            edge = max(((r.boundary.intersection(k[0].boundary).length, i) for i, k in enumerate(keep)), default=(0, 0))
+            if edge[0] > 0:
+                keep[edge[1]][0] = keep[edge[1]][0].union(r)
+            else:
+                keep.append([r, h])
+        out.extend((r, h) for r, h in keep)
+    return out
+
+
+# grass maintenance routes: tracks (or service ways) mapped as grass or earth are turf, not a paved cart path
+TURF_TRACK = {"surface": {"grass", "ground", "dirt", "earth", "mud"}, "tracktype": {"grade4", "grade5"}}
+
+
+def osm_vectors(G):
+    """OSM-authoritative non-golf surfaces ({road, building, court, water: [polygons]}), the service roads and tracks
+    that run inside the golf course, which are cart paths (GSPro surface: cart path, hole 98), and the course area.
+    Roads are the highway classes of ROAD_HALF_WIDTH, drawn that wide each side of the centre line. A track or service
+    way inside the course mapped as grass or earth (TURF_TRACK: mown maintenance routes) is left to the turf."""
+    osm = lambda pred: [g for _, t, g in G if pred(t)]
+    course_area = unary_union(osm(lambda t: t.get("leisure") == "golf_course"))
+    roads, course_tracks = [], []
+    for _, t, g in G:
+        hw = t.get("highway")
+        if hw in ROAD_HALF_WIDTH and g.geom_type == "LineString":
+            if hw in ("service", "track") and not course_area.is_empty and g.intersection(course_area).length > 0.6 * g.length:
+                if not any(t.get(k) in v for k, v in TURF_TRACK.items()):
+                    course_tracks.append(g.buffer(1.4, cap_style=1))
+                continue
+            roads.append(g.buffer(ROAD_HALF_WIDTH[hw], cap_style=2))
+    roads += osm(lambda t: t.get("amenity") == "parking")
+    vector = {
+        "road": [g for g in roads if g.geom_type in ("Polygon", "MultiPolygon")],
+        "building": [g for g in osm(lambda t: "building" in t) if g.geom_type in ("Polygon", "MultiPolygon")],
+        "court": [g for g in osm(lambda t: t.get("leisure") in ("pitch",) or t.get("sport") == "tennis") if g.geom_type in ("Polygon", "MultiPolygon")],
+        "water": [g for g in osm(lambda t: t.get("leisure") == "swimming_pool" or is_water(t))
+                  if g.geom_type in ("Polygon", "MultiPolygon")],
+    }
+    return vector, course_tracks, course_area
 
 
 def chaikin(coords, n=2):
@@ -212,9 +379,7 @@ def main():
         ndvi = (nir - rgb[0]) / (nir + rgb[0] + 1e-3) if nir is not None else None
         sand[r0:r1], shade_sand[r0:r1] = sand_mask(Lab[..., 0], Lab[..., 1], Lab[..., 2], ndvi,
                                                    osm_green[r0:r1] if ndvi is not None else None, parts=True)
-        grass[r0:r1] = Lab[..., 1] < -14  # clearly green: turf (bunker grass faces) or tree crowns; sand sits near a* -3
-        if ndvi is not None:  # spring photo: turf is rarely that green, but live turf is NDVI > 0.25 and sand ~0
-            grass[r0:r1] |= ndvi > 0.25
+        grass[r0:r1] = turf_mask(Lab[..., 1], ndvi)
     del Lab, osm_green
     sand = sand_hysteresis(sand, shade_sand); del shade_sand
     osm_bunk = burn_mask(osm(lambda t: t.get("golf") == "bunker"))
@@ -245,24 +410,7 @@ def main():
     surf["cartpath"] = ((lab == CID["cartpath"]) & corridor) | (backbone & canopy)
     # stray classifier "path" pixels away from mapped paths are just worn turf -> rough
     # 4) OSM-authoritative non-golf features
-    # service roads / tracks that run inside the golf course are cart paths (GSPro surface: cart path, hole 98)
-    course_area = unary_union(osm(lambda t: t.get("leisure") == "golf_course"))
-    roads, course_tracks = [], []
-    for _, t, g in G:
-        hw = t.get("highway")
-        if hw in ROAD_HALF_WIDTH and g.geom_type == "LineString":
-            if hw in ("service", "track") and not course_area.is_empty and g.intersection(course_area).length > 0.6 * g.length:
-                course_tracks.append(g.buffer(1.4, cap_style=1))
-                continue
-            roads.append(g.buffer(ROAD_HALF_WIDTH[hw], cap_style=2))
-    roads += osm(lambda t: t.get("amenity") == "parking")
-    vector = {
-        "road": [g for g in roads if g.geom_type in ("Polygon", "MultiPolygon")],
-        "building": [g for g in osm(lambda t: "building" in t) if g.geom_type in ("Polygon", "MultiPolygon")],
-        "court": [g for g in osm(lambda t: t.get("leisure") in ("pitch",) or t.get("sport") == "tennis") if g.geom_type in ("Polygon", "MultiPolygon")],
-        "water": [g for g in osm(lambda t: t.get("leisure") == "swimming_pool" or t.get("natural") == "water" or t.get("golf") == "water_hazard")
-                  if g.geom_type in ("Polygon", "MultiPolygon")],
-    }
+    vector, course_tracks, course_area = osm_vectors(G)
     for n, gs in vector.items():
         surf[n] = burn_mask(gs)
     if course_tracks:
@@ -308,6 +456,46 @@ def main():
         gs = [shape(s) for s, v in shapes(m.astype(np.uint8), mask=m, transform=T, connectivity=8) if v == 1]
         return unary_union(gs)
 
+    from rasterio.features import geometry_mask
+    from rasterio.windows import Window as RWindow, transform as window_transform
+    with rasterio.open(C.BUILD / "dem.tif") as ds:
+        demv = ds.read(1); Tv = ds.transform
+    def dem_points(geom):
+        x0, y0, x1, y1 = geom.bounds
+        c0 = max(0, int((x0 - Tv.c) / Tv.a) - 1); c1 = min(demv.shape[1], int((x1 - Tv.c) / Tv.a) + 2)
+        r0 = max(0, int((Tv.f - y1) / -Tv.e) - 1); r1 = min(demv.shape[0], int((Tv.f - y0) / -Tv.e) + 2)
+        if c1 <= c0 or r1 <= r0:
+            return np.zeros((0, 3))
+        sub = RWindow(c0, r0, c1 - c0, r1 - r0)
+        tw = window_transform(sub, Tv)
+        m = ~geometry_mask([geom], out_shape=(r1 - r0, c1 - c0), transform=tw)
+        rr, cc = np.nonzero(m)
+        return np.c_[tw.c + (cc + 0.5) * tw.a, tw.f + (rr + 0.5) * tw.e, demv[r0:r1, c0:c1][m]]
+    def dem_window(p, pad):
+        """The DEM `pad` m round polygon p, its transform, p's cells and the basin water poured into p spills out of (p
+        and the ground within 2.5 m of it: the ring is_hollow compares p with)."""
+        x0, y0, x1, y1 = p.bounds
+        c0 = max(0, int((x0 - pad - Tv.c) / Tv.a) - 1); c1 = min(demv.shape[1], int((x1 + pad - Tv.c) / Tv.a) + 2)
+        r0 = max(0, int((Tv.f - y1 - pad) / -Tv.e) - 1); r1 = min(demv.shape[0], int((Tv.f - y0 + pad) / -Tv.e) + 2)
+        tw = window_transform(RWindow(c0, r0, c1 - c0, r1 - r0), Tv)
+        z = demv[r0:r1, c0:c1].astype(np.float64)
+        inside = ~geometry_mask([p], out_shape=z.shape, transform=tw)
+        return z, tw, inside, ~geometry_mask([p.buffer(2.5)], out_shape=z.shape, transform=tw)
+    # a photo too coarse to separate the sand from the grass faces (Brambles' 0.6 m NAIP): bunkers are cut to their
+    # LiDAR pans (bunker_bowls); the faces go to the surfaces below in PRIORITY, else rough
+    trim_bunkers = C.IMAGERY_RES >= BUNKER_TRIM["photo_res"]
+    def trim_faces(g):
+        out = []
+        for p in polys_of(g):
+            z, tw, inside, basin = dem_window(p, max(2.5, BUNKER_TRIM["radius"]) + 1.0)
+            m = bunker_bowls(z, inside, basin, abs(Tv.a))
+            parts = []
+            if m is not None and m.any():
+                q = unary_union([shape(s_) for s_, v in shapes(m.astype(np.uint8), mask=m, transform=tw, connectivity=8) if v == 1])
+                parts = [r for r in polys_of(make_valid(smooth_poly(q, close=0.2)).intersection(p)) if r.area >= MIN_AREA["bunker"]]
+            out.extend(parts or [p])
+        return unary_union(out) if out else Polygon()
+
     aoi = box(C.CORE["xmin"], C.CORE["ymin"], C.CORE["xmax"], C.CORE["ymax"])
     final = {}
     taken = Polygon()
@@ -322,6 +510,11 @@ def main():
         else:
             g = smooth_poly(g, close=0.35 if n != "bunker" else 0.2)
         g = make_valid(g).intersection(aoi).difference(taken)
+        if n == "bunker" and trim_bunkers:
+            n0 = len(polys_of(g)); a0 = g.area
+            g = trim_faces(g)
+            print(f"bunker trim (photo {C.IMAGERY_RES} m): {n0} bunkers, {a0:.0f} m2 -> {len(polys_of(g))} pans, "
+                  f"{g.area:.0f} m2", flush=True)
         g = unary_union([p for p in polys_of(g) if p.area >= max(1.0, 0.25 * MIN_AREA.get(n, 1))])
         final[n] = g
         taken = unary_union([taken, g])
@@ -347,21 +540,6 @@ def main():
         return best if bd < lim else 99
     # LiDAR / OSM validation of the small features the photo classifier over-predicts (QA round 1 found many):
     # a tee must overlap a mapped tee or be a built, flat deck; a bunker must overlap a mapped bunker or be a hollow.
-    from rasterio.features import geometry_mask
-    from rasterio.windows import Window as RWindow, transform as window_transform
-    with rasterio.open(C.BUILD / "dem.tif") as ds:
-        demv = ds.read(1); Tv = ds.transform
-    def dem_points(geom):
-        x0, y0, x1, y1 = geom.bounds
-        c0 = max(0, int((x0 - Tv.c) / Tv.a) - 1); c1 = min(demv.shape[1], int((x1 - Tv.c) / Tv.a) + 2)
-        r0 = max(0, int((Tv.f - y1) / -Tv.e) - 1); r1 = min(demv.shape[0], int((Tv.f - y0) / -Tv.e) + 2)
-        if c1 <= c0 or r1 <= r0:
-            return np.zeros((0, 3))
-        sub = RWindow(c0, r0, c1 - c0, r1 - r0)
-        tw = window_transform(sub, Tv)
-        m = ~geometry_mask([geom], out_shape=(r1 - r0, c1 - c0), transform=tw)
-        rr, cc = np.nonzero(m)
-        return np.c_[tw.c + (cc + 0.5) * tw.a, tw.f + (rr + 0.5) * tw.e, demv[r0:r1, c0:c1][m]]
     osm_tees = unary_union(osm(lambda t: t.get("golf") == "tee")).buffer(2.0)
     osm_bunk = unary_union(osm(lambda t: t.get("golf") == "bunker")).buffer(1.5)
     def tee_ok(p):
@@ -380,6 +558,15 @@ def main():
         P = dem_points(inner if not inner.is_empty else p)
         R = dem_points(p.buffer(2.5).difference(p.buffer(0.5)))
         return len(P) >= 8 and len(R) >= 8 and P[:, 2].mean() < R[:, 2].mean() - depth
+    def unmapped_hollow(p):
+        """is_hollow, and closed or faced (closed_hollow): an open channel is lower than its banks too"""
+        if not is_hollow(p):
+            return False
+        inner = p.buffer(-0.3)
+        P = dem_points(inner if not inner.is_empty else p)
+        R = dem_points(p.buffer(2.5).difference(p.buffer(0.5)))
+        z, _, inside, basin = dem_window(p, 3.5)
+        return closed_hollow(z, inside, basin, float(R[:, 2].mean() - P[:, 2].mean()))
     def trim_grass(g):
         """Remove clearly green turf (outside canopy) from a mapped bunker outline (OSM outlines include the faces)."""
         if g.is_empty:
@@ -406,7 +593,7 @@ def main():
     paved = unary_union([make_valid(x) for x in vector["road"]]) if vector["road"] else Polygon()
     bldgs = unary_union([make_valid(x) for x in vector["building"]]) if vector["building"] else Polygon()
     for p in polys_of(final["bunker"]):
-        if bunker_ok(p, osm_bunk, course_buf, is_hollow, paved, bldgs, *BUNKER_CLEARANCE):
+        if bunker_ok(p, osm_bunk, course_buf, unmapped_hollow, paved, bldgs, *BUNKER_CLEARANCE):
             keep_b.append(p); continue
         (to_path if p.intersection(path_corr).area > 0.5 * p.area else []).append(p); dropped += 1
     print(f"validation: tees kept {len(keep_t)}, bunkers kept {len(keep_b)}, rejected {dropped} "
@@ -422,6 +609,8 @@ def main():
         if g.intersection(kb).area >= 0.3 * g.area or not is_hollow(g, 0.05):
             continue
         add = trim_grass(g.difference(blockers).difference(kb))
+        if trim_bunkers and not add.is_empty:
+            add = trim_faces(add)
         if add.area > 4:
             keep_b.extend(polys_of(add)); added += 1
             for n in ("fairway", "native", "deeprough"):
@@ -505,14 +694,7 @@ def main():
 
     # hole assignment
     pins = [g for _, t, g in G if t.get("golf") == "pin" and g.geom_type == "Point"]
-    green_hole = []
-    for p in polys_of(final["green"]):
-        h = 99
-        for ref, line in holes.items():
-            end = Point(line.coords[-1])
-            if p.buffer(4).contains(end) or any(p.buffer(4).contains(q) and q.distance(end) < 8 for q in pins):
-                h = ref
-        green_hole.append((p, h))
+    green_hole = split_shared_greens(polys_of(final["green"]), {ref: Point(l.coords[-1]) for ref, l in holes.items()}, pins)
     def nearest_green(p, maxd):
         best = (None, 1e9)
         for g, h in green_hole:
@@ -526,7 +708,7 @@ def main():
         if n in ("rough", "road", "building", "court", "native", "semirough", "water", "deeprough"):
             return 99
         if n == "green":
-            return next(h for g, h in green_hole if g.equals(p))
+            return next(h for g, h in green_hole if g.equals(p))   # (greens are emitted from green_hole below)
         if n == "fringe":
             h = nearest_green(p, 1.5)
             return h if h is not None else 99
@@ -536,12 +718,14 @@ def main():
         if n == "tee":
             return nearest_line(p, 40, "start")
         return nearest_line(p, 45)
+    # a fairway several lines of play run through is split between their corridors (the rest: nearest line)
+    fairway_hole = split_shared_fairways(polys_of(final["fairway"]), {r: l for r, l in holes.items() if r != 99})
     feats = []
     for n, g in final.items():
-        for p in polys_of(g):
+        for p, h in (green_hole if n == "green" else fairway_hole if n == "fairway" else [(q, None) for q in polys_of(g)]):
             if p.area < 1e-6:
                 continue
-            h = assign(p, n)
+            h = assign(p, n) if h is None else h
             feats.append({"type": "Feature", "geometry": mapping(p),
                           "properties": {"surface": n, "hole": h, "area": round(p.area, 2), "stroke": STROKE.get(n, "#ff00ff")}})
     # fringe/semirough adopt the hole of the green/fairway they surround

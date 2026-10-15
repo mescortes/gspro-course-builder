@@ -3,7 +3,7 @@ import sys, numpy as np, rasterio
 from rasterio.windows import from_bounds
 from rasterio.enums import Resampling
 from PIL import Image, ImageDraw
-sys.path.insert(0, 'scripts'); import config as C
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent)); import config as C
 
 
 def hillshade(z, res, az=315, alt=35):

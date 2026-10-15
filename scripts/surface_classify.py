@@ -22,6 +22,62 @@ CLASSES = ["unknown", "green", "fairway", "tee", "bunker", "cartpath", "rough", 
 CID = {n: i for i, n in enumerate(CLASSES)}
 
 
+def _tuning_files():
+    """Where config.tuning() reads a key, for messages."""
+    return f"courses/{C.SLUG}/course.toml" + (f" or regions/{C.REGION_NAME}.toml" if C.REGION_NAME else "")
+
+
+def _number(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
+def tuned(name, default):
+    """A table of thresholds: the engine defaults, with the keys the region's [tuning.<name>] table and then the
+    course.toml one set over them (key by key, config.tuning). An unknown key or a value that is not a number stops
+    the build, so a typo cannot leave the default in force silently (or fail as a bare TypeError)."""
+    v = C.tuning(name, {})
+    where = _tuning_files()
+    if not isinstance(v, dict):
+        sys.exit(f"[tuning.{name}] in {where} must be a table of {', '.join(default)}, not {v!r}")
+    bad = sorted(set(v) - set(default))
+    if bad:
+        sys.exit(f"[tuning.{name}] in {where}: unknown key {', '.join(bad)} (the keys are {', '.join(default)})")
+    for k, x in v.items():
+        if not _number(x):
+            sys.exit(f"[tuning.{name}] in {where}: {k} = {x!r} is not a number (the default is {default[k]})")
+    return {k: float(v.get(k, d)) for k, d in default.items()}
+
+
+def is_water(t):
+    """OSM tags of a pond, lake or creek: natural=water, or a golf water hazard (golf=lateral_water_hazard is often
+    mapped without natural=water). check_course counts the same features."""
+    return t.get("golf") in ("water_hazard", "lateral_water_hazard") or t.get("natural") == "water"
+
+
+# OSM highway classes that are roads, with the half width (m) of the road surface vectorize draws round the centre line
+# (the training labels use at most 2.5 m of it). A service road or a track inside the golf course is a cart path.
+ROAD_HALF_WIDTH_DEFAULT = {
+    "motorway": 7.0, "trunk": 7.0, "primary": 6.5, "secondary": 6.0, "tertiary": 5.0, "residential": 4.0,
+    "unclassified": 3.5, "living_street": 3.0, "service": 3.0, "track": 1.5,
+    "motorway_link": 4.0, "trunk_link": 4.0, "primary_link": 4.0, "secondary_link": 4.0, "tertiary_link": 3.5}
+
+
+def road_half_widths():
+    """ROAD_HALF_WIDTH_DEFAULT with course.toml [tuning.road_half_width] over it: a class can be added or widened, and
+    0 leaves a class out (tracks that are woodland footpaths)."""
+    v = C.tuning("road_half_width", {})
+    if not isinstance(v, dict):
+        sys.exit(f"[tuning.road_half_width] in {_tuning_files()} must be a table of highway class = metres, not {v!r}")
+    for k, x in v.items():
+        if not _number(x):
+            sys.exit(f"[tuning.road_half_width] in {_tuning_files()}: {k} = {x!r} is not a number (half the road's "
+                     "width in metres; 0 leaves the class out)")
+    return {k: float(x) for k, x in dict(ROAD_HALF_WIDTH_DEFAULT, **v).items() if x > 0}
+
+
+ROAD_HALF_WIDTH = road_half_widths()
+
+
 def grid():
     e = C.CORE; r = C.DEM_RES
     W = int(round((e["xmax"] - e["xmin"]) / r)); H = int(round((e["ymax"] - e["ymin"]) / r))
@@ -72,12 +128,19 @@ def osm_geoms():
     Golf features drawn for a course OSM lacks or maps wrongly (courses/<slug>/features/golf.geojson: OSM tags, UTM
     geometry, tag source=course) join them. course.toml [osm] exclude drops OSM elements, and [osm] outline keeps only
     the golf features (and golf-course outlines) of this course: more than half inside its outline(s) + 30 m.
-    Cached per process and on disk."""
+    Cached per process and on disk, keyed on the source files and on the course.toml settings applied here (a newcomer
+    sets [osm] exclude / outline after check_course reports a neighbour's holes: the next run must see them)."""
     import pickle, os
     traced = C.BUILD / "paths_detected.geojson" if C.tuning("trace_paths", True) else None   # course.toml [tuning]
     src = [C.RESEARCH / "osm_all.json", C.RESEARCH / "osm_golf.json", traced, C.SOURCES / "structures.geojson",
            C.SOURCES / "golf.geojson"]
-    stamp = tuple(int(os.path.getmtime(p)) if p is not None and p.exists() else 0 for p in src)
+    def key(p):  # nanoseconds and size: a file saved twice within one second is seen too
+        if p is None or not p.exists():
+            return 0
+        st = os.stat(p)
+        return st.st_mtime_ns, st.st_size
+    margin = C.tuning("osm_outline_margin", 30.0)
+    stamp = tuple(key(p) for p in src) + (C.CRS, tuple(sorted(C.OSM_EXCLUDE)), tuple(C.OSM_OUTLINE), margin)
     cache = C.BUILD / "osm_geoms.pkl"
     if stamp in _OSM_CACHE:
         return _OSM_CACHE[stamp]
@@ -138,7 +201,7 @@ def osm_geoms():
             g = g.buffer(0)
         out.append((oid, t, g))
     if C.OSM_OUTLINE:
-        out = this_course(out, {oid for _, oid in C.OSM_OUTLINE}, C.tuning("osm_outline_margin", 30.0))
+        out = this_course(out, {oid for _, oid in C.OSM_OUTLINE}, margin)
     if src[4].exists():
         for i, f in enumerate(json.load(open(src[4]))["features"]):
             out.append((7_000_000_000 + i, dict(f["properties"], source="course"), shape(f["geometry"])))
@@ -155,11 +218,12 @@ def osm_geoms():
 
 def osm_label_raster(W, H, T, chm):
     G = osm_geoms()
-    def polys(pred, buf=0.0):
+    def polys(pred, buf=0.0):  # buf: metres, or a function of the tags
         r = []
         for _, t, g in G:
             if pred(t):
-                gg = g.buffer(buf) if buf else g
+                b = buf(t) if callable(buf) else buf
+                gg = g.buffer(b) if b else g
                 if not gg.is_empty and gg.area > 0:
                     r.append(gg)
         return r
@@ -173,11 +237,13 @@ def osm_label_raster(W, H, T, chm):
         lab[m] = cid
     course = polys(lambda t: t.get("leisure") == "golf_course")
     course_m = rasterize([(g, 1) for g in course], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if course else np.ones((H, W), bool)
-    feats = polys(lambda t: t.get("golf") in ("green", "fairway", "tee", "bunker", "water_hazard") or t.get("natural") == "water")
+    feats = polys(lambda t: t.get("golf") in ("green", "fairway", "tee", "bunker") or is_water(t))
     feat_m = rasterize([(g, 1) for g in feats], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if feats else np.zeros((H, W), bool)
     # unlabelled bands where the real edge of a path/road is unknown (OSM gives centre lines only)
+    # a golf=cartpath is a cart path whatever its highway tag (Whistle Bear: golf=cartpath + highway=service)
+    road = lambda t: t.get("highway") in ROAD_HALF_WIDTH and t.get("golf") != "cartpath"
     lines = polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway"), 1.8) + \
-        polys(lambda t: t.get("highway") in ("service", "residential", "tertiary", "secondary", "unclassified", "secondary_link", "motorway"), 6.0)
+        polys(road, 6.0)
     line_m = rasterize([(g, 1) for g in lines], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if lines else np.zeros((H, W), bool)
     rough = course_m & ~ndimage.binary_dilation(feat_m, iterations=int(4 / C.DEM_RES)) & ~line_m & (chm < 0.5)
     lab[rough] = CID["rough"]
@@ -185,22 +251,54 @@ def osm_label_raster(W, H, T, chm):
     burn(polys(lambda t: t.get("golf") == "tee"), CID["tee"], 0.75)
     burn(polys(lambda t: t.get("golf") == "green"), CID["green"], 0.75)
     burn(polys(lambda t: t.get("golf") == "bunker"), CID["bunker"], 0.5)
-    burn(polys(lambda t: t.get("golf") == "water_hazard" or t.get("natural") == "water"), CID["water"], 1.0)
+    burn(polys(is_water), CID["water"], 1.0)
     burn(polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway"), 0.6), CID["cartpath"], 0)
-    burn(polys(lambda t: t.get("highway") in ("service", "residential", "tertiary", "secondary", "unclassified", "secondary_link", "motorway"), 2.5), CID["road"], 0)
+    burn(polys(road, lambda t: min(2.5, ROAD_HALF_WIDTH[t["highway"]])), CID["road"], 0)  # a track: no wider than itself
     burn(polys(lambda t: t.get("amenity") == "parking"), CID["road"], 1.0)
     burn(polys(lambda t: "building" in t), CID["building"], 1.0)
     lab[(chm > 3.0) & ~np.isin(lab, [CID["building"]])] = CID["tree"]
     return lab, G
 
 
+# Native / mulch seed colour (1 m-smoothed CIELAB of the photo, NDVI with a NIR band; canopy height in m), tuned on
+# Westmount's SWOOP 2025 photo: course.toml [tuning.native] sets the keys another photo or another soil needs.
+NATIVE = tuned("native", dict(a_min=3.0, b_min=11.0, L_max=55.0, chm_max=1.2, ndvi_max=0.18))
+# vectorize's photo colour rules (CIELAB of the photo, NDVI with a NIR band), tuned on the same photo. White silica
+# sand (b* ~4-6), another camera or another season needs other values: course.toml [tuning.sand] (sunlit sand),
+# [tuning.shadow_sand] (sand in shade, NIR photos only) and [tuning.turf] (clearly green turf, trimmed off bunkers)
+# override any of these keys. measure_registration.py reads the same sand rule. Defined here, with NATIVE, so that
+# check_course (which imports this module) reports a mistyped key before the build, not at the vectorize step.
+SAND = tuned("sand", dict(L_min=66.0, a_min=-12.0, b_min=8.5, b_max=26.0, ndvi_max=0.12))
+SHADOW_SAND = tuned("shadow_sand", dict(ndvi_max=0.02, L_min=25.0, a_min=-8.0, b_min=2.0))
+TURF = tuned("turf", dict(a_max=-14.0, ndvi_min=0.25))
+
+
+def lidar_classes(key, default):
+    """A [tuning] list of ASPRS point classes. A string or a single number used to match no point (np.isin), which
+    showed only later as the tree step's warning."""
+    v = C.tuning(key, default)
+    if not (isinstance(v, (list, tuple)) and v
+            and all(isinstance(c, int) and not isinstance(c, bool) and 0 <= c <= 255 for c in v)):
+        sys.exit(f"[tuning] {key} = {v!r} in {_tuning_files()}: a list of ASPRS point classes (whole numbers 0-255), "
+                 f"e.g. {key} = {list(default)}")
+    return tuple(v)
+
+
+# ASPRS classes of the tree returns (detect_trees): 1 (unclassified: the Ontario and USGS QL2 tiles leave vegetation
+# there) and 3-5 (low / medium / high vegetation: Spain PNOA, Denmark, many 3DEP QL1 projects). Ground is 2;
+# buildings, noise, water, bridges and overlap stay out. course.toml [tuning] lidar_vegetation_classes for a programme
+# that uses others (0). Checked here so check_course reports a malformed list.
+VEG_CLASSES = lidar_classes("lidar_vegetation_classes", (1, 3, 4, 5))
+
+
 def add_native_seeds(lab, X, names):
     """Brown/dry native & mulch areas are not mapped in OSM: seed them from colour (reddish-brown, low canopy)."""
     f = {n: X[..., i] for i, n in enumerate(names)}
-    seed = (f["A4"] > 3.0) & (f["B4"] > 11.0) & (f["L4"] < 55) & (f["chmmax"] < 1.2) & \
+    r = NATIVE
+    seed = (f["A4"] > r["a_min"]) & (f["B4"] > r["b_min"]) & (f["L4"] < r["L_max"]) & (f["chmmax"] < r["chm_max"]) & \
            np.isin(lab, [CID["unknown"], CID["rough"]])
     if "NDVI4" in f:  # spring photo: dormant turf is brown too, but still far greener in NIR than mulch or bare soil
-        seed &= f["NDVI4"] < 0.18
+        seed &= f["NDVI4"] < r["ndvi_max"]
     seed = ndimage.binary_opening(seed, iterations=2)
     lab[seed] = CID["native"]
     return lab
@@ -213,9 +311,39 @@ NAMES_BASE = ["L", "A", "B", "L4", "A4", "B4", "L12", "A12", "B12", "Lstd2", "Ls
 NAMES_NIR = ["N", "NDVI", "NDVI4", "NDVI12", "Nstd3"]
 
 
+_PHOTO = {}   # (path, mtime) -> band 4 is NIR
+
+
 def has_nir():
-    with rasterio.open(C.IMAGERY) as ds:
-        return ds.count >= 4
+    """True when band 4 of the photo is near-infrared. Exits on a photo that is not 8-bit R, G, B: every reader scales
+    0-255 to 0-1. GDAL flags the 4th band of any 4-band 8-bit GeoTIFF as alpha (the engine's own downloads too), so
+    the flag says nothing: an alpha mask (a GDAL warp, a tile export) holds only 0 and 255, a NIR band a full range."""
+    from rasterio.windows import Window
+    if not C.IMAGERY.exists():
+        sys.exit(f"{C.IMAGERY}: missing: run fetch_data.py imagery (or put the photo at {C.IMAGERY_RAW}), then build_all.py")
+    key = (str(C.IMAGERY), C.IMAGERY.stat().st_mtime_ns)
+    if key not in _PHOTO:
+        with rasterio.open(C.IMAGERY) as ds:
+            if ds.count < 3 or ds.dtypes[0] != "uint8":
+                sys.exit(f"{C.IMAGERY}: {ds.count} band(s) of {ds.dtypes[0]}, but the engine reads an 8-bit R, G, B (+ NIR) "
+                         f"photo. Convert {C.IMAGERY_RAW.name} in {C.IMAGERY_RAW.parent} with the rasterio tools of the "
+                         ".venv: .venv/bin/rio stack in.tif --bidx 1,2,3[,<NIR band>] rgbn.tif (keep R, G, B and NIR), "
+                         "then .venv/bin/rio convert rgbn.tif out.tif --dtype uint8 --scale-ratio <255 / the photo's "
+                         "maximum> (.venv/bin/rio info --stats in.tif gives it); or with GDAL's tools, gdal_translate -ot "
+                         "Byte -scale <min> <max> 0 255 -b 1 -b 2 -b 3 [-b <NIR band>] in.tif out.tif. Save out.tif as "
+                         f"{C.IMAGERY_RAW.name} (keep the original elsewhere) and rerun from the registration: "
+                         "scripts/build_all.py register")
+            nir = False
+            if ds.count >= 4:   # a central block is enough to tell a mask from a photo band
+                w = Window(max(0, ds.width // 2 - 1024), max(0, ds.height // 2 - 1024), min(2048, ds.width), min(2048, ds.height))
+                b = ds.read(4, window=w)
+                v = b[b > 0]
+                nir = bool(v.size) and float((v == 255).mean()) < 0.99
+                if not nir:
+                    print(f"photo: band 4 of {C.IMAGERY.name} holds only 0 and 255 (an alpha mask, not NIR): built without NIR",
+                          flush=True)
+        _PHOTO[key] = nir
+    return _PHOTO[key]
 
 
 def feature_names():
@@ -249,6 +377,7 @@ def read_window(path, pr0, pr1, pc0, pc1, scale=1, fill=0.0):
 
 
 def read_imagery_window(T, pr0, pr1, pc0, pc1):
+    has_nir()  # the photo is 8-bit RGB (or the build stops here, saying how to convert it)
     x0 = T.c + pc0 * T.a; x1 = T.c + pc1 * T.a; y1 = T.f + pr0 * T.e; y0 = T.f + pr1 * T.e
     with rasterio.open(C.IMAGERY) as ds:
         a = ds.read([1, 2, 3], window=from_bounds(x0, y0, x1, y1, transform=ds.transform),
@@ -257,11 +386,11 @@ def read_imagery_window(T, pr0, pr1, pc0, pc1):
 
 
 def read_nir_window(T, pr0, pr1, pc0, pc1):
-    """NIR band (0..1) on the DEM grid, or None for a 3-band photo."""
+    """NIR band (0..1) on the DEM grid, or None for a photo without one (3 bands, or R, G, B + alpha)."""
+    if not has_nir():
+        return None
     x0 = T.c + pc0 * T.a; x1 = T.c + pc1 * T.a; y1 = T.f + pr0 * T.e; y0 = T.f + pr1 * T.e
     with rasterio.open(C.IMAGERY) as ds:
-        if ds.count < 4:
-            return None
         a = ds.read(4, window=from_bounds(x0, y0, x1, y1, transform=ds.transform), out_shape=(pr1 - pr0, pc1 - pc0),
                     resampling=Resampling.average, boundless=True, fill_value=0)
     return a.astype(np.float32) / 255.0

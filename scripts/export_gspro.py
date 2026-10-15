@@ -1,7 +1,8 @@
 """GSPro / OPCD hand-off package (output/gspro/) for the terrain square config.TERRAIN.
 
-  heightmap_<N>.raw      Unity terrain heightmap, 16-bit little-endian ("Windows" byte order), N x N (N = 2^k + 1),
-                         north row first. Inside the build extent: the course DEM; outside: the 1-2 m backdrop DEM (feathered).
+  heightmap_<N>.raw      Unity terrain heightmap, 16-bit little-endian ("Windows" byte order), N x N (N = 2^k + 1, 0.5 m
+                         spacing up to Unity 2018's 4097: a terrain over 2048 m is coarser), north row first. Inside the
+                         build extent: the course DEM; outside: the 1-2 m backdrop DEM (feathered).
   heightmap_<N>.png      same data as 16-bit greyscale PNG
   terrain.json           size, height range, origin, import settings, Unity <-> UTM transform
   overlay_8192.jpg       satellite overlay for the Inkscape tracing layer (north-up, covers the terrain exactly)
@@ -28,7 +29,16 @@ import config as C
 OUT = C.OUTPUT / "gspro"
 TE = C.TERRAIN
 SIZE = TE["xmax"] - TE["xmin"]
-N = 2 ** int(math.ceil(math.log2(SIZE / 0.5))) + 1  # 2048 m -> 4097 (0.5 m spacing)
+MAX_N = 4097  # Unity 2018's largest heightmapResolution (2^12 + 1): an 8193^2 RAW cannot be imported
+
+
+def heightmap_resolution(size, spacing=0.5):
+    """Heightmap samples a side, 2^k + 1: `spacing` m where that fits (2048 m -> 4097, 640 m -> 2049); a wider terrain
+    keeps MAX_N samples at a coarser spacing (2560 m -> 0.625 m, 4096 m -> 1 m), recorded in terrain.json."""
+    return min(2 ** int(math.ceil(math.log2(size / spacing))) + 1, MAX_N)
+
+
+N = heightmap_resolution(SIZE)
 SINK = 0.05  # m the Unity terrain sits below the course meshes inside the build extent
 OPCD = {  # surface -> (OPCD palette name, fill hex, stacking order)
     "rough": ("Rough", "#278438", 0), "deeprough": ("Deep Rough", "#164B20", 1), "native": ("Pinestraw", "#BE751D", 2),
@@ -55,6 +65,8 @@ def heightmap():
     e = C.CORE
     inside = (X > e["xmin"]) & (X < e["xmax"]) & (Y > e["ymin"]) & (Y < e["ymax"])
     if not inside.all() and (C.DATA / "dem/backdrop_dem.tif").exists():
+        from build_backdrop import require_cover
+        require_cover(C.DATA / "dem/backdrop_dem.tif", TE, "the GSPro terrain")
         zb = sample(C.DATA / "dem/backdrop_dem.tif", X, Y)
         # feather over 25 m inside the build extent so the seam has no step
         d = np.minimum.reduce([X - e["xmin"], e["xmax"] - X, Y - e["ymin"], e["ymax"] - Y])
@@ -88,16 +100,21 @@ def heightmap():
 OUTER_SINK = 2.0   # m: the outer plot sits this far below the inner terrain inside the inner square (inner always wins)
 
 
-def outer_extent():
-    """OPCD 'Plot (Outer)': a second Unity terrain twice the inner size, centred on it, for the mountain background."""
-    cx, cy = (TE["xmin"] + TE["xmax"]) / 2, (TE["ymin"] + TE["ymax"]) / 2
-    return dict(xmin=cx - SIZE, ymin=cy - SIZE, xmax=cx + SIZE, ymax=cy + SIZE)
+def outer_extent(te=None):
+    """OPCD 'Plot (Outer)': a second Unity terrain twice the inner size, centred on it, for the mountain background.
+    `te` is the inner terrain (default config.TERRAIN); build_backdrop sizes the backdrop DEM to cover this."""
+    te = te or TE
+    size = te["xmax"] - te["xmin"]
+    cx, cy = (te["xmin"] + te["xmax"]) / 2, (te["ymin"] + te["ymax"]) / 2
+    return dict(xmin=cx - size, ymin=cy - size, xmax=cx + size, ymax=cy + size)
 
 
 def outer_terrain(n=4097, px=8192):
     """Outer plot heightmap (16-bit RAW, 4097^2 over 2x the inner size) + 8192 px overlay, as in the OPCD outer-plot
     recipe (research/GSPRO_COSMETICS.md). Inside the inner square it is sunk OUTER_SINK m (feathered over 10 m)."""
     oe = outer_extent()
+    from build_backdrop import require_cover   # past the DEM's border sample() would repeat its edge heights
+    require_cover(C.DATA / "dem/backdrop_dem.tif", oe, "the GSPro outer plot")
     xs = oe["xmin"] + np.arange(n) * (oe["xmax"] - oe["xmin"]) / (n - 1)
     ys = oe["ymax"] - np.arange(n) * (oe["ymax"] - oe["ymin"]) / (n - 1)
     X, Y = np.meshgrid(xs, ys)
@@ -291,6 +308,36 @@ def gkd_hole(h, hmin):
             "bunkers": [{"coords": ring3d(z["polygon_utm"], hmin, 2.0)} for z in h["hazards"] if z["type"] == "bunker"]}
 
 
+def oob_outline(course, te):
+    """The course outline GreenKeeper's pOOB ring follows, kept on the terrain square `te`: an outline that leaves it
+    (the test profile's small square, a course wider than the terrain) is clipped to it (its largest part); one inside
+    it is returned as it is."""
+    if course is None:
+        return None
+    from shapely.geometry import box
+    sq = box(te["xmin"], te["ymin"], te["xmax"], te["ymax"])
+    if sq.contains(course):
+        return course
+    from vectorize import polys_of
+    parts = polys_of(course.intersection(sq))
+    return max(parts, key=lambda g: g.area) if parts else None
+
+
+def gkd_ratings(ratings, slots):
+    """GreenKeeper 'rating/slope' strings per tee slot: {slot}SR (men) and {slot}SR_women, each only where rated (a
+    tee can be rated for women only, Brambles Front). ratings: config.RATINGS, slots: card tee -> GKD slot."""
+    sr = {}
+    for k, slot in slots.items():
+        r = ratings.get(k)
+        if not r:
+            continue
+        if r[0] is not None:
+            sr[f"{slot}SR"] = f"{r[0]:.1f}/{r[1]}"
+        if r[2] is not None:
+            sr[f"{slot}SR_women"] = f"{r[2]:.1f}/{r[3]}"
+    return sr
+
+
 def greenkeeper(hmin):
     """greenkeeper.json: per hole tees / pins / aim points / hazards in Unity terrain coordinates, plus a 'gkd' view in
     GreenKeeper's own vocabulary (tee slots, rating/slope strings, Thursday-Sunday pins, pOOB ring, 3D hazard rings)
@@ -314,13 +361,8 @@ def greenkeeper(hmin):
     from surface_classify import osm_geoms
     course = max((g for _, t, g in osm_geoms() if t.get("leisure") == "golf_course" and g.geom_type == "Polygon"),
                  key=lambda g: g.area, default=None)
-    sr = {}
-    for k, slot in GKD_TEE_SLOT.items():
-        r = C.RATINGS.get(k)
-        if r:
-            sr[f"{slot}SR"] = f"{r[0]:.1f}/{r[1]}"
-            if r[2] is not None:
-                sr[f"{slot}SR_women"] = f"{r[2]:.1f}/{r[3]}"
+    oob = oob_outline(course, TE)
+    sr = gkd_ratings(C.RATINGS, GKD_TEE_SLOT)
     gk = {"course": C.COURSE_NAME, "layout": C.LAYOUT, "frame": "Unity terrain (x east, y up, z north) metres",
           "tee_sets": [{"key": k, "name": n, "colour": c} for k, n, c in C.TEES],
           "ratings": {k: dict(zip(("men_rating", "men_slope", "women_rating", "women_slope", "total_yards"), v)) for k, v in C.RATINGS.items()},
@@ -328,7 +370,7 @@ def greenkeeper(hmin):
                           "one value per slot: pick men's or women's), pOOB = the OSM property line on the ground (our OB "
                           "line), hazards = water / native rings with ground heights. Distances follow GreenKeeper's rule.",
                   "tee_slots": GKD_TEE_SLOT, "ratings": sr, "par": sum(h["par"] for h in holes),
-                  "pOOB": {"coords": ring3d(list(course.exterior.coords), hmin) if course is not None else []}},
+                  "pOOB": {"coords": ring3d(list(oob.exterior.coords), hmin) if oob is not None else []}},
           "terrain": "see terrain.json", "holes": holes}
     json.dump(gk, open(OUT / "greenkeeper.json", "w"), indent=1)
     for old in OUT.glob("hole01_greenkeeper.json"):
@@ -353,6 +395,9 @@ def main():
     json.dump(meta, open(OUT / "terrain.json", "w"), indent=1)
     nh = greenkeeper(hmin)
     print(f"gspro package: heightmap {N}^2 over {SIZE:.0f} m ({hmin}..{hmax} m), svg shapes {n}, trees {nt}, holes {nh}")
+    if SIZE / (N - 1) > 0.5:
+        print(f"   heightmap spacing {SIZE / (N - 1):.3g} m: Unity 2018 takes at most {MAX_N}^2 samples (terrain.json "
+              "sample_spacing_m); the course meshes keep their own detail")
 
 
 if __name__ == "__main__":
