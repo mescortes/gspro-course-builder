@@ -49,25 +49,25 @@ green centre), with the card yards in brackets where they differ by more than 6 
 <!-- holes-table -->
 | Hole | Par | SI | Blue | White | Red | Gold | Green (yd deep × wide) | Elev. change | Hazards |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | 5 | 7 | 559 | 535 | 514 | 434 | 40 × 24 | -6 m | 6 bunker |
-| 2 | 4 | 13 | 373 | 357 | 335 | 286 | 47 × 18 | +10 m | 2 bunker |
-| 3 | 3 | 9 | 195 | 179 | 163 | 160 | 28 × 28 | -8 m | 2 bunker, 1 water |
-| 4 | 4 | 1 | 415 | 386 | 366 | 323 | 32 × 25 | -6 m | 3 bunker, 1 water |
+| 1 | 5 | 7 | 559 | 535 | 514 | 435 | 40 × 24 | -6 m | 6 bunker |
+| 2 | 4 | 13 | 373 | 357 | 335 | 286 | 48 × 18 | +10 m | 2 bunker |
+| 3 | 3 | 9 | 195 | 179 | 163 | 160 | 28 × 28 | -8 m | 2 bunker, 1 native_area, 1 water |
+| 4 | 4 | 1 | 415 | 386 | 367 | 323 | 32 × 25 | -6 m | 3 bunker, 1 water |
 | 5 | 5 | 3 | 600 | 568 | 527 | 450 | 42 × 29 | +5 m | 4 bunker |
 | 6 | 3 | 15 | 202 | 180 | 163 | 133 | 32 × 32 | -8 m | 5 bunker |
-| 7 | 5 | 11 | 541 | 503 | 480 | 449 | 42 × 26 | -8 m | 4 bunker |
-| 8 | 4 | 17 | 305 | 275 | 260 | 245 | 27 × 23 | +4 m | 5 bunker |
+| 7 | 5 | 11 | 541 | 503 | 480 | 449 | 41 × 26 | -8 m | 4 bunker |
+| 8 | 4 | 17 | 305 | 275 | 260 | 245 | 27 × 24 | +2 m | 5 bunker |
 | 9 | 4 | 5 | 401 | 373 | 346 | 334 | 35 × 19 | +6 m | 2 bunker, 1 water |
-| 10 | 4 | 12 | 334 | 319 | 304 | 217 | 28 × 32 | -3 m | 2 bunker, 3 native_area |
+| 10 | 4 | 12 | 334 | 319 | 304 | 217 | 29 × 32 | -3 m | 2 bunker, 4 native_area |
 | 11 | 5 | 6 | 580 | 540 | 502 | 451 | 37 × 24 | +0 m | 2 bunker, 1 native_area |
 | 12 | 3 | 18 | 141 | 127 | 108 | 93 | 32 × 27 | -6 m | 3 bunker |
 | 13 | 5 | 8 | 554 | 520 | 503 | 439 | 35 × 28 | -6 m | 2 bunker |
 | 14 | 4 | 10 | 375 | 359 | 318 | 294 | 29 × 27 | -5 m | 3 bunker |
-| 15 | 4 | 2 | 453 | 396 | 367 | 315 | 25 × 28 | +3 m | – |
+| 15 | 4 | 2 | 453 | 396 | 367 | 315 | 26 × 28 | +3 m | – |
 | 16 | 4 | 4 | 439 | 418 | 400 | 359 | 33 × 28 | -4 m | 1 bunker |
 | 17 | 3 | 16 | 165 | 145 | 132 | 113 | 27 × 27 | -5 m | 3 bunker |
-| 18 | 4 | 14 | 384 | 367 | 351 | 334 | 36 × 26 | +4 m | 1 bunker |
-| **Total** | **73** | | **7015** (7018) | **6546** (6550) | **6139** (6143) | **5429** (5432) | | | |
+| 18 | 4 | 14 | 384 | 367 | 351 | 334 | 36 × 26 | +4 m | 1 bunker, 2 native_area |
+| **Total** | **73** | | **7015** (7018) | **6546** (6550) | **6139** (6143) | **5430** (5432) | | | |
 <!-- /holes-table -->
 
 ## Data
@@ -133,7 +133,9 @@ The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the Mountain
 
 ## Rebuilding
 
-Requires Python 3.12, [uv](https://github.com/astral-sh/uv) and headless Blender 4.2 LTS (for the FBX step).
+Requires Python 3.12, [uv](https://github.com/astral-sh/uv) and headless Blender 4.2 LTS (for the FBX step). On
+macOS, Blender opens a Metal device even with `-b`: where the GPU is not reachable (a sandboxed shell, for example) it
+crashes at startup, and the `fbx` step has to run outside the sandbox.
 
 Measured on this build:
 * **RAM:** 11.5 GB at peak (the classifier). No other step exceeds 5 GB.
@@ -142,6 +144,10 @@ Measured on this build:
   at about 4-5 min each.
 * **On a 32-core, 93 GB runner** (fresh clone, 2026-10-11): about 33 min. The first backdrop run takes 11 min and is
   cached afterwards. Peak memory, sampled every 2 s, was 5.6 GB.
+* **On a MacBook Pro (Apple M5 Max, 18 cores, 64 GB, macOS 27.0.1; 2026-10-14)**: about 13 min with the downloads in
+  place; vectorize (3 min), rasters and export (2 min each) are the longest steps. Peak memory 8.4 GB (largest single step). The first
+  backdrop run downloads its 5 km photo from the LIO image server; that took 84 min on the day, with HTTP 500/502
+  responses that the fetch retries.
 
 ```bash
 uv venv --python 3.12 .venv
@@ -151,9 +157,18 @@ uv pip install --python .venv/bin/python -r requirements.txt
 .venv/bin/python scripts/fetch_backdrop.py
 BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py      # all steps (about 25 min on 96 cores)
 .venv/bin/python -m pytest -q tests                                  # unit + built-course tests
+.venv/bin/python scripts/fingerprint.py check                        # the build against fingerprints/westmount.json
 # CI (.github/workflows/tests.yml) runs the unit tests only: pytest tests --ignore=tests/test_course.py
 python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?v=1#h1-tee
 ```
+
+`fingerprints/westmount.json` is the golden build fingerprint: a digest of every downloaded input and build product
+(GeoTIFFs by pixels and georeference, `.npz` files by their arrays), with readable summaries and the machine, OS and
+package versions that produced it. Every engine change must rebuild Westmount to the same fingerprint, or explain
+each difference. Floating-point results only match on that machine and package set; `fingerprint.py check` lists any
+environment difference before the artefacts. FBX and .blend files are listed, not compared: Blender writes the time
+into both and derives FBX object ids from Python's per-process string hash. The glTF they are converted from and
+`gspro/fbx_manifest.json` are compared.
 
 `research/osm_*.json` hold the OSM snapshot the model was built from. Delete them before `fetch_data.py osm` to refresh.
 
