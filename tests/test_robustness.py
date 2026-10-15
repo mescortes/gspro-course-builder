@@ -174,3 +174,18 @@ def test_tee_labels_tell_black_from_blue():
     assert C.tee_labels(("black", "gold", "blue", "white", "red")) == {
         "black": "Bla", "gold": "G", "blue": "Blu", "white": "W", "red": "R"}
     assert C.tee_labels(("blue", "white", "red", "gold")) == {"blue": "B", "white": "W", "red": "R", "gold": "G"}
+
+
+def test_the_out_of_bounds_ring_stays_on_the_terrain():
+    """GreenKeeper's pOOB ring is the course outline on the ground. An outline wider than the GSPro terrain (the test
+    profile's small square, or a course wider than 2 km) put ring points off the terrain. It is clipped to the
+    terrain square; an outline inside it is used as it is."""
+    import export_gspro as X
+    from shapely.geometry import box, Polygon
+    te = dict(xmin=0.0, ymin=0.0, xmax=1000.0, ymax=1000.0)
+    wide = box(-200, 100, 1300, 900)
+    o = X.oob_outline(wide, te)
+    assert box(0, 0, 1000, 1000).buffer(1e-6).contains(o) and abs(o.area - 1000 * 800) < 1
+    inside = Polygon([(100, 100), (900, 120), (500, 800)])
+    assert X.oob_outline(inside, te) is inside
+    assert X.oob_outline(None, te) is None

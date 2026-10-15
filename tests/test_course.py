@@ -465,7 +465,7 @@ def test_greenkeeper_gkd_hints():
     ring = np.asarray(g["pOOB"]["coords"])
     assert ring.shape[1] == 3 and len(ring) > 50 and np.linalg.norm(ring[0] - ring[-1]) < 8
     te = C.TERRAIN
-    assert (ring[:, 0] > 0).all() and (ring[:, 0] < te["xmax"] - te["xmin"]).all() and (ring[:, 2] > 0).all()
+    assert (ring[:, 0] >= 0).all() and (ring[:, 0] <= te["xmax"] - te["xmin"]).all() and (ring[:, 2] >= 0).all()  # on the terrain (a clipped ring runs along its edge)
     meta = json.load(open(GSPRO / "terrain.json"))
     assert (ring[:, 1] >= -0.5).all() and (ring[:, 1] <= meta["terrain_size_m"]["height_y"] + 0.5).all()
     for h in gk["holes"]:

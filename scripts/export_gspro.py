@@ -308,6 +308,21 @@ def gkd_hole(h, hmin):
             "bunkers": [{"coords": ring3d(z["polygon_utm"], hmin, 2.0)} for z in h["hazards"] if z["type"] == "bunker"]}
 
 
+def oob_outline(course, te):
+    """The course outline GreenKeeper's pOOB ring follows, kept on the terrain square `te`: an outline that leaves it
+    (the test profile's small square, a course wider than the terrain) is clipped to it (its largest part); one inside
+    it is returned as it is."""
+    if course is None:
+        return None
+    from shapely.geometry import box
+    sq = box(te["xmin"], te["ymin"], te["xmax"], te["ymax"])
+    if sq.contains(course):
+        return course
+    from vectorize import polys_of
+    parts = polys_of(course.intersection(sq))
+    return max(parts, key=lambda g: g.area) if parts else None
+
+
 def gkd_ratings(ratings, slots):
     """GreenKeeper 'rating/slope' strings per tee slot: {slot}SR (men) and {slot}SR_women, each only where rated (a
     tee can be rated for women only, Brambles Front). ratings: config.RATINGS, slots: card tee -> GKD slot."""
@@ -346,6 +361,7 @@ def greenkeeper(hmin):
     from surface_classify import osm_geoms
     course = max((g for _, t, g in osm_geoms() if t.get("leisure") == "golf_course" and g.geom_type == "Polygon"),
                  key=lambda g: g.area, default=None)
+    oob = oob_outline(course, TE)
     sr = gkd_ratings(C.RATINGS, GKD_TEE_SLOT)
     gk = {"course": C.COURSE_NAME, "layout": C.LAYOUT, "frame": "Unity terrain (x east, y up, z north) metres",
           "tee_sets": [{"key": k, "name": n, "colour": c} for k, n, c in C.TEES],
@@ -354,7 +370,7 @@ def greenkeeper(hmin):
                           "one value per slot: pick men's or women's), pOOB = the OSM property line on the ground (our OB "
                           "line), hazards = water / native rings with ground heights. Distances follow GreenKeeper's rule.",
                   "tee_slots": GKD_TEE_SLOT, "ratings": sr, "par": sum(h["par"] for h in holes),
-                  "pOOB": {"coords": ring3d(list(course.exterior.coords), hmin) if course is not None else []}},
+                  "pOOB": {"coords": ring3d(list(oob.exterior.coords), hmin) if oob is not None else []}},
           "terrain": "see terrain.json", "holes": holes}
     json.dump(gk, open(OUT / "greenkeeper.json", "w"), indent=1)
     for old in OUT.glob("hole01_greenkeeper.json"):
