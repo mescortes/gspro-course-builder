@@ -374,6 +374,34 @@ def test_feature_files_in_lon_lat_or_another_frame_are_reported(tmp_path):
     assert "research/layout.geojson" in p[2] and "terrain" in p[2]
 
 
+def test_a_broken_feature_file_or_one_that_is_not_a_collection_is_named(tmp_path):
+    """An unknown geometry type or a one-point line raises shapely's GeometryTypeError / GEOSException, not
+    ValueError, and check_course stopped with a traceback. A file holding a single Feature (or a bare geometry) was
+    skipped without a word, and assemble_features then stopped with KeyError 'features'. The file is also closed."""
+    import warnings
+    class Course(Card):
+        SOURCES = tmp_path / "features"; RESEARCH = tmp_path / "research"; CRS = "EPSG:2958"
+        TERRAIN = FRAME["terrain"]; COURSE_DIR = tmp_path
+    (tmp_path / "features/overrides").mkdir(parents=True); (tmp_path / "research").mkdir()
+    poly = {"type": "Polygon", "coordinates": [[[500000.0, 4800000.0], [500010.0, 4800000.0], [500010.0, 4800010.0],
+                                                [500000.0, 4800000.0]]]}
+    feature = lambda g: {"type": "Feature", "properties": {"golf": "green"}, "geometry": g}
+    files = {"a_circle": {"type": "FeatureCollection", "features": [feature({"type": "Circle", "coordinates": [1, 2]})]},
+             "b_one_point": {"type": "FeatureCollection",
+                             "features": [feature({"type": "LineString", "coordinates": [[500000.0, 4800000.0]]})]},
+             "c_single_feature": feature(poly), "d_bare_geometry": poly}
+    for name, d in files.items():
+        json.dump(d, open(tmp_path / f"features/overrides/{name}.geojson", "w"))
+    (tmp_path / "features/overrides/e_truncated.geojson").write_text('{"type": "FeatureCollection", "feat')
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        p = K.feature_files_report(Course)
+    assert len(p) == 5, p
+    assert all(f"features/overrides/{n}.geojson" in x for n, x in zip(sorted(files) + ["e_truncated"], p)), p
+    assert "circle" in p[0].lower() and "FeatureCollection" in p[2] and "FeatureCollection" in p[3] and "wrap" in p[2]
+    assert not [x for x in w if issubclass(x.category, ResourceWarning)]
+
+
 def test_westmounts_feature_files_are_in_its_frame():
     assert K.feature_files_report(C) == []
 

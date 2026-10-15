@@ -267,6 +267,7 @@ def feature_files_report(c=C):
     put every feature near the grid origin, and the build then had no golf labels on the course."""
     from pyproj import CRS
     from pyproj.exceptions import CRSError
+    from shapely.errors import ShapelyError
     from shapely.geometry import shape
     frame = CRS(c.CRS)
     ext = [dict(c.TERRAIN)] + ([dict(c.FETCH_CORE)] if getattr(c, "FETCH_CORE", None) else [])
@@ -278,10 +279,28 @@ def feature_files_report(c=C):
     for f in files:
         name = f"courses/{Path(c.COURSE_DIR).name}/{f.relative_to(c.COURSE_DIR).as_posix()}"
         try:
-            fc = json.load(open(f))
-            b = [shape(x["geometry"]).bounds for x in fc.get("features", []) if x.get("geometry")]
-        except (ValueError, KeyError, TypeError, AttributeError) as e:
-            out.append(f"{name}: not a GeoJSON feature collection ({e})")
+            with open(f) as fh:
+                fc = json.load(fh)
+        except ValueError as e:  # not JSON, or not UTF-8
+            out.append(f"{name}: not a JSON file ({e}): fix it, or export it again (QGIS: Export > Save Features As, "
+                       "GeoJSON)")
+            continue
+        if not (isinstance(fc, dict) and fc.get("type") == "FeatureCollection" and isinstance(fc.get("features"), list)):
+            kind = fc.get("type") if isinstance(fc, dict) else type(fc).__name__
+            out.append(f"{name}: a {kind or 'JSON object'}, not a FeatureCollection: the build reads a "
+                       "FeatureCollection's features, so wrap it: {\"type\": \"FeatureCollection\", \"features\": [...]}")
+            continue
+        b, bad = [], None
+        for i, x in enumerate(fc["features"]):
+            try:
+                if x.get("geometry"):
+                    b.append(shape(x["geometry"]).bounds)
+            except (ValueError, KeyError, TypeError, AttributeError, ShapelyError) as e:
+                bad = (f"{name}: feature {i + 1}: {e.__class__.__name__}: {str(e).strip()}: fix or redraw it (a GeoJSON "
+                       "geometry type, a line of two or more points, a polygon ring of four or more closing on itself)")
+                break
+        if bad:
+            out.append(bad)
             continue
         named = ((fc.get("crs") or {}).get("properties") or {}).get("name")
         if named:
