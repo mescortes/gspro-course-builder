@@ -49,7 +49,9 @@ leaf_off = true  # November 2017 flights: deciduous crowns are sparse in the CHM
 raw = "swoop2025_course.tif"
 registered = "swoop2025_course_reg.tif"
 res = 0.16
-shift = [0.0, 0.0]  # measure_registration.py after the first build
+# SWOOP 2025 vs the 2017 LiDAR (measure_registration.py, 118 bunkers: photo sand vs LiDAR hollows): dx +0.25 m
+# (MAD 0.25), dy 0.00 m (MAD 0.25), the same in the north / south / east / west halves
+shift = [0.25, 0.0]  # metres +E/+N applied to the photo
 leaf_off = true  # spring photo: the ground is visible through the bare crowns
 credit = "Contains information licensed under the Open Government Licence - Ontario (SWOOP 2025 orthoimagery)"
 
