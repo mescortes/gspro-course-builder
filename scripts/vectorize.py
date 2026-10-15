@@ -132,12 +132,12 @@ def closed_hollow(z, inside, basin, sunk, H=None, res=None):
 
 def open_both_ends(z, inside, basin, res, H=None, floor_r=1.5, apart=120.0):
     """Is the ground round a polygon (`inside` on the DEM window z, cells of `res` m; the ring: `basin` outside it) open
-    on two opposite sides, as a channel is at both ends? A ring cell is open when it lies less than H `open` m above the
-    floor next to it - the lowest polygon cell within `floor_r` m of the one nearest to it (a polygon takes in a lip up
-    its faces) - or above the plane of the polygon's lower half (a channel's bed runs on up at its slope). An outlet is
-    a patch of open cells (8-connected, H `outlet` m2 or more) that leads out of the basin (reaches its outer edge);
-    two outlets `apart` degrees or more apart seen from the polygon's centre are opposite ends. A bunker cut into a
-    slope has one outlet, its low side. H: BUNKER_HOLLOW ([tuning.bunker_hollow])."""
+    on two opposite sides, as a channel is at both ends? A ring cell is open when it lies less than H `open` m above
+    either the floor next to it - the lowest polygon cell within `floor_r` m of the one nearest to it (a polygon takes
+    in a lip up its faces) - or the plane fitted to the polygon's lower half (a channel's bed runs on at its slope). An
+    outlet is a patch of open cells (8-connected, H `outlet` m2 or more) that leads out of the basin (reaches its outer
+    edge); two outlets `apart` degrees or more apart seen from the polygon's centre are opposite ends. A bunker cut
+    into a slope has one outlet, its low side. H: BUNKER_HOLLOW ([tuning.bunker_hollow])."""
     import math
     H = BUNKER_HOLLOW if H is None else H
     ok = np.isfinite(z)
