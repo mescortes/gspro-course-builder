@@ -219,6 +219,26 @@ def test_new_course_names_an_unknown_region_and_an_incomplete_scaffold(tmp_path,
         N.load_region("plains")
 
 
+def test_the_scaffold_keys_of_a_searched_provider_are_checked(tmp_path, monkeypatch):
+    """A new Canadian region written as lidar = { provider = "nrcan_copc" } passed load_region, then new_course.py
+    stopped with a KeyError traceback: the NRCan search reads [scaffold] lidar province and backdrop url."""
+    sc = region("southern_ontario")["scaffold"]
+    assert region_spec.scaffold_problems({"scaffold": sc}) == []
+    bare = dict(sc, lidar={"provider": "nrcan_copc"}, backdrop={"provider": "cog_dem"})
+    p = "\n".join(region_spec.scaffold_problems({"scaffold": bare}))
+    assert "[scaffold] lidar: no province" in p and "[scaffold] backdrop: no url" in p and "nrcan_copc" in p
+    typo = dict(sc, backdrop={"provider": "cog_dem", "url": "https://x/{province}-{projet}-1m-dtm.tif"})
+    p = "\n".join(region_spec.scaffold_problems({"scaffold": typo}))
+    assert "{projet}" in p and "{project}" in p and "{kind}" in p, p
+    monkeypatch.setattr(N, "ROOT", tmp_path)
+    (tmp_path / "regions").mkdir()
+    text = (ROOT / "regions/southern_ontario.toml").read_text()
+    (tmp_path / "regions/quebec_test.toml").write_text(text.replace('lidar = { provider = "nrcan_copc", province = "ON" }',
+                                                                    'lidar = { provider = "nrcan_copc" }'))
+    with pytest.raises(SystemExit, match=r"quebec_test.toml.*\[scaffold\] lidar: no province"):
+        N.load_region("quebec_test")
+
+
 # ---- scaffold sources
 def test_a_provider_new_course_cannot_discover_is_copied_from_the_region(monkeypatch):
     """Every region provider but nrcan_copc was rewritten as usgs_3dep (project '?', no DTM, base_h 0): a region with a

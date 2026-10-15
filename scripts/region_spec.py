@@ -6,6 +6,7 @@ regions/TEMPLATE.toml.example is a commented template.
 
 Importing this module loads no course: new_course.py runs before the course exists.
 """
+import string
 
 # (table, keys, reader). A course.toml table of the same name overrides the region's key by key (config.REGION).
 TABLES = (
@@ -35,6 +36,13 @@ CLASSIFIERS = {
 # new_course.py: [scaffold] keys (crs is optional: an EPSG code, or a CRS name with {zone} / {hemisphere} for a
 # datum whose UTM zones EPSG names otherwise, e.g. "GDA2020 / MGA zone {zone}")
 SCAFFOLD_KEYS = ("datum", "vertical", "imagery_res", "lidar_leaf_off", "imagery_leaf_off", "lidar", "backdrop", "imagery")
+# new_course.discover_sources: what its search for a [scaffold] lidar provider reads besides the provider, as
+# (table, key, what it is, the {fields} of a URL pattern)
+SCAFFOLD_SEARCH_KEYS = {
+    "nrcan_copc": (("lidar", "province", "the province or territory folder of NRCan's point clouds, "
+                    "pointclouds_nuagespoints/<province>/", ()),
+                   ("backdrop", "url", "the 1 m DTM file URL of a LiDAR project", ("province", "project", "kind"))),
+}
 
 
 def _get(r, path):
@@ -53,6 +61,22 @@ def scaffold_problems(region):
             if isinstance(sc.get(k), dict) and "provider" not in sc[k]]
     out += [f"[scaffold] {k}: true or false (the usual leaf state of the region's data), not {sc[k]!r}"
             for k in ("lidar_leaf_off", "imagery_leaf_off") if k in sc and not isinstance(sc[k], bool)]
+    provider = sc.get("lidar", {}).get("provider") if isinstance(sc.get("lidar"), dict) else None
+    for table, key, what, fields in SCAFFOLD_SEARCH_KEYS.get(provider, ()):
+        t = sc.get(table) if isinstance(sc.get(table), dict) else {}
+        if not isinstance(t.get(key), str):
+            out.append(f"[scaffold] {table}: no {key} (new_course.py's {provider} search reads it: {what}"
+                       + (f", with {', '.join('{' + f + '}' for f in fields)}" if fields else "") + ")")
+            continue
+        try:
+            have = {f for _, f, _, _ in string.Formatter().parse(t[key]) if f is not None}
+        except ValueError as e:  # an unclosed brace
+            out.append(f"[scaffold] {table} {key}: {t[key]!r} is not a URL pattern ({e}): {what}")
+            continue
+        if fields and have != set(fields):
+            out.append(f"[scaffold] {table} {key}: {t[key]!r} must hold {', '.join('{' + f + '}' for f in fields)} "
+                       f"and no other field" + (f" (not {', '.join('{' + f + '}' for f in sorted(have - set(fields)))})"
+                                               if have - set(fields) else "") + f": {what}")
     return out
 
 
