@@ -86,7 +86,9 @@ def check_frame_crs(crs, lon=None, lat=None):
     if lon is not None and lat is not None:
         f = Proj(c).get_factors(lon, lat)
         k = max((f.meridional_scale, f.parallel_scale), key=lambda s: abs(s - 1))
-        if math.isfinite(k) and abs(k - 1) > MAX_SCALE_ERROR:
+        if not math.isfinite(k):
+            sys.exit(f"{where} ({c.name}) does not reach the course at {lon:.4f}, {lat:.4f}: {fix}")
+        if abs(k - 1) > MAX_SCALE_ERROR:
             sys.exit(f"{where} ({c.name}): a metre on the ground is {k:.4f} of its metres at the course "
                      f"({abs(k - 1):.1%} off: a 400-yard hole would measure {400 * k:.0f} yards): {fix}")
     return f"EPSG:{code}"

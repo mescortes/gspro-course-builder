@@ -158,7 +158,7 @@ def test_the_course_frame_must_be_a_projected_crs_in_metres():
             N.check_frame_crs(bad)
 
 
-def test_the_frame_crs_is_written_as_the_epsg_code_of_a_ground_metre_grid():
+def test_the_frame_crs_is_written_as_the_epsg_code_of_a_ground_metre_grid(monkeypatch):
     """The engine reads [frame] crs as EPSG:<code> (the photo request, the feature files' crs names): a CRS name, an
     OGC URN or a PROJ string was accepted, then fetch_data.py imagery stopped with IndexError or ValueError. A compound
     CRS (with heights) and Web Mercator were accepted too: Web Mercator's metres are 1.38 ground metres at 43 N, so
@@ -177,6 +177,14 @@ def test_the_frame_crs_is_written_as_the_epsg_code_of_a_ground_metre_grid():
     assert N.check_frame_crs("EPSG:2958", -80.39, 43.36) == "EPSG:2958"
     assert N.check_frame_crs("EPSG:2959", -80.39, 43.36) == "EPSG:2959"     # the neighbouring UTM zone: 0.2 % long
     assert N.check_frame_crs("EPSG:3310", -122.57, 38.77) == "EPSG:3310"    # California Albers: 0.13 %
+    with pytest.raises(SystemExit, match=r"EPSG:2958.*1\.1685 of its metres.*467 yards"):   # Ontario's zone in California
+        N.check_frame_crs("EPSG:2958", -122.57, 38.77)
+    import pyproj
+    class NoFactors:
+        meridional_scale = parallel_scale = float("nan")
+    monkeypatch.setattr(pyproj.Proj, "get_factors", lambda self, lon, lat: NoFactors())
+    with pytest.raises(SystemExit, match="does not reach the course"):
+        N.check_frame_crs("EPSG:2958", -80.39, 43.36)
 
 
 # ---- regions (tests/test_robustness.py runs region_spec.problems over every regions/*.toml)
