@@ -1,0 +1,486 @@
+{
+ "type": "FeatureCollection",
+ "name": "Brambles golf features (hand-digitised, OSM tags, EPSG:6339)",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::6339"
+  }
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "1",
+    "par": "5",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      537133.01,
+      4291713.18
+     ],
+     [
+      536916.47,
+      4291765.77
+     ],
+     [
+      536676.93,
+      4291686.71
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "2",
+    "par": "4",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      536643.05,
+      4291687.45
+     ],
+     [
+      536711.33,
+      4291465.78
+     ],
+     [
+      536746.46,
+      4291290.32
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "3",
+    "par": "3",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      536789.96,
+      4291286.74
+     ],
+     [
+      536704.44,
+      4291174.35
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "4",
+    "par": "4",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      536676.86,
+      4291186.69
+     ],
+     [
+      536680.44,
+      4291188.49
+     ],
+     [
+      536434.44,
+      4291163.47
+     ],
+     [
+      536279.26,
+      4291067.19
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "5",
+    "par": "4",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      536359.1,
+      4291047.87
+     ],
+     [
+      536471.67,
+      4290884.98
+     ],
+     [
+      536567.17,
+      4290834.3
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "6",
+    "par": "4",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      536577.21,
+      4290811.92
+     ],
+     [
+      536808.69,
+      4290729.4
+     ],
+     [
+      536993.49,
+      4290813.41
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "7",
+    "par": "5",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      537073.09,
+      4290830.65
+     ],
+     [
+      537306.37,
+      4290913.19
+     ],
+     [
+      537564.81,
+      4290876.06
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "8",
+    "par": "3",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      537588.97,
+      4290871.26
+     ],
+     [
+      537633.72,
+      4291031.07
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "9",
+    "par": "4",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      537630.47,
+      4291070.91
+     ],
+     [
+      537402.66,
+      4291167.31
+     ],
+     [
+      537285.98,
+      4291180.08
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "10",
+    "par": "4",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      537249.96,
+      4291188.95
+     ],
+     [
+      537105.13,
+      4290990.02
+     ],
+     [
+      537049.7,
+      4290840.64
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "11",
+    "par": "4",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      537030.42,
+      4290808.45
+     ],
+     [
+      536951.01,
+      4290978.89
+     ],
+     [
+      536945.72,
+      4291096.17
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "12",
+    "par": "3",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      537001.66,
+      4291097.73
+     ],
+     [
+      536890.94,
+      4291248.32
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "13",
+    "par": "5",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      536866.83,
+      4291227.94
+     ],
+     [
+      536761.68,
+      4291005.51
+     ],
+     [
+      536621.27,
+      4290828.21
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "14",
+    "par": "4",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      536592.11,
+      4290862.97
+     ],
+     [
+      536677.85,
+      4291064.48
+     ],
+     [
+      536686.99,
+      4291141.7
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "15",
+    "par": "4",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      536679.71,
+      4291178.18
+     ],
+     [
+      536478.32,
+      4291320.4
+     ],
+     [
+      536334.92,
+      4291397.52
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "16",
+    "par": "3",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      536378.79,
+      4291417.28
+     ],
+     [
+      536598.25,
+      4291387.0
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "17",
+    "par": "5",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      536634.56,
+      4291395.04
+     ],
+     [
+      536557.98,
+      4291629.24
+     ],
+     [
+      536529.21,
+      4291875.44
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "golf": "hole",
+    "ref": "18",
+    "par": "4",
+    "source": "course",
+    "note": "line of play: Back tee -> fairway / lay-up targets -> green centre"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      536581.8,
+      4291869.41
+     ],
+     [
+      536822.79,
+      4291813.63
+     ],
+     [
+      537041.76,
+      4291795.37
+     ]
+    ]
+   }
+  }
+ ]
+}
