@@ -23,8 +23,7 @@ RES = 2.0
 
 def shift(path, dz):
     """Add `dz` m to every height of the GeoTIFF `path` (no-data stays no-data), and record the offset the file now
-    carries in its Z_OFFSET_TAG (written after the heights: a file left without it reads as not moved, and
-    check_datum then asks for a refetch)."""
+    carries in its Z_OFFSET_TAG: build_backdrop.check_datum compares it with course.toml's z_offset."""
     total = applied_z_offset(path) + dz
     with rasterio.open(path, "r+") as ds:
         z = ds.read(1)

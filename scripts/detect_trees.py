@@ -229,7 +229,7 @@ def crown_base(lab, T, n):
 
 # ASPRS classes that never hold tree returns: ground, building, low noise, model key-point (LAS 1.0-1.3), water, rail,
 # road surface, overlap (LAS 1.0-1.3), wires and towers, bridge deck, high noise, overhead structure, ignored ground,
-# snow, temporal exclusion. The others (0, 1, 3-5, a programme's own 23-255) may.
+# snow, temporal exclusion. The others (0, 1, 3-5, 23-63 reserved, 64-255 a programme's own) may.
 NOT_TREE_CLASSES = frozenset({2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22})
 
 

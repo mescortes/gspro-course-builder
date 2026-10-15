@@ -349,7 +349,12 @@ def has_nir():
     key = (str(C.IMAGERY), C.IMAGERY.stat().st_mtime_ns)
     if key not in _PHOTO:
         with rasterio.open(C.IMAGERY) as ds:
-            if ds.count < 3 or ds.dtypes[0] != "uint8":
+            if ds.count < 3:
+                sys.exit(f"{C.IMAGERY}: {ds.count} band(s), but the engine reads a colour photo (R, G, B, + NIR): a "
+                         f"greyscale photo cannot be used. Put a colour orthophoto at {_rel(C.IMAGERY_RAW)} (or set "
+                         f"[sources.imagery] in courses/{C.SLUG}/course.toml and run fetch_data.py imagery), then rerun "
+                         "from the registration: scripts/build_all.py register")
+            if ds.dtypes[0] != "uint8":
                 # one ratio for every band kept (photo_8bit.py): `rio info --stats` gives band 1's maximum only, and
                 # NIR scaled by red's maximum went past 255 and wrapped (rio convert casts unchecked)
                 raw = _rel(C.IMAGERY_RAW)

@@ -82,6 +82,11 @@ def test_a_16_bit_photo_is_refused_with_the_conversion(tmp_path, monkeypatch):
     assert "rio info" not in msg and "--scale-ratio" not in msg
     with pytest.raises(SystemExit, match="uint16"):
         S.read_imagery_window(T, 0, 40, 0, 40)
+    # a greyscale photo: no conversion helps, so none is offered
+    monkeypatch.setattr(S.C, "IMAGERY", _photo(tmp_path / "grey.tif", rgb[:1]))
+    with pytest.raises(SystemExit, match="1 band.*greyscale photo cannot be used") as e:
+        S.has_nir()
+    assert "photo_8bit" not in str(e.value) and "build_all.py register" in str(e.value)
 
 
 def _photo16(path, bands, nodata=None):
