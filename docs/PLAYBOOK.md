@@ -117,6 +117,18 @@ export COURSE=<slug>
 The OSM snapshot is saved in `courses/<slug>/research/` and is what the model is built from: commit it. Delete it and
 fetch again to refresh. LiDAR goes to `data/<slug>/lidar/`; keep only the tiles of the chosen project there.
 
+**LiDAR in another CRS.** Tiles need not be in the course frame (`[frame] crs`): a project in State Plane feet (many
+California 3DEP projects, e.g. NAD83(2011) / California zone 2 (ftUS) + NAVD88 height (ftUS)) or in the neighbouring
+UTM zone is reprojected as it is read, heights converted to metres. check_course's data section lists which tiles are
+reprojected and from what. The engine converts height units, not vertical datums: heights on another datum than the
+region's `[scaffold] vertical` are read as they are and flagged (`!!`). A tile whose header names no CRS is read as the
+frame, as is one whose CRS record cannot be read (flagged `!!`); for those, or for tiles whose header names a wrong
+CRS, give the project's CRS in course.toml:
+
+| Setting | What it does |
+|---|---|
+| `[lidar] crs = "EPSG:6418+6360"` | The tiles' CRS (horizontal + vertical), in place of what their headers say. Optional. |
+
 **Checkpoint:** check_course's data section shows LiDAR covering CORE, the photo 0 % empty, the backdrop DTM present.
 
 ## 4. Courses OSM does not map

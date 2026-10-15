@@ -193,11 +193,11 @@ def crown_base(lab, T, n):
     out = np.full(n, np.nan)
     sums = []; gcount = []; acount = []
     seen = np.zeros(256, np.int64)  # returns per class inside CORE, for the warning below
-    for f in C.lidar_tiles():
+    for f, fr in C.lidar_readers(say=False):   # in the frame (a tile in another CRS reprojected as it is read)
         with laspy.open(f) as rr:
             h = rr.header
             for ch in rr.chunk_iterator(5_000_000):
-                x = ch.x.array * h.scales[0] + h.offsets[0]; y = ch.y.array * h.scales[1] + h.offsets[1]
+                x, y, z = C.lidar_xyz(h, ch, fr["transform"])
                 m = (x > e["xmin"]) & (x < e["xmax"]) & (y > e["ymin"]) & (y < e["ymax"])
                 cls = np.asarray(ch.classification)
                 seen += np.bincount(cls[m], minlength=256)[:256]
@@ -205,7 +205,7 @@ def crown_base(lab, T, n):
                 if not m.any():
                     continue
                 isg = (cls[m] == 2)
-                x, y = x[m], y[m]; z = (ch.z.array * h.scales[2] + h.offsets[2])[m]
+                x, y, z = x[m], y[m], z[m]
                 c = ((x - T.c) / T.a).astype(int); rw = ((y - T.f) / T.e).astype(int)
                 cd = ((x - TD.c) / TD.a).astype(int); rd = ((y - TD.f) / TD.e).astype(int)
                 ok = (c >= 0) & (c < lab.shape[1]) & (rw >= 0) & (rw < lab.shape[0])

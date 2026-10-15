@@ -115,6 +115,9 @@ UNITY_NAME = UNITY_SCRIPT.removesuffix(".cs").removesuffix("Setup")  # class <UN
 
 CRS = _frame["crs"]
 CRS_LABEL = _frame.get("crs_label", CRS)
+# The course's height datum, the region's [scaffold] vertical (e.g. NAVD88): LiDAR heights on another datum are
+# reported (lidar_crs_notes), not converted.
+VERTICAL_DATUM = _region.get("scaffold", {}).get("vertical")
 ORIGIN_E, ORIGIN_N = (float(v) for v in _frame["origin"])
 BASE_H = float(_frame["base_h"])  # metres subtracted from heights in the model frame
 
@@ -142,6 +145,7 @@ DEM_RES = float(_frame.get("dem_res", 0.25))  # metres
 LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))  # the build reads them through lidar_tiles(), which checks tiles.json
 _lidar = _T.get("lidar", {})
 LIDAR_LEAF_OFF = bool(_lidar.get("leaf_off", False))  # deciduous crowns sparse in the CHM (detect_trees closes them)
+LIDAR_CRS = _lidar.get("crs")  # the tiles' CRS when their headers name none, a wrong one or one laspy cannot read
 IMAGERY_LEAF_OFF = bool(_img.get("leaf_off", False))  # ground visible through bare crowns (vectorize.py keeps it)
 # The flags course.toml leaves out, which check_course flags: a missing flag reads as leaf-on, and leaf-off data then
 # builds without a warning (bare crowns split into several trees, bunkers under bare branches dropped).
@@ -213,37 +217,206 @@ def lidar_tiles():
     return LIDAR_TILES
 
 
-def lidar_crs_problems(tiles):
-    """The tiles whose header CRS is not the course frame ([frame] crs), as messages. The engine reads LiDAR coordinates
-    as they are, so tiles in State Plane feet, the neighbouring UTM zone or a national grid failed later as 'no LiDAR
-    tile covers ...', which reads as a download gap. A tile whose header names no CRS is not checked."""
+# ---- LiDAR CRS. The engine works in the course frame ([frame] crs, metres): tiles in another CRS (State Plane feet,
+# the neighbouring UTM zone, heights in feet) are reprojected as they are read; tiles in the frame are read as they are.
+def _per_tile(items):
+    """[((attention, text), tile name)] -> [(attention, '<n> tile(s) (a, b, c, ...): <text>')], in first-seen order."""
+    by = {}
+    for key, name in items:
+        by.setdefault(key, []).append(name)
+    return [(a, f"{len(n)} tile{'s' * (len(n) > 1)} ({', '.join(n[:3])}{', ...' * (len(n) > 3)}): {t}")
+            for (a, t), n in by.items()]
+
+
+def _geokeys(header):
+    """A tile's GeoTIFF keys whose value is stored in the key itself, {key id: value}."""
+    return {k.id: k.value_offset for rec in list(header.vlrs) + list(header.evlrs or ())
+            for k in getattr(rec, "geo_keys", ()) if k.tiff_tag_location == 0}
+
+
+def _tile_header(f):
+    """(crs, why it has none, GeoTIFF keys, box (xmin, ymin, xmax, ymax)) from tile f's header. The WKT record (in an
+    EVLR at the end of a LAS 1.4 file too) wins over the GeoTIFF keys; [lidar] crs stands for every tile's record. A
+    record pyproj cannot read, or GeoTIFF keys that define the projection by parameters (laspy then reads only their
+    lon/lat datum), is 'not readable'."""
     import laspy
     from pyproj import CRS as _CRS
-    frame = _CRS(CRS)
-    bad = {}  # problem -> tile names
-    for f in tiles:
-        with laspy.open(f) as r:
+    from pyproj.exceptions import CRSError
+    with laspy.open(f) as r:
+        h = r.header
+        box = (*h.mins[:2], *h.maxs[:2])
+        if LIDAR_CRS:
             try:
-                tc = r.header.parse_crs()
-            except Exception:  # an odd or broken CRS record: nothing to compare
-                tc = None
-        if tc is None:
-            continue
-        h = tc.sub_crs_list[0] if tc.is_compound else tc
-        v = tc.sub_crs_list[1] if tc.is_compound and len(tc.sub_crs_list) > 1 else None
-        code = h.to_epsg()
-        if not (h.equals(frame, ignore_axis_order=True) or (code is not None and code == frame.to_epsg())):
-            why = (f"in {h.name!r}{f' (EPSG:{code})' if code else ''}, the course frame is {frame.name!r} ({CRS}, "
-                   f"courses/{SLUG}/course.toml [frame] crs): reproject the tiles to {CRS} (e.g. pdal translate with "
-                   f"filters.reprojection), or move the course to the tiles' CRS (new_course.py with --crs "
-                   f"{f'EPSG:{code}' if code else '<code>'} --dry-run prints the [frame] table to copy)")
-        elif v is not None and v.axis_info and v.axis_info[0].unit_conversion_factor != 1.0:
-            why = (f"heights in {v.axis_info[0].unit_name} ({v.name!r}): the engine reads them as metres; convert the "
-                   "tiles' heights to metres")
-        else:
-            continue
-        bad.setdefault(why, []).append(Path(f).name)
-    return [f"{len(n)} tile{'s' * (len(n) > 1)} ({', '.join(n[:3])}{', ...' * (len(n) > 3)}) {why}" for why, n in bad.items()]
+                return _CRS(LIDAR_CRS), None, {}, box
+            except CRSError as e:
+                sys.exit(f"courses/{SLUG}/course.toml: [lidar] crs = {LIDAR_CRS!r} is not a CRS pyproj knows ({e}): "
+                         'give the tiles\' CRS as an EPSG code ("EPSG:<horizontal>+<vertical>" for a compound one)')
+        keys = _geokeys(h)
+        named = any(v.user_id == "LASF_Projection" for v in list(h.vlrs) + list(h.evlrs or ()))
+        try:
+            tc = h.parse_crs()
+        except (CRSError, laspy.errors.LaspyException) as e:
+            return None, f"not readable ({e})", keys, box
+    if tc is None:
+        return None, "not readable (a CRS record laspy cannot parse)" if named else "not given", keys, box
+    hc = tc.sub_crs_list[0] if tc.is_compound else tc
+    if hc.is_geographic and (max(abs(box[0]), abs(box[2])) > 360 or max(abs(box[1]), abs(box[3])) > 90):
+        return None, (f"not readable (it names {hc.name!r}, a lon/lat CRS, but the coordinates are not degrees: the "
+                      "projection is defined by GeoTIFF parameters)"), keys, box
+    return tc, None, keys, box
+
+
+def _datum_note(v, ellipsoidal):
+    """Why the tile's heights (vertical CRS v) are not on the course's datum (VERTICAL_DATUM), or None when they are or
+    it cannot be told (no vertical CRS, an 'unknown' one, a region without [scaffold] vertical)."""
+    from pyproj import CRS as _CRS
+    from pyproj.exceptions import CRSError
+    where = f"regions/{REGION_NAME}.toml [scaffold] vertical" if REGION_NAME else "the region's [scaffold] vertical"
+    then = ("read as they are (the engine converts height units, not datums): the course is built on the tiles' "
+            "heights and build_backdrop's datum check measures the step to the backdrop DEM "
+            "([sources.backdrop] z_offset)")
+    if ellipsoidal:
+        return f"heights above the ellipsoid, the course's on {VERTICAL_DATUM or 'a geoid'} ({where}): {then}"
+    norm = lambda s: re.sub(r"[^a-z0-9]", "", (s or "").lower())
+    have = {norm(v.name), norm(getattr(v.datum, "name", ""))} - {"", "unknown"} if v is not None else set()
+    want = {norm(VERTICAL_DATUM)} if VERTICAL_DATUM else set()
+    if VERTICAL_DATUM:
+        try:   # an EPSG code names its datum
+            w = _CRS(VERTICAL_DATUM)
+            want |= {norm(w.name), norm(getattr(w.datum, "name", ""))}
+        except CRSError:
+            pass
+    want -= {"", "unknown"}
+    if not have or not want or any(a in b or b in a for a in want for b in have):
+        return None
+    return f"heights on {v.name!r}, the course's on {VERTICAL_DATUM} ({where}): {then}"
+
+
+def lidar_tile_frame(f):
+    """How tile f's points reach the course frame, a dict:
+      how        "frame": its CRS is the frame's, heights in metres: read as it is
+                 "assumed": it names no CRS, or one that cannot be read: read as the frame
+                 "reproject": coordinates and / or the height unit converted as they are read
+      transform  None (read as it is), else (x, y, z) -> (x, y, z) in the frame, heights in metres
+      bounds     its header box in the frame (xmin, ymin, xmax, ymax); the header's own box when read as it is
+      crs, why   its CRS (pyproj), or None and why it has none
+      notes      [(attention, text)] for lidar_crs_notes
+      problem    why it cannot be brought into the frame, or None"""
+    import math
+    from pyproj import CRS as _CRS, Transformer
+    from pyproj.database import get_units_map
+    from pyproj.exceptions import CRSError, ProjError
+    tc, why, keys, box = _tile_header(f)
+    out = dict(tile=Path(f), crs=tc, why=why, how="assumed", transform=None, bounds=box, notes=[], problem=None)
+    toml = f"courses/{SLUG}/course.toml"
+    if tc is None:
+        fix = (f"if they are in another CRS, set [lidar] crs in {toml}" if why == "not given" else
+               f"set [lidar] crs in {toml} to the tiles' CRS (the project's metadata names it)")
+        out["notes"].append((why != "not given", f"CRS {why}: read as {CRS} ({toml} [frame] crs), not checked; {fix}"))
+        return out
+    frame = _CRS(CRS)
+    hc = tc.sub_crs_list[0] if tc.is_compound else tc
+    v = tc.sub_crs_list[1] if tc.is_compound and len(tc.sub_crs_list) > 1 else None
+    if v is None and 1024 <= keys.get(4096, 0) <= 32766:   # the vertical GeoTIFF key, which laspy leaves out
+        try:
+            v = _CRS.from_epsg(keys[4096])
+        except CRSError:
+            pass
+    code = hc.to_epsg()
+    in_frame = hc.equals(frame, ignore_axis_order=True) or (code is not None and code == frame.to_epsg())
+    ellipsoidal = len(hc.axis_info) > 2     # a 3D CRS: heights above the ellipsoid
+    # the height unit: the vertical CRS's, a 3D CRS's third axis, the GeoTIFF height-unit key; with none of them, a
+    # projected CRS's horizontal unit (US tiles in feet have their heights in feet)
+    units = {u.code: u for u in get_units_map(auth_name="EPSG", category="linear").values()}
+    zf, zu, guessed = 1.0, "metre", False
+    if v is not None and v.axis_info:
+        zf, zu = v.axis_info[0].unit_conversion_factor, v.axis_info[0].unit_name
+    elif ellipsoidal:
+        zf, zu = hc.axis_info[2].unit_conversion_factor, hc.axis_info[2].unit_name
+    elif str(keys.get(4099)) in units:
+        zf, zu = units[str(keys[4099])].conv_factor, units[str(keys[4099])].name
+    elif hc.is_projected and hc.axis_info[0].unit_conversion_factor != 1.0:
+        zf, zu, guessed = hc.axis_info[0].unit_conversion_factor, hc.axis_info[0].unit_name, True
+    label = tc.name if v is None or tc.is_compound else f"{tc.name} + {v.name}"
+    vcode = v.to_epsg() if v is not None else None
+    codes = f" (EPSG:{code}{f'+{vcode}' if vcode else ''})" if code else ""
+    note = _datum_note(v, ellipsoidal)
+    if in_frame and zf == 1.0:
+        out["how"] = "frame"
+        out["notes"] += [(True, note)] if note else []
+        return out
+    tr = None
+    if not in_frame:
+        fix = f"if the record is wrong, set [lidar] crs in {toml} to the tiles' CRS (the project's metadata names it)"
+        try:
+            tr = Transformer.from_crs(hc.to_2d() if ellipsoidal else hc, frame, always_xy=True)
+            b = tr.transform_bounds(*box, densify_pts=21)
+        except (CRSError, ProjError) as e:
+            out["problem"] = f"in {label!r}{codes}: pyproj cannot transform it to the course frame {CRS} ({e}); {fix}"
+            return out
+        if not all(math.isfinite(c) for c in b):
+            out["problem"] = (f"box E {box[0]:.0f}-{box[2]:.0f} N {box[1]:.0f}-{box[3]:.0f} is outside what its CRS "
+                              f"{label!r}{codes} projects to the course frame {CRS}; {fix}")
+            return out
+        out["bounds"] = tuple(b)
+    heights = f"heights {zu} -> metres" if zf != 1.0 else ""
+    if guessed:
+        heights += (f"; it names no vertical CRS, so its heights are taken in {zu} like its horizontal axes: if they "
+                    f"are metres, set [lidar] crs = \"EPSG:{code or '<horizontal>'}+<vertical>\" in {toml}")
+    what = (f"in {label!r}{codes}, reprojected to {CRS} when read" + (f" ({heights})" if heights else "")
+            if tr is not None else f"in the course frame, {heights}: converted when read")
+    out.update(how="reproject", transform=_to_frame(tr, zf), notes=[(guessed, what)] + ([(True, note)] if note else []))
+    return out
+
+
+def _to_frame(tr, zf):
+    """(x, y, z) -> the frame: tr the horizontal transformer (None: in the frame already), zf the height unit in m."""
+    def to_frame(x, y, z):
+        if tr is not None:
+            x, y = tr.transform(x, y)
+        return x, y, (z if zf == 1.0 else z * zf)
+    return to_frame
+
+
+def lidar_tile_frames(tiles):
+    """lidar_tile_frame of each tile, in order."""
+    return [lidar_tile_frame(f) for f in tiles]
+
+
+def lidar_crs_problems(tiles, frames=None):
+    """The tiles that cannot be brought into the course frame, as messages ([] normally): a CRS pyproj cannot transform,
+    or a box its CRS cannot project (a wrong CRS record)."""
+    frames = lidar_tile_frames(tiles) if frames is None else frames
+    return [t for _, t in _per_tile(((True, fr["problem"]), fr["tile"].name) for fr in frames if fr["problem"])]
+
+
+def lidar_crs_notes(frames):
+    """[(attention, text)]: the tiles reprojected and from what, the tiles read as the frame without a CRS to check, and
+    heights on another datum; [] when every tile is in the frame."""
+    return _per_tile((n, fr["tile"].name) for fr in frames for n in fr["notes"])
+
+
+def lidar_readers(say=True):
+    """[(tile, lidar_tile_frame)] of lidar_tiles(), or exit naming the tiles that cannot be brought into the frame.
+    say: print what lidar_crs_notes says (once per build: the rasters step)."""
+    tiles = lidar_tiles()
+    frames = lidar_tile_frames(tiles)
+    bad = lidar_crs_problems(tiles, frames)
+    if bad:
+        sys.exit("LiDAR tiles that cannot be read in the course frame:\n  " + "\n  ".join(bad))
+    for a, x in lidar_crs_notes(frames) if say else ():
+        print(("!! " if a else "") + "lidar: " + x, flush=True)
+    return list(zip(tiles, frames))
+
+
+def lidar_xyz(header, chunk, to_frame=None):
+    """A chunk's x, y, z in the course frame (heights in metres): its scaled coordinates, through to_frame (a
+    lidar_tile_frame transform) unless that is None."""
+    h = header
+    x = chunk.x.array * h.scales[0] + h.offsets[0]
+    y = chunk.y.array * h.scales[1] + h.offsets[1]
+    z = chunk.z.array * h.scales[2] + h.offsets[2]
+    return (x, y, z) if to_frame is None else to_frame(x, y, z)
 
 
 LAYOUT = _course.get("layout", f"{len(PLAYABLE)} holes")

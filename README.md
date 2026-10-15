@@ -34,7 +34,9 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
 3. **Downloads** into `data/<slug>/`: LiDAR tiles, the photo, OSM, textures and the 5 km backdrop DEM, through the
    providers in `scripts/sources/` (`nrcan_copc` for NRCan CanElevation, `usgs_3dep` for USGS 3DEP, `arcgis_imageserver`
    for image services such as Ontario's SWOOP or USDA NAIP, `cog_dem` for 1 m DEM files).
-4. **Rasters**: the LiDAR is streamed into 0.25 m DEM, DSM, canopy height and intensity rasters.
+4. **Rasters**: the LiDAR is streamed into 0.25 m DEM, DSM, canopy height and intensity rasters. Tiles in another CRS
+   than the course frame (State Plane feet, the neighbouring UTM zone, heights in feet) are reprojected as they are
+   read; `check_course.py` says which.
 5. **Registration**: the photo is shifted onto the LiDAR (`measure_registration.py`: bunker sand against LiDAR
    hollows).
 6. **Surfaces**: a random forest on photo colour, near-infrared and LiDAR features, trained on the OSM golf features

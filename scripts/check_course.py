@@ -196,11 +196,8 @@ def data_report():
     if not tiles:
         out.append(f"!! no LiDAR tiles in {C.DATA / 'lidar'} (fetch_data.py lidar)")
     else:
-        import laspy
-        mins, maxs = [], []
-        for f in tiles:
-            with laspy.open(f) as r:
-                mins.append(r.header.mins[:2]); maxs.append(r.header.maxs[:2])
+        boxes = [fr["bounds"] for fr in C.lidar_tile_frames(tiles)]   # header boxes in the frame (reprojected)
+        mins, maxs = [b[:2] for b in boxes], [b[2:] for b in boxes]
         lo, hi = np.min(mins, 0), np.max(maxs, 0)
         e = C.FETCH_CORE
         ok = lo[0] <= e["xmin"] and lo[1] <= e["ymin"] and hi[0] >= e["xmax"] and hi[1] >= e["ymax"]
@@ -238,11 +235,15 @@ def data_report():
 
 
 def lidar_crs_report(c=C):
-    """The LiDAR tiles' header CRS against the course frame: the engine reads their coordinates as course-CRS metres."""
+    """The LiDAR tiles' CRS against the course frame: how many are in it, which the build reprojects and from what,
+    which it reads as the frame without a CRS to check, heights on another datum, and tiles it cannot read at all."""
     if not c.LIDAR_TILES:
         return []
-    return [f"!! LiDAR CRS: {x}" for x in c.lidar_crs_problems(c.LIDAR_TILES)] or \
-        [f"LiDAR CRS: no tile names a CRS other than the frame's ({c.CRS})"]
+    frames = c.lidar_tile_frames(c.LIDAR_TILES)
+    n = sum(fr["how"] == "frame" for fr in frames)
+    return ([f"LiDAR CRS: {n} of {len(frames)} tiles in the course frame ({c.CRS})"] if n else []) + \
+        [f"!! LiDAR CRS: {x}" for x in c.lidar_crs_problems(c.LIDAR_TILES, frames)] + \
+        [f"{'!! ' if a else ''}LiDAR CRS: {x}" for a, x in c.lidar_crs_notes(frames)]
 
 
 def photo_crs_report(c=C):
