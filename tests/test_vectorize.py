@@ -387,3 +387,72 @@ def test_lidar_trim_leaves_a_bunker_without_a_pan_alone():
     z, X, Y = _dem(lambda x, y: np.where((np.abs(x - 25) < 4) & (y > 20) & (y < 27), 0.12 * 20, 0.12 * y))
     poly = (np.abs(X - 25) < 4.5) & (Y > 19.5) & (Y < 27.5)
     assert V.bunker_bowls(z, poly, ndimage.binary_dilation(poly, iterations=10), 0.25, V.BUNKER_TRIM_DEFAULT) is None
+
+
+def _dem_raster(f, n=240, res=0.25, x0=1000.0, y1=2060.0):
+    """A synthetic north-up DEM (float32, as dem.tif) of f(x, y) on cell centres, and its affine transform."""
+    from rasterio.transform import from_origin
+    T = from_origin(x0, y1, res, res)
+    xs = x0 + (np.arange(n) + 0.5) * res; ys = y1 - (np.arange(n) + 0.5) * res
+    X, Y = np.meshgrid(xs, ys)
+    return f(X, Y).astype(np.float32), T
+
+
+def test_dem_window_holds_the_polygon_and_its_spill_basin():
+    """vectorize.main's DEM window round a bunker: the window, its transform, the polygon's cells and the basin (the
+    polygon and 2.5 m round it), on the DEM's own cells."""
+    from shapely.geometry import box
+    dem, T = _dem_raster(lambda x, y: x - 1000 + 0.01 * (y - 2000))
+    p = box(1020, 2020, 1030, 2026)
+    z, tw, inside, basin = V.dem_window(dem, T, p, 3.5)
+    assert z.dtype == np.float64 and abs(inside.sum() * 0.0625 - p.area) < 1.0
+    assert abs(basin.sum() * 0.0625 - p.buffer(2.5).area) < 4.0 and (basin | ~inside).all()
+    r, c = np.argwhere(inside)[0]
+    x, y = tw.c + (c + 0.5) * tw.a, tw.f + (r + 0.5) * tw.e
+    assert abs(z[r, c] - (x - 1000 + 0.01 * (y - 2000))) < 1e-3, "the window is the DEM under it"
+    P = V.dem_points(dem, T, p)
+    assert len(P) == inside.sum() and abs(P[:, 2].mean() - z[inside].mean()) < 1e-9
+
+
+def test_unmapped_hollow_needs_a_closed_hollow_below_its_ring():
+    """vectorize.main's test for an unmapped bunker: lower than the ring round it (not higher: a sign slip would keep
+    mounds and drop bowls), and closed or faced (an open ditch is lower than its banks too)."""
+    from shapely.geometry import Point, box
+    H = V.BUNKER_HOLLOW_DEFAULT
+    c = Point(1030, 2030)
+    bowl, T = _dem_raster(lambda x, y: 0.02 * (x - 1000) - np.clip(0.4 * (1 - ((x - 1030) ** 2 + (y - 2030) ** 2) / 16), 0, None))
+    assert V.unmapped_hollow(bowl, T, c.buffer(3.5), H)
+    mound, _ = _dem_raster(lambda x, y: 0.02 * (x - 1000) + np.clip(0.4 * (1 - ((x - 1030) ** 2 + (y - 2030) ** 2) / 16), 0, None))
+    assert not V.unmapped_hollow(mound, T, c.buffer(3.5), H)
+    ditch, _ = _dem_raster(lambda x, y: 0.02 * (x - 1000) + np.where(np.abs(y - 2030) < 1.5, -0.25, 0.0))
+    assert V.is_hollow(ditch, T, box(1024, 2028.6, 1036, 2031.4)), "lower than its banks"
+    assert not V.unmapped_hollow(ditch, T, box(1024, 2028.6, 1036, 2031.4), H)
+
+
+def test_trim_faces_cuts_a_bunker_to_its_pans():
+    """vectorize.main's coarse-photo trim, polygons in and out: a bunker with two pans and a face above them becomes
+    the two pans; one with no pan, or whose pans are smaller than any bunker vectorize keeps, stays as it is."""
+    from shapely.geometry import box
+    def pan(x, y, cx, a=5.0, b=3.5, d=0.5):
+        r = np.hypot((x - cx) / a, (y - 2025) / b)
+        return np.where(r < 1, d * (r ** 4 - 1), 0.0)
+    dem, T = _dem_raster(lambda x, y: 0.05 * (y - 2000) + pan(x, y, 1016) + pan(x, y, 1034)
+                         + np.where(y > 2030, 0.4 * (y - 2030), 0.0))
+    p = box(1008, 2019, 1042, 2033)
+    out = V.polys_of(V.trim_faces(dem, T, p, V.BUNKER_TRIM_DEFAULT))
+    assert len(out) == 2 and all(q.area >= V.MIN_AREA["bunker"] for q in out)
+    assert sum(q.area for q in out) < 0.7 * p.area and all(q.bounds[3] < 2031.5 for q in out)
+    slope, _ = _dem_raster(lambda x, y: np.where((np.abs(x - 1025) < 4) & (y > 2020) & (y < 2027), 0.12 * 20, 0.12 * (y - 2000)))
+    q = box(1020.5, 2019.5, 1029.5, 2027.5)
+    assert V.trim_faces(slope, T, q, V.BUNKER_TRIM_DEFAULT).equals(q), "no pan: left alone"
+    tiny, _ = _dem_raster(lambda x, y: 0.05 * (y - 2000) + pan(x, y, 1025, 1.2, 1.0, 0.3))
+    q = box(1018, 2018, 1032, 2032)
+    assert V.trim_faces(tiny, T, q, V.BUNKER_TRIM_DEFAULT).equals(q), "a pan under MIN_AREA: left alone"
+
+
+def test_bunkers_are_trimmed_only_with_a_coarse_photo():
+    """[tuning.bunker_trim] photo_res: Westmount's 0.16 m photo separates sand from grass faces, Brambles' 0.6 m does
+    not; photo_res = 0 always trims, a large value never."""
+    T = V.BUNKER_TRIM_DEFAULT
+    assert not V.trims_bunkers(0.16, T) and V.trims_bunkers(0.6, T) and V.trims_bunkers(0.3, T)
+    assert V.trims_bunkers(0.16, dict(T, photo_res=0.0)) and not V.trims_bunkers(0.6, dict(T, photo_res=100.0))
