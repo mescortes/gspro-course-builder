@@ -82,6 +82,12 @@ def course_report(c=C):
     for kind in ("lidar", "imagery", "backdrop"):
         if not c.DATA_SOURCES.get(kind):
             p.append(f"[sources.{kind}]: missing")
+    core, ter = getattr(c, "CORE", None), getattr(c, "TERRAIN", None)
+    if core and ter and not (ter["xmin"] <= core["xmin"] and core["xmax"] <= ter["xmax"]
+                             and ter["ymin"] <= core["ymin"] and core["ymax"] <= ter["ymax"]):
+        p.append(f"[frame]: core {core['xmax'] - core['xmin']:.0f} x {core['ymax'] - core['ymin']:.0f} m does not fit in "
+                 f"the {ter['xmax'] - ter['xmin']:.0f} x {ter['ymax'] - ter['ymin']:.0f} m terrain: the GSPro heightmap "
+                 f"would cut off part of the course")
     return p
 
 
