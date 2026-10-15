@@ -86,11 +86,14 @@ export COURSE=westmount                                       # the course folde
 .venv/bin/python scripts/fetch_textures.py
 .venv/bin/python scripts/fetch_backdrop.py
 BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py    # all steps; `build_all.py <from> <to>` runs a range
-.venv/bin/python -m pytest -q tests                           # unit tests + built-course tests
+.venv/bin/python -m pytest -q tests --ignore=tests/test_course.py   # unit tests (no data or build needed)
+.venv/bin/python -m pytest -q --course $COURSE tests/test_course.py   # the built course
 python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?course=westmount&v=1#h1-tee
 ```
 
 `MG_PROFILE=test` builds a small extent around the course's test holes (`[test_profile]`) into `build/<slug>-test/`.
+The built-course tests take their limits from `course.toml` `[tests]` (green size range, minimum bunker count,
+green slope caps, documented tee gaps `known_tee_gaps = { "7.back" = 40 }`); the defaults are Westmount's.
 CI (`.github/workflows/tests.yml`) runs the unit tests: `pytest tests --ignore=tests/test_course.py`.
 
 A new course:
