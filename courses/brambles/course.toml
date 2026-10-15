@@ -56,6 +56,10 @@ src_crs = "EPSG:6339"
 [tuning]
 trace_paths = false  # the NDVI-ridge tracer follows the turf and barranca edges here; draft_features drafts the gravel paths
 
+# The 2023 LiDAR was flown after every tee was built (2020-22): no synthetic tee decks (they left 1 m steps by greens)
+[tuning.level_tees]
+enabled = false
+
 # draft_features.py (features/golf.geojson): the meadow between the holes is course (outline closed over 160 m gaps)
 [draft]
 outline = { corridor = 45.0, close = 80.0 }
