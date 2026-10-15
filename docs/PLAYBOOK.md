@@ -165,6 +165,21 @@ Put the shift in `[imagery] shift` (metres east, north) when the quarters agree,
 (and redraft, §4, if the features were drafted from the photo). Westmount: 0.25 m south; Brambles: 0.75 m east;
 Whistle Bear: 0.25 m east.
 
+**Tuning for another photo or LiDAR.** The colour rules were tuned on Westmount's 16 cm spring photo. Set only the
+keys that need it in `course.toml` (a region's `[tuning]` tables apply first; the course's keys override them one by
+one). A mistyped key or a value that is not a number stops `check_course.py` with its name.
+
+| Setting | Default | What it fixes |
+|---|---|---|
+| `[tuning.sand]` `L_min`, `a_min`, `b_min`, `b_max`, `ndvi_max` | 66, -12, 8.5, 26, 0.12 | Unmapped bunkers missing: the sunlit sand rule (photo CIELAB, NDVI). White silica sand needs `b_min` about 3. `measure_registration.py` uses it too. |
+| `[tuning.shadow_sand]` `ndvi_max`, `L_min`, `a_min`, `b_min` | 0.02, 25, -8, 2 | Sand in shade (NIR photos only). |
+| `[tuning.turf]` `a_max`, `ndvi_min` | -14, 0.25 | Bunkers spilling onto grass faces: what counts as clearly green turf (trimmed off bunkers). |
+| `[tuning.native]` `a_min`, `b_min`, `L_max`, `chm_max`, `ndvi_max` | 3, 11, 55, 1.2, 0.18 | Native / mulch areas: their reddish-brown seed colour. |
+| `[tuning.road_half_width]` `<highway class> = m` | motorway 7 ... service 3, track 1.5 | Road surfaces too narrow or too wide; add a class, or `0` drops one. Inside the course a `highway=track` becomes a 2.8 m cart path: `track = 0` when OSM's tracks there are grass maintenance routes. |
+| `[tuning] lidar_vegetation_classes` | `[1, 3, 4, 5]` | The ASPRS classes of the tree returns (the trees step stops when most crowns have none, listing the classes found). |
+| `[tuning] lidar_vegetation_min_share` | 0.5 | That stop: the share of crowns that must hold 8 vegetation returns; `0` for sparse LiDAR whose classes are right. |
+| `[tuning] backdrop_datum_warn_m`, `backdrop_datum_max_m` | 0.3, 3 | The backdrop DEM's height offset from the LiDAR round the course: a warning, then a stop. The fix is `[sources.backdrop] z_offset` (the value the message gives); raise the stop only for a real step (a cliff or a quarry at the edge). |
+
 **Checkpoint:** `build_all.py` ends without error; `measure_registration.py` shows no shift beyond a pixel.
 
 ## 6. Tests
