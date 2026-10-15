@@ -14,7 +14,8 @@ the lines of play (courses/<slug>/features/golf.geojson, golf=hole) and the GPS 
   outline   leisure=golf_course: the hole corridors and the turf, closed
 
 The draft replaces the previous one in features/golf.geojson (features tagged draft=yes); features drawn by hand (no
-draft tag) are kept. Review sheets per hole: build/<slug>/draft/hole_NN.jpg. Thresholds: course.toml [draft]
+draft tag) are kept. vectorize treats drafted bunkers as training labels, not survey data: the photo bunkers over
+them get the LiDAR test of unmapped ones (vectorize.survey_bunkers), hand-drawn ones do not. Review sheets per hole: build/<slug>/draft/hole_NN.jpg. Thresholds: course.toml [draft]
 (sections turf, green, tee, sand, water, outline, path), defaults below.
 
   COURSE=brambles python scripts/draft_features.py

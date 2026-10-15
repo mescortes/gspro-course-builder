@@ -34,7 +34,8 @@ course values said to be in `scripts/config.py` are in `courses/<slug>/course.to
   * Sand colour gates them: L* > 66, low chroma.
   * A confident classifier inside a mapped OSM bunker covers shaded sand.
   * Then **trim clearly green pixels** (a* < −14) outside canopy, because the classifier bleeds onto grass faces.
-  * Keep a bunker only if it overlaps OSM or is a LiDAR hollow, and a closed one (`vectorize.closed_hollow`): an
+  * Keep a bunker only if it overlaps OSM (or one drawn by hand: drafted bunkers, `draft=yes`, are photo guesses and
+    get the test, `vectorize.survey_bunkers`) or is a LiDAR hollow, and a closed one (`vectorize.closed_hollow`): an
     open channel (barranca floor, ditch, path cut) is lower than its banks too. Closed means it holds water, or it has
     a real face (a quarter of Westmount's bunkers, cut into slopes and open on the low side, hold none). The face is an
     average, so a deep ditch or a scour hole on a barranca thalweg has one too: a faced hollow must not also be open on

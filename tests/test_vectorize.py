@@ -522,3 +522,24 @@ def test_held_water_fills_a_bowl_to_its_spill_point_without_deprecated_calls():
         b = basin.copy(); b[[0, -1], :] = False; b[:, [0, -1]] = False
         ref = reconstruction(np.where(b, z.max(), z), z, method="erosion") - z
     assert np.array_equal(w, ref), "the same fill as before"
+
+
+def test_drafted_bunkers_get_the_lidar_test_of_unmapped_ones():
+    """Round-3 extra: a course OSM does not map has its bunkers drafted from the photo (draft_features: draft=yes). They
+    counted as mapped, so bare soil drafted as sand (Brambles: the hole-7 barranca, the hole-1 road cut) skipped the
+    LiDAR test. Drafted bunkers are training labels, not survey data: a photo bunker over one gets the unmapped test,
+    and one the photo missed is added only if it passes it. OSM's and hand-drawn bunkers still spare it."""
+    from shapely.geometry import Point, box
+    H = V.BUNKER_HOLLOW_DEFAULT
+    dem, T = _dem_raster(lambda x, y: 0.02 * (x - 1000) + np.where(np.abs(y - 2030) < 1.5, -0.6, 0.0)  # a ditch
+                         - np.clip(0.5 * (1 - ((x - 1030) ** 2 + (y - 2010) ** 2) / 16), 0, None))      # a bowl
+    ditch, bowl = box(1024, 2028.6, 1036, 2031.4), Point(1030, 2010).buffer(3.5)
+    course = box(1000, 1990, 1060, 2060)
+    G = [(1, {"golf": "bunker", "draft": "yes"}, ditch), (2, {"golf": "bunker", "draft": "yes"}, bowl),
+         (3, {"golf": "bunker"}, box(1040, 2040, 1045, 2045))]
+    survey = V.survey_bunkers(G)
+    assert survey.contains(box(1040, 2040, 1045, 2045)) and survey.intersection(ditch.union(bowl)).is_empty
+    ok = lambda p: V.bunker_ok(p, survey, course, lambda q: V.unmapped_hollow(dem, T, q, H))
+    assert not ok(ditch) and ok(bowl) and ok(box(1040.5, 2040.5, 1044.5, 2044.5))
+    assert [V.mapped_bunker_hollow(dem, T, g, t, course, H=H) for _, t, g in G[:2]] == [False, True]
+    assert V.mapped_bunker_hollow(dem, T, ditch, {"golf": "bunker"}, course, H=H), "surveyed: a 5 cm hollow will do"

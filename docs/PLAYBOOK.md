@@ -187,7 +187,9 @@ Draw the lines of play and draft the rest (Brambles):
    paths and the course outline into golf.geojson (tagged `draft=yes`; hand-drawn features are kept) and review sheets
    to `build/<slug>/draft/hole_NN.jpg`. Thresholds are in `[draft]` (see `draft_features.DEFAULTS`); tune them on
    the sheets, then commit the draft. It only has to be good enough to train the classifier: the QA rounds correct
-   the model.
+   the model. Drafted bunkers are not survey data: the vectorize step gives them the LiDAR test of unmapped bunkers
+   (a closed hollow, on the course, clear of roads), so bare soil drafted as sand in a channel or a road cut is
+   dropped. Draw a bunker by hand (no `draft` tag) to keep it whatever the LiDAR says.
 4. Set `[tuning] trace_paths = false` if the photo's path tracer follows turf edges instead of paths (look at
    `build/<slug>/paths_detected.geojson` after the paths step).
 

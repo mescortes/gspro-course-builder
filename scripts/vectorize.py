@@ -244,6 +244,30 @@ def unmapped_hollow(dem, T, p, H=None):
     return closed_hollow(z, inside, basin, float(m[1] - m[0]), H, abs(T.a))
 
 
+def is_drafted(t):
+    """A feature draft_features drew from the photo (draft=yes in features/golf.geojson): a training label for a course
+    OSM does not map, not survey data."""
+    return t.get("draft") == "yes"
+
+
+def survey_bunkers(G, buf=1.5):
+    """The mapped bunkers (OSM's, and those drawn by hand in features/golf.geojson), `buf` m round them: a photo bunker
+    over one skips the LiDAR test (bunker_ok). Drafted bunkers are not among them (Brambles: bare soil in the hole-7
+    barranca and a hole-1 road cut, drafted as sand, kept their false bunkers)."""
+    return unary_union([g for _, t, g in G if t.get("golf") == "bunker" and not is_drafted(t)]).buffer(buf)
+
+
+def mapped_bunker_hollow(dem, T, g, t, course, paved=None, buildings=None, H=None):
+    """May a mapped bunker the photo missed (in shade or under a crown) be added? Its LiDAR hollow must show (5 cm), and
+    a drafted one (is_drafted) must pass the unmapped bunkers' tests (bunker_ok: on the course, clear of roads and
+    buildings, a closed hollow; H: [tuning.bunker_hollow]), or what the LiDAR rejected as a photo bunker would come
+    back here."""
+    if is_drafted(t):
+        return bunker_ok(g, Polygon(), course, lambda q: unmapped_hollow(dem, T, q, H), paved, buildings,
+                         *BUNKER_CLEARANCE)
+    return is_hollow(dem, T, g, 0.05)
+
+
 def trims_bunkers(photo_res, Tr=None):
     """Are bunkers cut to their LiDAR pans (trim_faces) with a photo of `photo_res` m? Tr: BUNKER_TRIM
     ([tuning.bunker_trim] photo_res)."""
@@ -650,7 +674,7 @@ def main():
     # LiDAR / OSM validation of the small features the photo classifier over-predicts (QA round 1 found many):
     # a tee must overlap a mapped tee or be a built, flat deck; a bunker must overlap a mapped bunker or be a hollow.
     osm_tees = unary_union(osm(lambda t: t.get("golf") == "tee")).buffer(2.0)
-    osm_bunk = unary_union(osm(lambda t: t.get("golf") == "bunker")).buffer(1.5)
+    osm_bunk = survey_bunkers(G)   # drafted bunkers (draft=yes) are not survey data: they get the LiDAR test
     def tee_ok(p):
         if p.intersection(osm_tees).area >= 0.25 * p.area:
             return True
@@ -701,7 +725,7 @@ def main():
         if t.get("golf") != "bunker" or g.geom_type != "Polygon" or not g.intersects(aoi):
             continue
         g = make_valid(g).buffer(0)
-        if g.intersection(kb).area >= 0.3 * g.area or not is_hollow(demv, Tv, g, 0.05):
+        if g.intersection(kb).area >= 0.3 * g.area or not mapped_bunker_hollow(demv, Tv, g, t, course_buf, paved, bldgs):
             continue
         add = trim_grass(g.difference(blockers).difference(kb))
         if trim_bunkers and not add.is_empty:
