@@ -29,6 +29,7 @@ bunker = [196, 180, 146]
 #   shrub  under 4.5 m
 [trees]
 archetypes = ["maple", "oak", "pine", "spruce", "shrub"]
+needles = { pine = "pine", spruce = "spruce" }  # archetypes drawn as procedural needle cards (make_foliage)
 classifier = "leaf_off_parkland"
 bark = { maple = "trident_maple_bark", oak = "jolcham_oak_bark_01", pine = "pine_bark", spruce = "knotted_pine_bark", shrub = "bark_brown_01" }
 backdrop = { kinds = ["maple", "oak", "spruce"], share = [0.5, 0.35, 0.15], crown = [0.3, 0.5, 2.0, 8.0] }
@@ -155,8 +156,8 @@ nsides = 6
 up_bias = 0.5
 trunk_r = 0.06
 
-# make_foliage leaf cards (Southern Ontario summer foliage): sprite source in data/<slug>/textures/leaf_refs ("" =
-# procedural needles), target HSV, leaves per card, leaf scale, twig colour, extra hues.
+# make_foliage leaf cards (Southern Ontario summer foliage): sprite source in data/<slug>/textures/leaf_refs ("" for
+# the needle archetypes in [trees] needles), target HSV, leaves per card, leaf scale, twig colour, extra hues.
 [foliage.maple]
 src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg"
 hsv = [0.23, 0.62, 0.4]
@@ -293,3 +294,12 @@ native = "withered_grass"
 [viewer]
 species_tint = { maple = [1.0, 1.04, 0.9], oak = [0.9, 0.94, 0.78], pine = [0.84, 0.95, 0.9], spruce = [0.7, 0.84, 0.86], shrub = [1.0, 1.0, 0.9] }
 sky = [[0.0, "#2f6db8"], [0.3, "#5f97d3"], [0.45, "#a9c7e3"], [0.5, "#d6e2ea"], [0.53, "#c2cdb8"], [1.0, "#7d8a64"]]
+
+# new_course.py: datum, vertical datum, data providers and photo resolution for a new course in this region.
+[scaffold]
+datum = "NAD83(CSRS)"
+vertical = "CGVD2013"
+imagery_res = 0.16
+lidar = { provider = "nrcan_copc", province = "ON" }
+backdrop = { provider = "cog_dem", url = "https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/{province}-{project}-1m-{kind}.tif" }
+imagery = { provider = "arcgis_imageserver", url = "https://ws.geoservices.lrc.gov.on.ca/arcgis5/rest/services/AerialImagery/GEO_Imagery_Data_Service_2023to2027/ImageServer", mosaic_rule = { mosaicMethod = "esriMosaicNorthwest", where = "Project='SWOOP2025'" }, bands = [0, 1, 2, 3] }

@@ -6,6 +6,7 @@ south-west corner.
   provider = "nrcan_copc"
   zone = 17
   projects = [{ folder = "ON/Lake_Erie_2018", suffix = "2018LLAKEERIE" }, ...]
+  missing_ok = [[5460, 48050]]   # optional: tiles no folder has (open water ...)
 
 A tile is taken from the first project folder that has it (HTTP HEAD), so a course on the seam of two projects gets
 both. Folder names do not tell the flight date (Deer Ridge's Lake_Erie_2018 tiles hold 2017-11-21 points): read the
@@ -31,8 +32,10 @@ def url(spec, project, e, n):
 
 def fetch(spec, ext, out, margin=15.0):
     """Download every tile reaching the extent into `out`; returns the number of tiles."""
+    import sys
     out.mkdir(parents=True, exist_ok=True)
-    n = 0
+    n, missing = 0, []
+    ok = {tuple(t) for t in spec.get("missing_ok", ())}
     for e, nn in tiles(ext, margin):
         for p in spec["projects"]:
             u = url(spec, p, e, nn)
@@ -42,4 +45,8 @@ def fetch(spec, ext, out, margin=15.0):
                 break
         else:
             print(f"lidar: no tile {e} {nn} in", ", ".join(p["folder"] for p in spec["projects"]), flush=True)
+            if (e, nn) not in ok:
+                missing.append(f"{e} {nn}")
+    if missing:
+        sys.exit(f"lidar: no folder has tiles {', '.join(missing)} (list them in [sources.lidar] missing_ok if expected)")
     return n

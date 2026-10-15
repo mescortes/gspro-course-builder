@@ -9,11 +9,12 @@ Each provider module has a fetch() taking its course.toml table (`spec`).
 import importlib, sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1])); import config as C
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 def provider(kind):
     """(module, spec) for "lidar", "imagery" or "backdrop"."""
+    import config as C   # here, not at import: new_course.py uses the providers before the course exists
     spec = C.DATA_SOURCES.get(kind)
     if not spec:
         sys.exit(f"courses/{C.SLUG}/course.toml: no [sources.{kind}] (see scripts/sources/__init__.py)")

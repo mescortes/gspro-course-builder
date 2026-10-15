@@ -26,6 +26,17 @@ def download(url, dst, size=None):
 
 
 def size(url):
-    """Content-Length from a HEAD request, None when the file is not there."""
-    r = requests.head(url, headers=UA, timeout=60)
-    return int(r.headers.get("Content-Length", 0)) or None if r.status_code == 200 else None
+    """Content-Length from a HEAD request; None when the file is not there (404). Any other answer is retried, then
+    raised: a proxy 403 or an S3 503 must not read as a missing tile."""
+    for attempt in range(5):
+        try:
+            r = requests.head(url, headers=UA, timeout=60)
+            if r.status_code == 200:
+                return int(r.headers.get("Content-Length", 0)) or None
+            if r.status_code == 404:
+                return None
+            err = f"HTTP {r.status_code}"
+        except requests.RequestException as ex:
+            err = ex.__class__.__name__
+        print("  retry HEAD", attempt + 1, err, flush=True); time.sleep(10 * (attempt + 1))
+    raise RuntimeError(f"HEAD failed ({err}): {url}")

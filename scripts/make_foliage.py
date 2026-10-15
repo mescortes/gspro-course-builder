@@ -54,6 +54,16 @@ def recolor(sp, hsv_target, rng, var=0.08):
 # archetype: source sprites (None = procedural needles), target HSV, leaves per card, leaf scale (fraction of card),
 # twig colour, extra hues: regions/<region>.toml [foliage.<archetype>]
 SPEC = {k: dict(C.as_tuples(v), src=v["src"] or None) for k, v in C.REGION["foliage"].items()}
+NEEDLES = dict(C.REGION["trees"].get("needles", {}))   # archetype -> procedural needle style ("pine" | "spruce")
+
+
+def card_kind(name, spec):
+    """"pine" / "spruce" (procedural needles) or "sprites" (leaves cut from the sprite atlas)."""
+    if name in NEEDLES:
+        return NEEDLES[name]
+    if not spec["src"]:
+        sys.exit(f"{name}: no leaf sprites (src) and no needle style in the region's [trees] needles")
+    return "sprites"
 
 
 def make_card(spec, sps, rng, size=512, pine=False):
@@ -162,9 +172,10 @@ def main():
         sps = sprites(REF / spec["src"], min_px=300) if spec["src"] else []
         atlas = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
         for k in range(4):
-            if name == "pine":
+            kind = card_kind(name, spec)
+            if kind == "pine":
                 card = pine_card(rng, 512, spec["hsv"])
-            elif name == "spruce":
+            elif kind == "spruce":
                 card = spruce_card(rng, 512, spec["hsv"])
             else:
                 card = make_card(spec, sps, rng, 512)

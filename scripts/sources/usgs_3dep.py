@@ -4,8 +4,9 @@
   provider = "usgs_3dep"
   project = "CA_NorthCoastRanges_B23"   # the work unit's project name, as in the tile titles
 
-The API pads its lon/lat boxes by ~11 m and lists every project, so tiles are kept by project name and by their box,
-shrunk by `pad` m, overlapping the extent in the course CRS. Tile names do not mark a whole-km corner.
+The API lists every project's tiles in lon/lat boxes; projected back they are about tile side x sin(grid
+convergence) too big per side (~5 m at Brambles). Tiles are kept by project name and by their box, shrunk by `pad`
+m, overlapping the extent + margin in the course CRS. Tile names do not mark a whole-km corner.
 """
 from pyproj import Transformer
 from sources import http
@@ -13,7 +14,7 @@ from sources import http
 TNM = "https://tnmaccess.nationalmap.gov/api/v1/products"
 
 
-def items(spec, ext, crs, margin=15.0, pad=20.0):
+def items(spec, ext, crs, margin=15.0, pad=5.0):
     """[(title, url)] of the project's tiles reaching ext + margin."""
     to_ll = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
     to_xy = Transformer.from_crs("EPSG:4326", crs, always_xy=True)

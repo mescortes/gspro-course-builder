@@ -84,7 +84,7 @@ def test_the_imageserver_request_is_the_one_westmount_has_always_sent(tmp_path, 
     monkeypatch.setattr(A.time, "sleep", lambda s: None)
     with pytest.raises(SystemExit):
         A.fetch(spec, 537000.0, 4810000.0, 537100.0, 4810100.0, 0.16, tmp_path / "x.tif", bands=tuple(spec["bands"]))
-    url, p = sent[0]
+    url, p = next(s for s in sent if s[0].endswith("/exportImage"))
     assert url == "https://ws.geoservices.lrc.gov.on.ca/arcgis5/rest/services/AerialImagery/GEO_Imagery_Data_Service_2023to2027/ImageServer/exportImage"
     assert p == dict(bbox="537000.000,4810000.000,537100.000,4810100.000", bboxSR=2958, imageSR=2958, size="625,625",
                      format="tiff", pixelType="U8", bandIds="0,1,2,3", interpolation="RSP_BilinearInterpolation",
