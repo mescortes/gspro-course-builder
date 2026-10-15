@@ -17,6 +17,7 @@ from sources import http, store
 from sources.http import requests  # noqa: F401 (tests patch requests.head through here)
 
 BUCKET = "https://canelevation-lidar-point-clouds.s3.ca-central-1.amazonaws.com/pointclouds_nuagespoints"
+ACCEPT_ONLY = ("missing_ok",)   # keys that accept or refuse a fetch, not choose its tiles (config.lidar_problems)
 
 
 def tiles(ext, margin=15.0):

@@ -42,19 +42,38 @@ def leaf_atlas(model, key):
     return {f"{model}__{url.split('/')[-1]}": url}
 
 
+def origin(name):
+    """Where the asset id of `name` comes from, for a message."""
+    files = (f"regions/{C.REGION_NAME}.toml or " if C.REGION_NAME else "") + f"courses/{C.SLUG}/course.toml"
+    if name.startswith("leaf_refs/"):
+        return "LEAF_REFS in scripts/fetch_textures.py"
+    if name in C.REGION.get("trees", {}).get("bark", {}).values():
+        return f"[trees] bark in {files}"
+    if name in C.REGION.get("materials", {}).values():
+        return f"[materials] in {files}"
+    return "IDS in scripts/fetch_textures.py" if name in IDS else "the command line"
+
+
 def fetch(name, folder, listing, record):
     """The files of `name` into `folder`, listed by `listing()` ({file name: url}, from the Poly Haven API) unless the
-    record lists them all and they are there. Offline, an asset fetched before the record existed keeps its files."""
+    record lists them all and they are there. Offline, an asset fetched before the record existed keeps its files. An
+    id Poly Haven does not know (a 4xx, or no 2k maps) stops the fetch naming where the id comes from."""
     done = record.get(name)
     if not (done and all((folder / f).exists() for f in done)):
+        fix = (f"the id comes from {origin(name)}: fix it there (an asset's id is the end of its polyhaven.com/a/<id> "
+               f"page)")
         try:
             want = listing()
         except RuntimeError as ex:
             have = sorted(p.name for p in folder.glob("*") if p.is_file()) if folder.exists() and not done else []
             if not have:
+                if isinstance(ex, http.PermanentError):
+                    sys.exit(f"textures: Poly Haven has no asset {name.removeprefix('leaf_refs/')!r} ({ex}): {fix}")
                 sys.exit(f"textures: Poly Haven does not answer for {name} ({ex}): check the network and rerun fetch_textures.py")
             print(f"textures: Poly Haven does not answer for {name}: keeping the {len(have)} files already in {folder}", flush=True)
             return
+        if not want:
+            sys.exit(f"textures: Poly Haven lists no 2k maps for {name!r}: {fix}")
         for f, url in want.items():
             if not (folder / f).exists():
                 http.download(url, folder / f)

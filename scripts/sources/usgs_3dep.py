@@ -21,6 +21,7 @@ from sources import http, store
 
 TNM = "https://tnmaccess.nationalmap.gov/api/v1/products"
 TITLE = "USGS Lidar Point Cloud "   # tile titles: TITLE + project + " " + tile id
+ACCEPT_ONLY = ("max_uncovered",)    # keys that accept or refuse a fetch, not choose its tiles (config.lidar_problems)
 
 
 def _read_box(ext, margin):
@@ -74,8 +75,11 @@ def items(spec, ext, crs, margin=15.0, pad=5.0):
 
 
 def uncovered(boxes, ext, margin=15.0, step=10.0):
-    """(share, (x0, y0, x1, y1)) of ext + margin outside every box, sampled every `step` m; (0.0, None) when covered.
-    The boxes are the listed ones, a few metres too big, so two abutting tiles leave no sliver between them."""
+    """(share, gaps) of ext + margin outside every box, sampled every `step` m; (0.0, []) when covered. Each connected
+    gap is ((x0, y0, x1, y1), edges): the box of its samples (padded by half a sample) and the edges of the extent it
+    lies along, the largest gap first. The boxes are the listed ones, a few metres too big, so two abutting tiles leave
+    no sliver between them."""
+    from scipy import ndimage
     (ax, bx), (ay, by) = _read_box(ext, margin)
     X, Y = np.meshgrid(np.linspace(ax, bx, int(math.ceil((bx - ax) / step)) + 1),
                        np.linspace(ay, by, int(math.ceil((by - ay) / step)) + 1))
@@ -83,9 +87,21 @@ def uncovered(boxes, ext, margin=15.0, step=10.0):
     for x0, y0, x1, y1 in boxes:
         inside |= (X >= x0) & (X <= x1) & (Y >= y0) & (Y <= y1)
     if inside.all():
-        return 0.0, None
-    out = ~inside
-    return float(out.mean()), (X[out].min(), Y[out].min(), X[out].max(), Y[out].max())
+        return 0.0, []
+    lab, n = ndimage.label(~inside, structure=np.ones((3, 3)))
+    size = np.bincount(lab.ravel())
+    hx, hy = (X[0, 1] - X[0, 0]) / 2, (Y[1, 0] - Y[0, 0]) / 2
+    gaps = []
+    for i in sorted(range(1, n + 1), key=lambda i: -size[i]):
+        g = lab == i
+        rows, cols = np.nonzero(g)
+        h, w = rows.max() - rows.min() + 1, cols.max() - cols.min() + 1
+        # (samples on the edge, depth away from it): a gap lies along an edge it runs at least as far as it is deep
+        runs = dict(north=(g[-1].sum(), h), south=(g[0].sum(), h), east=(g[:, -1].sum(), w), west=(g[:, 0].sum(), w))
+        touched = [e for e, (run, _) in runs.items() if run]
+        gaps.append(((max(ax, X[0, cols.min()] - hx), max(ay, Y[rows.min(), 0] - hy), min(bx, X[0, cols.max()] + hx),
+                      min(by, Y[rows.max(), 0] + hy)), [e for e in touched if runs[e][0] >= runs[e][1]] or touched))
+    return float((~inside).mean()), gaps
 
 
 def fetch(spec, ext, out, crs, margin=15.0):
@@ -100,12 +116,16 @@ def fetch(spec, ext, out, crs, margin=15.0):
         there = sorted({project(it.get("title", "")) for it in its} - {""})
         sys.exit(f"lidar: no tile of project {spec['project']!r} reaches the extent. The National Map lists "
                  f"{', '.join(there) if there else 'no point cloud'} over it: set [sources.lidar] project in course.toml")
-    share, where = uncovered([b for _, _, b in tiles], ext, margin)
+    share, gaps = uncovered([b for _, _, b in tiles], ext, margin)
     if share > spec.get("max_uncovered", 0.0):
-        sys.exit(f"lidar: the {spec['project']} tiles leave {share:.0%} of the extent uncovered (E {where[0]:.0f}-"
-                 f"{where[2]:.0f} N {where[1]:.0f}-{where[3]:.0f}): set [sources.lidar] project in course.toml to one that "
-                 f"covers the course or, if that part is open water or out of play, allow it with [sources.lidar] "
-                 f"max_uncovered = {math.ceil(share * 100) / 100}")
+        (x0, y0, x1, y1), edges = gaps[0]
+        where = (f"{len(gaps)} gaps, the largest " if len(gaps) > 1 else "") + f"E {x0:.0f}-{x1:.0f} N {y0:.0f}-{y1:.0f}"
+        where += (f" on its {' and '.join(', '.join(edges).rsplit(', ', 1))} edge{'s' * (len(edges) > 1)}" if edges
+                  else " inside it")
+        sys.exit(f"lidar: the {spec['project']} tiles leave {f'{share:.1%}' if share >= 0.001 else 'under 0.1%'} of the "
+                 f"extent ([frame] core + {margin:g} m) uncovered ({where}): set [sources.lidar] project in course.toml "
+                 f"to one that covers the course or, if that part is open water or out of play, allow it with "
+                 f"[sources.lidar] max_uncovered = {math.ceil(share * 100) / 100}")
     for _, u, _ in tiles:
         http.download(u, out / u.split("/")[-1])
     store.write_tiles(out, spec, ext, [u.split("/")[-1] for _, u, _ in tiles])

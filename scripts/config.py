@@ -14,7 +14,7 @@ LiDAR; heights CGVD2013, m). WGS84 inputs (OSM, web imagery) are projected with 
 to the LiDAR empirically (measure_registration.py), which also absorbs the ~1 m WGS84 / NAD83(CSRS) difference.
 Model frame (glTF, Y-up, metres): x = E - ORIGIN_E, y = H - BASE_H, z = -(N - ORIGIN_N).
 """
-import json, os, re, sys, tomllib
+import importlib, json, os, re, sys, tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -179,8 +179,10 @@ def course_hole(osm_ref):
 
 def lidar_problems():
     """What is wrong with data/<slug>/lidar against the tiles.json its last fetch wrote (scripts/sources/store.py): []
-    when the folder holds exactly the listed tiles, fetched for the current [sources.lidar] and [frame] core. A folder
-    fetched before tiles.json existed has none and is taken as it is."""
+    when the folder holds exactly the listed tiles, fetched for the current [sources.lidar] and [frame] core, naming
+    each key that differs. The keys that only accept or refuse a fetch (the provider's ACCEPT_ONLY: max_uncovered,
+    missing_ok) are not compared: the tiles are the same, and a refetch needs the network. A folder fetched before
+    tiles.json existed has none and is taken as it is."""
     folder = DATA / "lidar"
     try:
         m = json.loads((folder / "tiles.json").read_text())
@@ -189,9 +191,23 @@ def lidar_problems():
     except ValueError:
         return [f"{folder / 'tiles.json'} is unreadable: rerun fetch_data.py lidar"]
     out = []
-    if m.get("spec") != json.loads(json.dumps(DATA_SOURCES.get("lidar"))) or m.get("extent") != FETCH_CORE:
-        out.append(f"the tiles in {folder} were fetched for another [sources.lidar] or [frame] core than "
-                   f"courses/{SLUG}/course.toml's: rerun fetch_data.py lidar")
+    rec, now = m.get("spec") or {}, json.loads(json.dumps(DATA_SOURCES.get("lidar") or {}))
+    try:
+        skip = importlib.import_module(f"sources.{now.get('provider')}").ACCEPT_ONLY
+    except (ImportError, AttributeError):
+        skip = ()
+    show = lambda v: "(not set)" if v is None else repr(v)
+    for k in sorted(set(rec) | set(now)):
+        if k not in skip and rec.get(k) != now.get(k):
+            out.append(f"the tiles in {folder} were fetched with [sources.lidar] {k} = {show(rec.get(k))}, "
+                       f"courses/{SLUG}/course.toml now has {show(now.get(k))}: rerun fetch_data.py lidar, or put the "
+                       f"old value back")
+    ext = m.get("extent") or {}
+    moved = [f"{k} {show(ext.get(k))}, now {show(FETCH_CORE.get(k))}" for k in sorted(set(ext) | set(FETCH_CORE))
+             if ext.get(k) != FETCH_CORE.get(k)]
+    if moved:
+        out.append(f"the tiles in {folder} were fetched for another [frame] core ({'; '.join(moved)}): rerun "
+                   f"fetch_data.py lidar for the new core, or put the old core back")
     have, listed = {p.name for p in folder.glob("*.laz")}, set(m.get("tiles", ()))
     if have - listed:
         out.append(f"{folder}: {', '.join(sorted(have - listed))} not in tiles.json (the tiles fetch_data.py lidar "

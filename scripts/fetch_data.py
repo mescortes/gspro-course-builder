@@ -24,6 +24,9 @@ from sources.http import UA, permanent
 OVERPASS = ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
             "https://overpass.private.coffee/api/interpreter")
 OSM_API = "https://api.openstreetmap.org/api/0.6/map"
+# Overpass remarks of a query too big for it ('Query timed out in "query" ...', 'Query run out of memory ...'), unlike
+# a busy server's ('Dispatcher_Client::request_read_and_idx::timeout. The server is probably too busy ...')
+TOO_BIG = ("timed out", "out of memory")
 
 
 def lonlat_bbox(e, margin=0.0):
@@ -42,7 +45,8 @@ def fetch_lidar():
 
 def overpass_error(text):
     """Why an HTTP 200 Overpass reply is not a snapshot (None when it is one). A query that hits the timeout or the
-    memory limit still answers 200, with a 'remark' saying 'runtime error: ...' and empty or partial elements."""
+    memory limit, or reaches a busy server, still answers 200, with a 'remark' saying 'runtime error: ...' and empty or
+    partial elements."""
     try:
         reply = json.loads(text)
     except ValueError:
@@ -54,10 +58,11 @@ def overpass_error(text):
 
 
 def overpass(query, path):
-    """Run an Overpass query against the public mirrors; True when `path` was written. A runtime error on every mirror
-    (the query is too big for Overpass) returns False at once: the OSM API fallback fetches the box in tiles."""
+    """Run an Overpass query against the public mirrors; True when `path` was written. When every mirror that answers
+    says the query is too big for it (TOO_BIG), False at once: the OSM API fallback fetches the box in tiles. A busy
+    mirror (its remark, an HTTP 429 / 504), another error or no answer is tried again, up to three rounds."""
     for attempt in range(3):
-        too_big = False
+        too_big = []   # per mirror that answered: whether it said the query is too big
         for ep in OVERPASS:
             try:
                 r = requests.post(ep, data={"data": query}, headers=dict(UA, Accept="application/json"), timeout=300)
@@ -67,8 +72,8 @@ def overpass(query, path):
             if why is None:
                 store.write_text(path, r.text); return True
             print("  overpass", ep, why[:200], flush=True)
-            too_big = too_big or why.startswith("remark")
-        if too_big:
+            too_big.append(why.startswith("remark") and any(s in why.lower() for s in TOO_BIG))
+        if too_big and all(too_big):
             return False
         time.sleep(10 * (attempt + 1))
     return False

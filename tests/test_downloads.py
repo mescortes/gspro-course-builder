@@ -104,6 +104,31 @@ def test_a_download_resumes_its_part_file(tmp_path, monkeypatch):
     assert (tmp_path / "u.laz").read_bytes() == data and len(sent) == 2
 
 
+def test_a_whole_part_file_of_unknown_size_is_renamed_not_fetched_again(tmp_path, monkeypatch):
+    """With no size given (every 3DEP tile, every Poly Haven file), a whole .part left by a crash before the rename was
+    asked for its remaining bytes, the server answered 416, and the .part was deleted and fetched again: a 300-900 MB
+    tile downloaded twice."""
+    from sources import http
+    data = bytes(range(10))
+    sent = []
+
+    def get(url, headers=None, **kw):
+        rng = (headers or {}).get("Range")
+        sent.append(rng)
+        if rng and int(rng.split("=")[1].rstrip("-")) >= len(data):
+            return Resp(416, headers={"Content-Range": f"bytes */{len(data)}"})
+        return Resp(200, headers={"Content-Length": str(len(data))}, body=data)
+    monkeypatch.setattr(http.requests, "get", get); _no_sleep(monkeypatch)
+    (tmp_path / "t.laz.part").write_bytes(data)
+    http.download("https://x/t.laz", tmp_path / "t.laz")
+    assert (tmp_path / "t.laz").read_bytes() == data and sent == ["bytes=10-"]
+    sent.clear()
+    (tmp_path / "u.laz.part").write_bytes(data + b"xy")   # longer than the file: stale, fetched again
+    http.download("https://x/u.laz", tmp_path / "u.laz")
+    assert (tmp_path / "u.laz").read_bytes() == data and sent == ["bytes=12-", None]
+    assert not (tmp_path / "t.laz.part").exists() and not (tmp_path / "u.laz.part").exists()
+
+
 def test_a_permanent_http_error_is_not_retried_and_says_its_status(tmp_path, monkeypatch):
     """A 404 (a stale TNM link) or a proxy 403 was retried 5 times over 5 minutes, logged as 'HTTPError' only."""
     from sources import http
@@ -153,6 +178,29 @@ def test_the_build_reads_only_the_tiles_the_last_lidar_fetch_listed(tmp_path, mo
     monkeypatch.setattr(C, "DATA_SOURCES", dict(C.DATA_SOURCES, lidar=other))
     with pytest.raises(SystemExit, match=r"\[sources.lidar\].*fetch_data.py lidar"):
         C.lidar_tiles()
+
+
+def test_a_lidar_setting_change_names_the_key_and_a_threshold_change_needs_no_refetch(tmp_path, monkeypatch):
+    """Any edit of [sources.lidar] blocked the build with 'fetched for another [sources.lidar] or [frame] core', even
+    max_uncovered or missing_ok, which only accept or refuse a fetch (the tiles are the same), and the message did not
+    say which key or which side of the core had changed. Rerunning fetch_data.py lidar needs the network."""
+    folder = tmp_path / "lidar"; folder.mkdir(); (folder / "a.laz").write_bytes(b"")
+    monkeypatch.setattr(C, "DATA", tmp_path)
+    spec = {"provider": "usgs_3dep", "project": "CA_NorthCoastRanges_B23"}
+    (folder / "tiles.json").write_text(json.dumps(dict(spec=spec, extent=C.FETCH_CORE, tiles=["a.laz"])))
+    monkeypatch.setattr(C, "DATA_SOURCES", dict(C.DATA_SOURCES, lidar=dict(spec, max_uncovered=0.05)))
+    assert C.lidar_problems() == []
+    nrcan = {"provider": "nrcan_copc", "zone": 17, "projects": [{"folder": "ON/A", "suffix": "X"}]}
+    (folder / "tiles.json").write_text(json.dumps(dict(spec=nrcan, extent=C.FETCH_CORE, tiles=["a.laz"])))
+    monkeypatch.setattr(C, "DATA_SOURCES", dict(C.DATA_SOURCES, lidar=dict(nrcan, missing_ok=[[5460, 48050]])))
+    assert C.lidar_problems() == []
+    monkeypatch.setattr(C, "DATA_SOURCES", dict(C.DATA_SOURCES, lidar=dict(nrcan, zone=18)))
+    [msg] = C.lidar_problems()
+    assert "zone = 17" in msg and "18" in msg and "fetch_data.py lidar" in msg and "core" not in msg
+    monkeypatch.setattr(C, "DATA_SOURCES", dict(C.DATA_SOURCES, lidar=nrcan))
+    monkeypatch.setattr(C, "FETCH_CORE", dict(C.FETCH_CORE, xmax=C.FETCH_CORE["xmax"] + 256))
+    [msg] = C.lidar_problems()
+    assert "[frame] core" in msg and "xmax" in msg and "[sources.lidar]" not in msg
 
 
 # ---- LiDAR: USGS 3DEP
@@ -218,7 +266,25 @@ def test_a_hole_in_the_3dep_tiles_stops_the_fetch(tmp_path, monkeypatch):
     assert json.loads((tmp_path / "tiles.json").read_text())["tiles"] == got
 
 
-# ---- OSM
+def test_the_3dep_coverage_error_gives_a_small_share_and_says_where_the_gap_is(tmp_path, monkeypatch):
+    """One uncovered column of 10 m samples over 2 km read 'leave 0% of the extent uncovered ... max_uncovered = 0.01',
+    and the box of every uncovered sample spanned the whole extent for a ring of margin or for two gaps."""
+    from sources import usgs_3dep
+    ext = dict(xmin=0.0, ymin=0.0, xmax=1970.0, ymax=1970.0)   # + 15 m margin: -15 .. 1985, 201 x 201 samples
+
+    def stop(*boxes):
+        tiles = [(f"t{i}", f"https://x/t{i}.laz", b) for i, b in enumerate(boxes)]
+        monkeypatch.setattr(usgs_3dep, "listing", lambda *a, **k: [])
+        monkeypatch.setattr(usgs_3dep, "keep", lambda *a, **k: tiles)
+        with pytest.raises(SystemExit) as ex:
+            usgs_3dep.fetch({"provider": "usgs_3dep", "project": "B23"}, ext, tmp_path, crs="EPSG:6339")
+        return str(ex.value)
+    msg = stop((-15.0, -15.0, 1980.0, 1985.0))   # the east column x = 1985 uncovered: 201 / 201^2
+    assert "0.5% of the extent" in msg and "east edge" in msg and "max_uncovered = 0.01" in msg
+    msg = stop((-10.0, -10.0, 1980.0, 1980.0))   # a ring of margin
+    assert "north, south, east and west edges" in msg
+    msg = stop((-15.0, -15.0, 900.0, 1985.0), (1000.0, -15.0, 1700.0, 1985.0), (1750.0, -15.0, 1985.0, 1985.0))
+    assert "2 gaps, the largest E 900-1000 N -15-1985" in msg   # not the box of both: E 900-1750
 
 def test_an_overpass_reply_with_a_runtime_error_is_not_a_snapshot(tmp_path, monkeypatch):
     """Overpass answers HTTP 200 with a 'remark' and empty or partial elements when the query times out or runs out of
@@ -233,6 +299,28 @@ def test_an_overpass_reply_with_a_runtime_error_is_not_a_snapshot(tmp_path, monk
     monkeypatch.setattr(fetch_data.requests, "post", lambda *a, **k: posts.append(a[0]) or Resp(200, body=bad))
     assert not fetch_data.overpass("q", tmp_path / "osm_golf.json") and not (tmp_path / "osm_golf.json").exists()
     assert len(posts) == len(fetch_data.OVERPASS)   # too big for Overpass: on to the OSM API, not two more rounds
+
+
+def test_a_busy_overpass_mirror_is_retried_not_taken_for_a_query_too_big(tmp_path, monkeypatch):
+    """Any remark with 'error' ended the Overpass rounds, including a mirror's 'The server is probably too busy' (a
+    transient load): one busy mirror and two 504s sent the box to the tiled OSM API, whose /map lacks the geometry of
+    relation members outside the box, without trying Overpass again."""
+    busy = json.dumps({"remark": "runtime error: open64: 0 Success /osm3s_osm_base Dispatcher_Client::request_read_and_idx"
+                                 "::timeout. The server is probably too busy to handle your request.", "elements": []})
+    too_big = json.dumps({"remark": "runtime error: Query run out of memory using about 2048 MB of RAM.", "elements": []})
+    good = json.dumps({"elements": [{"type": "node", "id": 1, "lat": 0.0, "lon": 0.0}]})
+    seq = [Resp(200, body=busy), Resp(504), Resp(504), Resp(200, body=good)]
+    monkeypatch.setattr(fetch_data.requests, "post", lambda *a, **k: seq.pop(0)); _no_sleep(monkeypatch)
+    assert fetch_data.overpass("q", tmp_path / "osm_all.json") and seq == []
+    posts = []
+
+    def post(ep, **kw):   # too big on the first mirror, no answer from the others: on to the OSM API at once
+        posts.append(ep)
+        if ep != fetch_data.OVERPASS[0]:
+            raise requests.ConnectionError("no route")
+        return Resp(200, body=too_big)
+    monkeypatch.setattr(fetch_data.requests, "post", post)
+    assert not fetch_data.overpass("q", tmp_path / "osm_golf.json") and posts == list(fetch_data.OVERPASS)
 
 
 def test_an_osm_snapshot_that_no_longer_reaches_the_course_extent_stops_the_fetch(tmp_path, monkeypatch):
@@ -300,6 +388,30 @@ def test_an_imageserver_fetch_resumes_from_its_chunks(tmp_path, monkeypatch):
     assert not (tmp_path / "photo.tif.chunks").exists()
     rec = store.read_record(out)
     assert rec["url"] == "https://s" and rec["bands"] == [0] and rec["bbox"] == [0.0, 0.0, 128.0, 64.0] and rec["res"] == 1.0
+
+
+def test_an_imageserver_error_in_a_200_reply_stops_at_once(tmp_path, monkeypatch):
+    """ArcGIS reports a bad parameter (wrong bandIds, an invalid mosaic rule where clause) as HTTP 200 with a JSON error
+    body. Only a 4xx status counted as permanent, so a config mistake was retried 10 times over 25 min of waits (one
+    of them after the last try), then said 'rerun to resume'."""
+    import time
+    from sources import arcgis_imageserver as A
+    sleeps, calls = [], []
+    monkeypatch.setattr(time, "sleep", sleeps.append)
+
+    def answer(code):
+        body = json.dumps({"error": {"code": code, "message": "Unable to complete operation.",
+                                     "details": ["Invalid bandIds: 4"] if code == 400 else []}})
+        return lambda url, params=None, **kw: calls.append(url) or Resp(200, headers={"content-type": "text/plain"}, body=body)
+    monkeypatch.setattr(A.requests, "get", answer(400))
+    with pytest.raises(SystemExit, match=r"Invalid bandIds.*bands in course.toml") as ex:
+        A.fetch({"url": "https://s"}, 0.0, 0.0, 64.0, 64.0, 1.0, tmp_path / "a.tif", bands=(0, 1, 2, 4))
+    assert len(calls) == 1 and sleeps == [] and "rerun" not in str(ex.value)
+    calls.clear()
+    monkeypatch.setattr(A.requests, "get", answer(500))   # a server error: retried, no wait after the last try
+    with pytest.raises(SystemExit, match="rerun"):
+        A.fetch({"url": "https://s"}, 0.0, 0.0, 64.0, 64.0, 1.0, tmp_path / "a.tif", bands=(0,))
+    assert len(calls) == A.ATTEMPTS and len(sleeps) == A.ATTEMPTS - 1
 
 
 def test_an_interrupted_photo_write_leaves_no_photo(tmp_path, monkeypatch):
@@ -438,6 +550,25 @@ def test_fetch_textures_needs_no_network_once_everything_is_there(tmp_path, monk
     (tmp_path / "textures/sand_01/nor_gl.png").unlink()
     with pytest.raises(SystemExit, match="sand_01"):
         T.main(["sand_01"])
+
+
+def test_an_asset_poly_haven_does_not_have_names_where_its_id_comes_from(tmp_path, monkeypatch):
+    """A mistyped bark or material id (Poly Haven answers 404) exited with 'check the network and rerun', which sent a
+    newcomer to the network instead of the id in the region file or course.toml."""
+    from sources import http
+    monkeypatch.setattr(C, "DATA", tmp_path); _no_sleep(monkeypatch)
+    import fetch_textures as T
+    monkeypatch.setattr(C, "REGION", dict(C.REGION, materials=dict(C.REGION["materials"], cart_path="asphalt_O2")))
+    monkeypatch.setattr(http.requests, "get", lambda url, params=None, **kw: Resp(404, body='{"error": "not found"}'))
+    with pytest.raises(SystemExit) as ex:
+        T.main(["asphalt_O2"])
+    msg = str(ex.value)
+    assert "asphalt_O2" in msg and "[materials]" in msg and f"regions/{C.REGION_NAME}.toml" in msg and "network" not in msg
+    with pytest.raises(SystemExit, match=r"typo_bark.*command line"):
+        T.main(["typo_bark"])
+    monkeypatch.setattr(http.requests, "get", lambda url, params=None, **kw: Resp(200, payload={}))   # no maps at all
+    with pytest.raises(SystemExit, match=r"no 2k maps.*typo_bark"):
+        T.main(["typo_bark"])
 
 
 # ---- check_course.py

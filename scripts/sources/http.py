@@ -11,6 +11,14 @@ def permanent(code):
     return 400 <= code < 500 and code not in (408, 429)
 
 
+class PermanentError(RuntimeError):
+    """A permanent HTTP error (see permanent()); `status` is its code. A caller can tell a wrong URL or asset id from
+    a network failure with it."""
+    def __init__(self, message, status):
+        super().__init__(message)
+        self.status = status
+
+
 def _total(r, have):
     """Size of the whole file from a 200 / 206 reply (None when the reply does not say, or is content-encoded)."""
     if r.headers.get("Content-Encoding", "identity") != "identity":
@@ -26,7 +34,9 @@ def download(url, dst, size=None, attempts=5):
     """`url` into `dst` through <dst>.part, renamed into place only once it is complete (`size` bytes when given, else
     the Content-Length), so a killed or truncated transfer never leaves a `dst` a rerun trusts. A retry, or a rerun
     after a crash, resumes the .part file with a Range request; a server that ignores it sends the whole file again.
-    A permanent 4xx (a stale link, a proxy 403) fails at once with its status."""
+    A 416 to that request means the .part is already whole when its size is the one the server names (a crash before
+    the rename): it is renamed, not fetched again. A permanent 4xx (a stale link, a proxy 403) fails at once with its
+    status (PermanentError)."""
     if dst.exists() and (size is None or dst.stat().st_size == size):
         return
     print("downloading", dst.name, round((size or 0) / 1e6), "MB", flush=True)
@@ -43,11 +53,15 @@ def download(url, dst, size=None, attempts=5):
         try:
             with requests.get(url, headers=dict(UA, Range=f"bytes={have}-") if have else UA, stream=True,
                               timeout=(60, 600)) as r:
-                if r.status_code == 416:            # nothing left to send: the .part is stale or whole; start over
-                    tmp.unlink(); err = "HTTP 416"
+                if r.status_code == 416:            # nothing left to send: the .part is whole, or stale
+                    m = re.fullmatch(r"bytes \*/(\d+)", r.headers.get("Content-Range", "").strip())
+                    if m and have and int(m.group(1)) == have and size in (None, have):
+                        os.replace(tmp, dst)
+                        return
+                    tmp.unlink(missing_ok=True); err = "HTTP 416"   # start over
                     continue
                 if permanent(r.status_code):
-                    raise RuntimeError(f"download failed (HTTP {r.status_code}): {url}")
+                    raise PermanentError(f"download failed (HTTP {r.status_code}): {url}", r.status_code)
                 r.raise_for_status()
                 resume = r.status_code == 206
                 total = size if size is not None else _total(r, have)
@@ -96,7 +110,7 @@ def exists(url):
 
 def get_json(url, params=None, valid=lambda j: True, attempts=5, timeout=120):
     """The JSON reply to a GET, retried on network errors, 5xx / 408 / 429 and replies `valid` rejects (an error body,
-    an HTML gateway page); a permanent 4xx fails at once. Raises RuntimeError naming the last error."""
+    an HTML gateway page); a permanent 4xx fails at once (PermanentError). Raises RuntimeError naming the last error."""
     err = None
     for attempt in range(attempts):
         try:
@@ -107,7 +121,7 @@ def get_json(url, params=None, valid=lambda j: True, attempts=5, timeout=120):
                     return j
                 err = f"unexpected reply {str(j)[:200]}"
             elif permanent(r.status_code):
-                raise RuntimeError(f"HTTP {r.status_code} from {url}: {getattr(r, 'text', '')[:200]}")
+                raise PermanentError(f"HTTP {r.status_code} from {url}: {getattr(r, 'text', '')[:200]}", r.status_code)
             else:
                 err = f"HTTP {r.status_code}"
         except (requests.RequestException, ValueError) as ex:

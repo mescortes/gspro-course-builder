@@ -13,8 +13,10 @@ Ontario SWOOP (Geospatial Ontario, 16 cm RGB + NIR, Open Government Licence - On
 RGB + NIR, public domain) are both served this way.
 
 Each chunk is kept in <out>.chunks/ until the photo is written, so a rerun after a failure fetches only the chunks still
-missing (these servers can be flaky: the 5 km backdrop photo once took 84 min). The photo is written to <out>.part and
-renamed into place, then recorded in <out>.source.json (sources/store.py).
+missing (these servers can be flaky: the 5 km backdrop photo once took 84 min). A reply no retry changes (an HTTP
+4xx, or the service's JSON error with a 4xx code, which ArcGIS sends with HTTP 200 for a wrong band id or where clause)
+stops the fetch at once. The photo is written to <out>.part and renamed into place, then recorded in <out>.source.json
+(sources/store.py).
 """
 import json, shutil, sys, time
 from pathlib import Path
@@ -26,7 +28,7 @@ from sources import store
 from sources.http import UA, permanent
 
 MAX_CHUNK_M = 800.0
-ATTEMPTS = 10          # per chunk; the wait doubles from 5 s up to MAX_WAIT_S (about 25 min of retries in all)
+ATTEMPTS = 10          # per chunk; the wait doubles from 5 s up to MAX_WAIT_S (about 20 min of retries in all)
 MAX_WAIT_S = 300.0
 
 
@@ -74,6 +76,16 @@ def _decode(content, h, w, n):
     return a[:n]
 
 
+def service_error(r):
+    """(code, text) of an ArcGIS JSON error reply ({"error": {"code": 400, "message": ..., "details": [...]}}); None
+    for any other reply."""
+    try:
+        e = r.json()["error"]
+        return int(e["code"]), " ".join(str(t) for t in [e.get("message"), *(e.get("details") or ())] if t)
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return None
+
+
 def _chunk_cache(out, key):
     """<out>.chunks/, emptied when it holds the chunks of another request (or chunking)."""
     cache = Path(out).with_name(Path(out).name + ".chunks")
@@ -114,19 +126,23 @@ def fetch(spec, xmin, ymin, xmax, ymax, res, out, bands, max_empty=None):
         if spec.get("mosaic_rule"):
             params["mosaicRule"] = json.dumps(spec["mosaic_rule"])
         for attempt in range(ATTEMPTS):
+            if attempt:   # no wait after the last try
+                time.sleep(min(5.0 * 2 ** (attempt - 1), MAX_WAIT_S))
             try:
                 r = requests.get(service + "/exportImage", params=params, timeout=300, headers=UA)
                 if r.status_code == 200 and r.headers.get("content-type", "").startswith("image"):
                     img[:, r0:r0 + h, c0:c0 + w] = _decode(r.content, h, w, len(bands))
                     store.write_bytes(kept, r.content)
                     break
-                if permanent(r.status_code):
-                    raise SystemExit(f"imagery: {service} answers HTTP {r.status_code} ({getattr(r, 'text', '')[:200]}): "
-                                     f"check [sources.imagery] url and mosaic_rule in course.toml")
+                err = service_error(r) if r.status_code == 200 else None   # ArcGIS: HTTP 200, {"error": {"code": 400}}
+                if permanent(err[0] if err else r.status_code):
+                    raise SystemExit(f"imagery: {service} answers {f'error {err[0]}' if err else f'HTTP {r.status_code}'} "
+                                     f"({err[1] if err else getattr(r, 'text', '')[:200]}): check [sources.imagery] url, "
+                                     f"mosaic_rule and bands in course.toml (and max_chunk_m when it says the image is "
+                                     f"too large)")
                 print("  bad", r.status_code, getattr(r, "text", "")[:200], flush=True)
             except (requests.RequestException, RuntimeError, rasterio.errors.RasterioIOError) as ex:
                 print("  retry", attempt + 1, ex.__class__.__name__, str(ex)[:120], flush=True)
-            time.sleep(min(5.0 * 2 ** attempt, MAX_WAIT_S))
         else:
             raise SystemExit(f"imagery: chunk {k + 1}/{len(wins)} {bb} failed {ATTEMPTS} times ({service}): rerun to "
                              f"resume (the {len(list(cache.glob('*.tif')))} chunks fetched so far are kept in {cache})")
