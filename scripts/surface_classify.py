@@ -330,8 +330,9 @@ def has_nir():
                          ".venv: .venv/bin/rio stack in.tif --bidx 1,2,3[,<NIR band>] rgbn.tif (keep R, G, B and NIR), "
                          "then .venv/bin/rio convert rgbn.tif out.tif --dtype uint8 --scale-ratio <255 / the photo's "
                          "maximum> (.venv/bin/rio info --stats in.tif gives it); or with GDAL's tools, gdal_translate -ot "
-                         "Byte -scale <min> <max> 0 255 -b 1 -b 2 -b 3 [-b <NIR band>] in.tif out.tif. Put out.tif in its "
-                         "place and rerun from the registration: scripts/build_all.py register")
+                         "Byte -scale <min> <max> 0 255 -b 1 -b 2 -b 3 [-b <NIR band>] in.tif out.tif. Save out.tif as "
+                         f"{C.IMAGERY_RAW.name} (keep the original elsewhere) and rerun from the registration: "
+                         "scripts/build_all.py register")
             nir = False
             if ds.count >= 4:   # a central block is enough to tell a mask from a photo band
                 w = Window(max(0, ds.width // 2 - 1024), max(0, ds.height // 2 - 1024), min(2048, ds.width), min(2048, ds.height))
