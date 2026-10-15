@@ -4,7 +4,9 @@
   [sources.imagery]   provider = "arcgis_imageserver" (Ontario SWOOP, USDA NAIP, any ArcGIS ImageServer)
   [sources.backdrop]  provider = "cog_dem" (NRCan HRDEM, USGS 3DEP 1 m DEM: cloud-optimised GeoTIFFs)
 
-Each provider module has a fetch() taking its course.toml table (`spec`).
+Each provider module has a fetch() taking its course.toml table (`spec`). They share http.py (downloads: retried,
+resumed, renamed into place once complete) and store.py (atomic writes, and the <file>.source.json record of what a
+file was fetched from, which a rerun checks against course.toml).
 """
 import importlib, sys
 from pathlib import Path

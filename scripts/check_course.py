@@ -91,8 +91,33 @@ def course_report(c=C):
     return p
 
 
+OVERLAP_SHARE = 0.1  # two LiDAR tiles whose boxes share more than this of the smaller one cover the same ground
+
+
+def lidar_overlaps(names, mins, maxs):
+    """'a and b' for each pair of tiles whose boxes overlap by more than OVERLAP_SHARE of the smaller box: two projects
+    (or flights) over the same ground, which the rasters would merge (the DSM keeps the higher return of both years)."""
+    out = []
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            w = min(maxs[i][0], maxs[j][0]) - max(mins[i][0], mins[j][0])
+            h = min(maxs[i][1], maxs[j][1]) - max(mins[i][1], mins[j][1])
+            small = min(np.prod(np.subtract(maxs[i], mins[i])), np.prod(np.subtract(maxs[j], mins[j])))
+            if w > 0 and h > 0 and w * h > OVERLAP_SHARE * small:
+                out.append(f"{names[i]} and {names[j]}")
+    return out
+
+
+def _rel(p):
+    try:
+        return p.relative_to(C.ROOT)
+    except ValueError:
+        return p
+
+
 def data_report():
-    """Downloads present and covering the extent."""
+    """Downloads present, covering the extent, and made from what course.toml asks for."""
+    import fetch_backdrop, fetch_data
     out = []
     tiles = C.LIDAR_TILES
     if not tiles:
@@ -108,15 +133,34 @@ def data_report():
         ok = lo[0] <= e["xmin"] and lo[1] <= e["ymin"] and hi[0] >= e["xmax"] and hi[1] >= e["ymax"]
         out.append(f"{'' if ok else '!! '}LiDAR: {len(tiles)} tiles, E {lo[0]:.0f}-{hi[0]:.0f} N {lo[1]:.0f}-{hi[1]:.0f}"
                    + ("" if ok else " (does not cover CORE)"))
+        pairs = lidar_overlaps([f.name for f in tiles], mins, maxs)
+        if pairs:
+            out.append(f"!! LiDAR: {'; '.join(pairs[:5])}{' ...' if len(pairs) > 5 else ''} cover the same ground (two "
+                       f"projects or flights?): keep one project's tiles in {C.DATA / 'lidar'}")
+        out += ["!! LiDAR: " + x for x in C.lidar_problems()]
     import rasterio
-    for what, p, bands in (("photo", C.IMAGERY_RAW, 4), ("backdrop DTM", C.DATA / "dem/backdrop_dem.tif", 1),
-                           ("backdrop DSM", C.DATA / "dem/backdrop_dsm.tif", 1)):
+    sq = fetch_backdrop.B
+    # more than this share empty: a black strip for the photo (as fetch_data.py's limit), a hole in the backdrop for the
+    # DTM (fetch_backdrop.py fills small gaps); the DSM is optional
+    limit = {"photo": C.DATA_SOURCES.get("imagery", {}).get("max_empty", 0.01), "backdrop DTM": 0.0, "backdrop DSM": 1.0}
+    for what, p, bands, box in (("photo", C.IMAGERY_RAW, 4, None), ("backdrop DTM", C.DATA / "dem/backdrop_dem.tif", 1, sq),
+                                ("backdrop DSM", C.DATA / "dem/backdrop_dsm.tif", 1, sq)):
         if not p.exists():
-            out.append(f"{'' if what == 'backdrop DSM' else '!! '}{what}: missing ({p.relative_to(C.ROOT)})")
+            out.append(f"{'' if what == 'backdrop DSM' else '!! '}{what}: missing ({_rel(p)})")
             continue
         with rasterio.open(p) as ds:
-            nan = float(np.isnan(ds.read(1, out_shape=(1, 256, 256)).astype(float)).mean()) if ds.dtypes[0].startswith("float") else 0.0
-            out.append(f"{'!! ' if ds.count < bands else ''}{what}: {ds.count} bands, {ds.res[0]:.2f} m, {nan:.1%} empty")
+            a = ds.read(out_shape=(ds.count, 256, 256))
+            empty = float(np.isnan(a[0]).mean()) if ds.dtypes[0].startswith("float") else float((a == 0).all(0).mean())
+            count, res, b = ds.count, ds.res[0], ds.bounds
+        short = box is not None and (b.left > box["xmin"] + res or b.bottom > box["ymin"] + res
+                                     or b.right < box["xmax"] - res or b.top < box["ymax"] - res)
+        bad = count < bands or empty > limit[what] or short
+        out.append(f"{'!! ' if bad else ''}{what}: {count} bands, {res:.2f} m, {empty:.1%} empty"
+                   + (f" (covers E {b.left:.0f}-{b.right:.0f} N {b.bottom:.0f}-{b.top:.0f}, not the backdrop square E "
+                      f"{box['xmin']:.0f}-{box['xmax']:.0f} N {box['ymin']:.0f}-{box['ymax']:.0f}: rerun fetch_backdrop.py)"
+                      if short else ""))
+    out += ["!! photo: " + x for x in fetch_data.imagery_problems()]
+    out += ["!! OSM: " + x for x in fetch_data.osm_problems()]
     return out
 
 
