@@ -150,7 +150,10 @@ course values said to be in `scripts/config.py` are in `courses/<slug>/course.to
     500 m² (a bad outline would terrace the hillside);
   * list the levelled tees for QA: large fill means the outline runs down a bank;
   * a LiDAR flown after every tee was built (Brambles) needs none: `[tuning.level_tees] enabled = false`, or drafted
-    pads that take in banks are cut and filled (a 1 m step by a green).
+    pads that take in banks are cut and filled (a 1 m step by a green);
+  * the feather stops dead at protected surfaces, so a deck beside a path or green can end in a step (Westmount's
+    hole-8 Blue deck, built up to its neighbour, 1.9 m at its cart path): `level_tees` prints each one over
+    `warn_step` (0.1 m). Tapering the feather before them was tried: it steepens the bank and moves Westmount's deck.
 * **Steep Thompson greens.** Relax the pin slope limit (3 → 5 %) until 12 % of the green is pinnable, or all pins land
   in one spot (`hole_data.pin_candidates`).
 * **Structures OSM lacks** go in `features/structures.geojson` (`building`, `height`, `roof:shape=hipped` for a

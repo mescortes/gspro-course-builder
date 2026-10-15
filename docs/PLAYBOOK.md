@@ -111,7 +111,9 @@ Fill in `course.toml` by hand from the research:
   ground under canopy is treated, and the region's tree classifier expects one of them.
 * `[tuning.level_tees] enabled = false` when the LiDAR was flown after every tee was built (compare the flight date
   with the course's opening and tee works). The engine gives tees with no deck in the LiDAR a synthetic one; on a
-  course whose decks are all in the LiDAR (Brambles) it cuts and fills tee polygons that take in banks instead.
+  course whose decks are all in the LiDAR (Brambles) it cuts and fills tee polygons that take in banks instead. The
+  `mesh` step prints a `level_tees: ... step` line for each synthetic deck that ends in a step of more than
+  `warn_step` (0.1 m) where it meets a path, green, bunker, road, building or water (they keep their height).
 * `[structures] parking`: OSM parking ids that get parked cars.
 
 ```bash
@@ -241,7 +243,8 @@ green size or slope failure means a green outline that takes in banks or misses 
 fairway" means a fairway that carries another hole's number (a fairway polygon several lines of play run along is
 split between their corridors, a line that only crosses it takes none; one that misses its own line goes to the
 nearest one); a step around a green is
-usually the bank of a synthetic tee deck nearby (§2, `[tuning.level_tees]`). Course-dependent limits go in
+usually the bank of a synthetic tee deck nearby (§2, `[tuning.level_tees]`; the `mesh` step's `level_tees: ... step`
+lines say which). Course-dependent limits go in
 `course.toml [tests]` (`green_area`, `min_bunkers`, `green_slope_max`, `known_tee_gaps = { "7.back" = 40 }` with the
 reason in research/NOTES.md); fix the rest. A course with few bunkers needs `min_bunkers` (the bunker tests count
 the bunkers over 20 m2 and the automatic ones over 40 m2).
