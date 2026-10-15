@@ -111,11 +111,20 @@ def pad_axes(pad, toward, step=1.5):
 TEE_MARKER_GAP = C.tuning("tee_marker_gap", 2.0)  # m: two tee sets' markers closer than this share one spot
 
 
+def clashes(pos, yards, others, min_sep):
+    """Would a marker at `pos` for a `yards` card sit on another set's marker (a tee dict with "pos" and "card")? Only
+    when the two are within `min_sep` m and their cards are not: then one of them misses its card (clamped to the end of
+    a pad). Two sets with the same card, or cards under min_sep apart, share the spot (a forward and a combo set on one
+    box)."""
+    return any(math.dist(pos, o["pos"]) < min_sep and abs(yards - o["card"]) / YD >= min_sep for o in others)
+
+
 def place_tees(pads, aims, green_c, card, min_sep=None):
     """Assign card tees to pads and slide markers to match the card yardage. Returns list of tee dicts. Back to front,
-    each set takes the pad that comes closest to its card. A set whose marker would land within `min_sep` m of an
-    earlier set's (both clamped to the end of one pad: a card longer than the ground, Brambles hole 7) takes the next
-    best pad instead and its gap is reported (pad_err); sets share a spot only when no pad is left for them."""
+    each set takes the pad that comes closest to its card. A set whose marker would land on an earlier set's (within
+    `min_sep` m while their cards are further apart: one clamped to the end of a pad, a card longer than the ground,
+    Brambles hole 7) takes the next best pad instead and its gap is reported (pad_err); sets share a spot only when no
+    pad is left for them. Sets whose cards are the same (within min_sep) share their spot (`clashes`)."""
     min_sep = TEE_MARKER_GAP if min_sep is None else min_sep
     first = aims[0] if aims else green_c
     info = []
@@ -144,7 +153,7 @@ def place_tees(pads, aims, green_c, card, min_sep=None):
         for i in ranked:
             ax, pos = spot(i, yards)
             choice = choice or (i, ax, pos)
-            if all(math.dist(pos, o["pos"]) >= min_sep for o in tees):
+            if not clashes(pos, yards, tees, min_sep):
                 choice = (i, ax, pos)
                 break
         best, ax, pos = choice
@@ -155,15 +164,16 @@ def place_tees(pads, aims, green_c, card, min_sep=None):
 
 def fairway_markers(tees, aims, green_c, min_sep=None):
     """In place: no tee pad can deliver a set's card yardage (composite forward tees): its marker goes on the line of play
-    at exactly the card distance, as forward markers on a fairway are - unless that spot is within `min_sep` m of
-    another set's marker (Brambles hole 7: the Middle card equals the Back deck's length, so the fairway marker sat on
-    the Back marker); then it stays on its pad and the gap is reported. Sets each tee's "source"."""
+    at exactly the card distance, as forward markers on a fairway are - unless that spot is on another set's marker
+    (`clashes`; Brambles hole 7: the Middle card equals the Back deck's length, so the fairway marker sat on the Back
+    marker, clamped there from a longer card); then it stays on its pad and the gap is reported. Sets each tee's
+    "source"."""
     min_sep = TEE_MARKER_GAP if min_sep is None else min_sep
     for t in tees:
         t["source"] = "pad"
         if t["pad_err"] > FAIRWAY_MARKER_GAP and t["key"] != TEE_KEYS[0]:
             pos = point_at_distance(t["card"] / YD, aims, green_c, np.asarray(tees[0]["pos"]))
-            if pos is not None and all(math.dist(pos, o["pos"]) >= min_sep for o in tees if o is not t):
+            if pos is not None and not clashes(pos, t["card"], [o for o in tees if o is not t], min_sep):
                 t["pos"] = pos; t["measured"] = play_distance(pos, aims, green_c) * YD; t["source"] = "fairway_marker"
     return tees
 

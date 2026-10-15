@@ -90,6 +90,32 @@ def test_sets_share_a_pad_at_their_own_yardages():
     assert abs(np.hypot(*(t[0]["pos"] - t[1]["pos"])) - 10.0) < 0.5
 
 
+def test_sets_with_the_same_card_share_their_deck():
+    """Round-3 review: scorecards often give two sets the same yardage on a hole (a forward and a combo set sharing a
+    box). Both markers are exactly at their card on the deck, so they share its spot: the second set must not be sent
+    to the forward pad (304.6 yd off) because its marker is within tee_marker_gap of the first's."""
+    deck, front = box(-5, -95, 5, -65), box(-5, 20, 5, 30)           # the deck measures 366.5-393.5 m from the green
+    for card in ([380.0, 380.0, 275.0], [380.0, 378.5, 275.0]):
+        t = HD.place_tees([front, deck], [], GREEN, [_yd(m) for m in card])
+        assert [x["pad"] for x in t] == [deck, deck, front], card
+        assert [x["pad_err"] for x in t] == [0.0, 0.0, 0.0], card
+        assert abs(np.hypot(*(t[0]["pos"] - t[1]["pos"])) - (card[0] - card[1])) < 0.1
+        HD.fairway_markers(t, [], GREEN)
+        assert [x["source"] for x in t] == ["pad"] * 3
+
+
+def test_a_set_whose_card_is_the_clamped_spot_still_moves():
+    """Brambles hole 7 exactly: the Back card is longer than the ground, so its marker clamps to the back of the Back
+    deck - which is where the Middle card is. The Middle marker is at its card there, but on a marker that misses its
+    own card by 31 m: it takes its own deck and its gap is reported (and no fairway marker lands on the Back marker)."""
+    back, middle = box(-2, 0, 2, 20), box(-5, 60, 5, 75)              # one axis; the Back deck's back end: 298.5 m
+    t = HD.place_tees([back, middle], [], GREEN, [_yd(330.0), _yd(298.5)])
+    assert t[0]["pad"] is back and t[0]["pad_err"] > 30
+    assert t[1]["pad"] is middle and t[1]["pad_err"] > 50
+    HD.fairway_markers(t, [], GREEN)
+    assert t[1]["source"] == "pad" and np.hypot(*(t[0]["pos"] - t[1]["pos"])) > 30
+
+
 def test_one_pad_for_every_set_doubles_them_up():
     """With a single pad (Brambles hole 15 before QA: the shared back deck is another hole's) there is nowhere else:
     the sets share its back end and the gaps are reported."""
