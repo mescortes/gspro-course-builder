@@ -27,6 +27,15 @@ def _tuning_files():
     return f"courses/{C.SLUG}/course.toml" + (f" or regions/{C.REGION_NAME}.toml" if C.REGION_NAME else "")
 
 
+def _rel(p):
+    """`p` relative to the repository (the commands in messages run from its root), else as it is."""
+    from pathlib import Path
+    try:
+        return Path(p).relative_to(C.ROOT)
+    except ValueError:
+        return Path(p)
+
+
 def _number(x):
     return isinstance(x, (int, float)) and not isinstance(x, bool)
 
@@ -325,13 +334,16 @@ def has_nir():
     if key not in _PHOTO:
         with rasterio.open(C.IMAGERY) as ds:
             if ds.count < 3 or ds.dtypes[0] != "uint8":
+                # one ratio for every band kept (photo_8bit.py): `rio info --stats` gives band 1's maximum only, and
+                # NIR scaled by red's maximum went past 255 and wrapped (rio convert casts unchecked)
+                raw = _rel(C.IMAGERY_RAW)
+                keep = raw.with_name(raw.stem + "_original" + raw.suffix)
                 sys.exit(f"{C.IMAGERY}: {ds.count} band(s) of {ds.dtypes[0]}, but the engine reads an 8-bit R, G, B (+ NIR) "
-                         f"photo. Convert {C.IMAGERY_RAW.name} in {C.IMAGERY_RAW.parent} with the rasterio tools of the "
-                         ".venv: .venv/bin/rio stack in.tif --bidx 1,2,3[,<NIR band>] rgbn.tif (keep R, G, B and NIR), "
-                         "then .venv/bin/rio convert rgbn.tif out.tif --dtype uint8 --scale-ratio <255 / the photo's "
-                         "maximum> (.venv/bin/rio info --stats in.tif gives it); or with GDAL's tools, gdal_translate -ot "
-                         "Byte -scale <min> <max> 0 255 -b 1 -b 2 -b 3 [-b <NIR band>] in.tif out.tif. Save out.tif as "
-                         f"{C.IMAGERY_RAW.name} (keep the original elsewhere) and rerun from the registration: "
+                         f"photo. Convert the photo you put in, {raw}: mv {raw} {keep} && .venv/bin/python "
+                         f"scripts/photo_8bit.py {keep} {raw} --bands 1,2,3[,<NIR band>] (the R, G, B and NIR band "
+                         "numbers of the photo, from its metadata). It scales those bands by one ratio, 255 / the "
+                         "largest value among them, so NDVI is kept and no band wraps past 255 (--max <value> to scale "
+                         "by the sensor's range instead, e.g. 4095 for 12-bit data). Then rerun from the registration: "
                          "scripts/build_all.py register")
             nir = False
             if ds.count >= 4:   # a central block is enough to tell a mask from a photo band
