@@ -11,8 +11,9 @@ can be run by hand.
 
 * Python 3.12 and [uv](https://github.com/astral-sh/uv); headless Blender 4.2 LTS for the FBX step (`BLENDER=` its
   binary; without it `build_all.py` looks on PATH, then in `/Applications/Blender.app` or the Windows installer's
-  folder). The build prints the Blender it uses, with a `!!` line when it is not 4.2. About 15 GB of RAM at peak and
-  5-10 GB of disk per course.
+  folder). The build prints the Blender it uses, with a `!!` line when it is not 4.2 (the version comes from the macOS
+  app bundle or the install folder's name; elsewhere, such as an apt or snap Blender on Linux, from
+  `blender --version`). About 15 GB of RAM at peak and 5-10 GB of disk per course.
 * `uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements-lock.txt` (the exact
   packages of the golden Westmount build; `requirements.txt` lists the direct dependencies unpinned)
 * `COURSE= .venv/bin/python -m pytest -q tests --ignore=tests/test_course.py` must pass (no data needed).
@@ -82,7 +83,9 @@ It writes `courses/<slug>/course.toml`: the frame (UTM CRS from the region's dat
 CORE = outline + 100 m in 256 m tiles, the 2048 m GSPro terrain square) and the likely `[sources]`. `--crs EPSG:<code>`
 sets another frame, such as the national metre grid the LiDAR is delivered in. It is written as its EPSG code. A
 compound CRS, Web Mercator, or a grid whose metres are more than 0.5 % off ground metres at the course is refused
-(`new_course.py` MAX_SCALE_ERROR: yardages would be off by as much). With `nrcan_copc`
+(`new_course.py` MAX_SCALE_ERROR: yardages would be off by as much), naming where the CRS came from (`--crs`, the
+region's `[scaffold] crs` or its datum's UTM zone). check_course.py checks `[frame] crs` the same way when you edit it
+by hand, at the centre of `[frame] core`, and asks for the `EPSG:<code>` form the engine reads. With `nrcan_copc`
 the frame must be a UTM zone (NRCan names its tiles by zone): near a zone boundary, `--crs` the neighbouring zone's EPSG
 code if the project is delivered in that zone.
 
@@ -120,7 +123,9 @@ COURSE=<slug> .venv/bin/python scripts/check_course.py
 
 **Checkpoint:** check_course reports nothing missing in course.toml; every hole has a line, a green and a tee (or the
 course goes the no-OSM route, §4). check_course also names any `[tuning]` key, table or table key (in course.toml or
-the region) that the engine does not read, with the closest name it does read: the build would ignore a misspelt one.
+the region) that the engine does not read, with the closest name it does read: the build would ignore a misspelt one
+(and a misspelt `[tuning.level_tees]` key, which is passed to `build_terrain_mesh.level_tees` as its parameters, would
+stop the build at the mesh step).
 
 ## 3. Download
 

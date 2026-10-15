@@ -82,6 +82,7 @@ def test_the_build_says_which_blender_it_uses_and_warns_on_another_version(monke
     exporter without a word, and fingerprint.py, which looked only at BLENDER and PATH, recorded no Blender at all.
     The version is read without starting Blender (a sandboxed macOS shell crashes it at start)."""
     import build_all as B, fingerprint as FP
+    monkeypatch.setattr(B.platform, "system", lambda: "Darwin")           # Blender is never started to ask
     exe = _fake_blender_app(tmp_path, "4.5.3")
     assert B.blender_version(exe) == "4.5.3"
     assert B.blender_version("C:/Program Files/Blender Foundation/Blender 4.2/blender.exe") == "4.2"
@@ -99,6 +100,36 @@ def test_the_build_says_which_blender_it_uses_and_warns_on_another_version(monke
     assert FP._blender() == "4.5.3"                                        # the program the build uses
     monkeypatch.setattr(B, "find_blender", lambda: sys.exit("BLENDER=/x is not a program"))
     assert FP._blender() is None
+
+
+def _fake_blender(path, script):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("#!/bin/sh\n" + script); path.chmod(0o755)
+    return str(path)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the fake Blender is a shell script")
+def test_a_blender_whose_install_names_no_version_is_asked_for_it_off_macos(monkeypatch, tmp_path):
+    """On Linux the version was known only from a folder name (the tools/setup_linux.sh archive): an apt Blender
+    (/usr/bin/blender, 4.0.2 on Ubuntu 24.04) or a snap one (/snap/bin/blender, a link to /usr/bin/snap) gave 'version
+    not known' and no '!!' line, and the FBX was built with another exporter. Off macOS, where nothing crashes it,
+    Blender is asked with --version, as fingerprint.py does."""
+    import build_all as B
+    monkeypatch.setattr(B.platform, "system", lambda: "Linux")
+    apt = _fake_blender(tmp_path / "usr/bin/blender", "echo 'Blender 4.0.2'\necho '\tbuild date: 2024-01-24'\n")
+    assert B.blender_version(apt) == "4.0.2"
+    note = B.blender_note(apt)
+    assert note.startswith("!! Blender 4.0.2") and apt in note and "4.2 LTS" in note
+    lts = _fake_blender(tmp_path / "usr/local/bin/blender", "echo 'Blender 4.2.3 LTS'\n")
+    assert B.blender_version(lts) == "4.2.3" and B.blender_note(lts) == f"Blender 4.2.3: {lts}"
+    silent = _fake_blender(tmp_path / "opt/bin/blender", "exit 1\n")
+    assert B.blender_version(silent) is None and "version not known" in B.blender_note(silent)
+    monkeypatch.setattr(B, "BLENDER_VERSION_TIMEOUT", 0.5)
+    stuck = _fake_blender(tmp_path / "srv/bin/blender", "exec sleep 5\n")
+    assert B.blender_version(stuck) is None
+    assert B.blender_version(str(tmp_path / "none/blender")) is None
+    monkeypatch.setattr(B.platform, "system", lambda: "Darwin")           # a sandboxed macOS shell crashes it
+    assert B.blender_version(apt) is None
 
 
 def test_registration_with_too_few_bunkers_says_so_and_prints_the_shift_to_paste():
