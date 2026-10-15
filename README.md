@@ -170,6 +170,9 @@ lists any environment difference before the artefacts. FBX and .blend files are 
 the time into both and derives FBX object ids from Python's per-process string hash. The glTF they are converted from
 and `gspro/fbx_manifest.json` are compared.
 
+A new course starts with `scripts/new_course.py` (frame, extents, likely data sources) and `scripts/check_course.py`
+(what is still missing); see `instructions.md` §3.
+
 `courses/westmount/research/osm_*.json` hold the OSM snapshot the model was built from. Delete them before
 `fetch_data.py osm` to refresh.
 

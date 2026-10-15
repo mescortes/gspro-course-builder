@@ -100,21 +100,27 @@ Collect:
 * `IMAGERY_RAW`, `IMAGERY_SHIFT = (0, 0)` to start (Phase D measures it), `IMAGERY`.
 * `course_hole()`, `PLAYABLE`, `NINE`, `SCORECARD`, `HANDICAP`, `RATINGS`.
 
-### Other per-course edit points (grep for the old course's coordinates and names)
+### Other per-course edit points
 
-* `scripts/fetch_data.py` → `LIDAR_PROJECT`: the newest, densest USGS 3DEP project covering the course. Check
-  `tnm_lpc.json` from a first TNM query.
-* `scripts/fetch_backdrop.py` → `URLS`: the USGS 1 m DEM COG tiles around the course, from TNM "Digital Elevation
-  Model (DEM) 1 meter". Use several projects if one has gaps.
+Start with `scripts/new_course.py <slug> "Name" --region <region> --osm way/<id>` (or `--bbox w,s,e,n` for a course OSM
+does not map): it writes the frame, the extents and the likely `[sources]`. Then `COURSE=<slug>
+scripts/check_course.py` lists what is still missing (holes without lines, greens or tees; scorecard, tees, ratings,
+GreenKeeper slots; data not fetched).
+
+* `courses/<slug>/course.toml` → `[sources.lidar]`: NRCan folders (`nrcan_copc`) or the newest USGS 3DEP project
+  (`usgs_3dep`, project = ...); `[sources.imagery]` (`arcgis_imageserver`: SWOOP, USDA NAIP); `[sources.backdrop]`
+  (`cog_dem`: HRDEM or 3DEP 1 m DEM files, optional `src_crs`).
+* Holes, greens, tees ... OSM lacks or maps wrongly: `courses/<slug>/features/golf.geojson` (OSM tags, UTM geometry);
+  `[osm] exclude` drops OSM elements, `[osm] outline` keeps only this course's golf features.
 * `scripts/export_fbx_blender.py` → `model_origin` (must equal ORIGIN_E/N, BASE_H).
 * `scripts/hole_data.py` → `AIM_OVERRIDES` (old hole-1 hand aim point: delete it).
 * `scripts/make_views.py` → hole-1 camera presets (`viewer/views.json`). Regenerate them for the new hole 1, or rely
   on the per-hole cameras.
 * Titles: `export_course.py` root node name, `export_gspro.py` GreenKeeper course name, `hole_data.py` and
   `make_maps.py` titles. `measure_registration.py` splits stats at a northing.
-* Trees: archetypes are Southern California species (oak, pine, sycamore, eucalyptus, shrub). For another region,
-  edit `detect_trees.py` (classification), `make_trees.py` / `make_foliage.py` (shapes, leaves) and `add_vegetation.BARK`.
-* Turf colours come from the photo automatically. Grass blade heights live in `grass_spec.SPEC` (estimates per grass type).
+* Trees, foliage, bark, 3D grass, turf tint, building palettes: `regions/<region>.toml` ([trees] with its classifier,
+  shapes, bark and needle styles; [foliage]; [grass]; [turf_tint]; [buildings]). A new region is a new file (e.g.
+  `regions/northern_california.toml`); a course table of the same name overrides it. Do not edit the scripts.
 * `tests/test_course.py`:
   * Reset `KNOWN_TEE_GAPS` to `{}`.
   * Update `test_hole1_regression` (yardages, elevation change).

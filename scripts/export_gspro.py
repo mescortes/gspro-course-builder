@@ -222,6 +222,16 @@ def trees_csv(hmin):
 
 
 GKD_TEE_SLOT = dict(C.TEE_GKD)   # GKD TeeType per card tee (course.toml [[tees]] gkd_slot)
+GKD_SLOTS = ("Black", "White", "Green", "Blue", "Yellow", "Red")   # GreenKeeper's tee slots (not Junior or Par3)
+
+
+def tee_type(t):
+    """The GreenKeeper TeeType of a holes.json tee: its course.toml gkd_slot, None (with a warning) without a valid one."""
+    slot = GKD_TEE_SLOT.get(t["key"])
+    if slot not in GKD_SLOTS:
+        print(f"greenkeeper: tee {t['key']} has no valid gkd_slot ({slot!r}); TeeType left empty", flush=True)
+        return None
+    return slot
 
 
 def unity_script(short=None, name=None, last_hole=None):
@@ -263,7 +273,7 @@ def gkd_hole(h, hmin):
         d0 = math.dist(p, gc)
         pts = [p] + [a for a in aims if math.dist(a, gc) < d0] + [gc]
         return sum(math.dist(a, b) for a, b in zip(pts[:-1], pts[1:]))
-    tees = [{"tee_type": GKD_TEE_SLOT.get(t["key"], t["name"]), "card_tee": t["name"], "position": unity(*t["utm"], hmin),
+    tees = [{"tee_type": tee_type(t), "card_tee": t["name"], "position": unity(*t["utm"], hmin),
              "distance_m": round(gk_dist(t["utm"][:2]), 2), "yards": t["yards"]} for t in h["tees"]]
     pins = {p["name"]: p for p in h["pins"]}
     bunkers = [np.asarray(z["polygon_utm"]) for z in h["hazards"] if z["type"] == "bunker"]

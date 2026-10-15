@@ -41,16 +41,43 @@ def read_on_grid(path, bands, W, H, resampling=Resampling.bilinear):
 _OSM_CACHE = {}
 
 
+def this_course(G, outline_ids, margin):
+    """Drop the golf features of other courses: keep a golf=* feature only when more than half of it (length, area, or
+    the point) lies inside this course's outline(s) + margin, and keep only this course's leisure=golf_course outlines."""
+    area = unary_union([g for oid, t, g in G if oid in outline_ids and g.geom_type in ("Polygon", "MultiPolygon")])
+    if area.is_empty:
+        return G
+    area = area.buffer(margin)
+    def inside(g):
+        if g.geom_type == "Point":
+            return area.contains(g)
+        if g.geom_type in ("LineString", "MultiLineString"):
+            return g.intersection(area).length > 0.5 * g.length
+        return g.area == 0 or g.intersection(area).area > 0.5 * g.area
+    out = []
+    for oid, t, g in G:
+        if t.get("leisure") == "golf_course" and oid not in outline_ids:
+            continue
+        if "golf" in t and not inside(g):
+            continue
+        out.append((oid, t, g))
+    return out
+
+
 def osm_geoms():
     """All tagged OSM ways/relations/nodes in courses/<slug>/research/osm_all.json as (id, tags, shapely geometry in UTM).
     Golf features come from osm_golf.json as well (wider query); cart-path centre lines traced from the photo
     (build/<slug>/paths_detected.geojson, trace_paths.py) are appended as golf=cartpath lines (tag source=trace_paths), and
     QA-curated structures OSM lacks (courses/<slug>/features/structures.geojson: shelters, with building / height / roof tags).
+    Golf features drawn for a course OSM lacks or maps wrongly (courses/<slug>/features/golf.geojson: OSM tags, UTM
+    geometry, tag source=course) join them. course.toml [osm] exclude drops OSM elements, and [osm] outline keeps only
+    the golf features (and golf-course outlines) of this course: more than half inside its outline(s) + 30 m.
     Cached per process and on disk."""
     import pickle, os
-    src = [C.RESEARCH / "osm_all.json", C.RESEARCH / "osm_golf.json", C.BUILD / "paths_detected.geojson",
-           C.SOURCES / "structures.geojson"]
-    stamp = tuple(int(os.path.getmtime(p)) if p.exists() else 0 for p in src)
+    traced = C.BUILD / "paths_detected.geojson" if C.tuning("trace_paths", True) else None   # course.toml [tuning]
+    src = [C.RESEARCH / "osm_all.json", C.RESEARCH / "osm_golf.json", traced, C.SOURCES / "structures.geojson",
+           C.SOURCES / "golf.geojson"]
+    stamp = tuple(int(os.path.getmtime(p)) if p is not None and p.exists() else 0 for p in src)
     cache = C.BUILD / "osm_geoms.pkl"
     if stamp in _OSM_CACHE:
         return _OSM_CACHE[stamp]
@@ -75,7 +102,7 @@ def osm_geoms():
     out = []
     for (typ, oid), e in elements.items():
         t = e.get("tags", {})
-        if not t:
+        if not t or (typ, oid) in C.OSM_EXCLUDE:
             continue
         if typ == "node":
             x, y = tr.transform(e["lon"], e["lat"])
@@ -110,7 +137,12 @@ def osm_geoms():
         if not g.is_valid:
             g = g.buffer(0)
         out.append((oid, t, g))
-    if src[2].exists():
+    if C.OSM_OUTLINE:
+        out = this_course(out, {oid for _, oid in C.OSM_OUTLINE}, C.tuning("osm_outline_margin", 30.0))
+    if src[4].exists():
+        for i, f in enumerate(json.load(open(src[4]))["features"]):
+            out.append((7_000_000_000 + i, dict(f["properties"], source="course"), shape(f["geometry"])))
+    if src[2] is not None and src[2].exists():
         for i, f in enumerate(json.load(open(src[2]))["features"]):
             out.append((9_000_000_000 + i, dict(f["properties"]), shape(f["geometry"])))
     if src[3].exists():

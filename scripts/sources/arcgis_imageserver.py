@@ -38,11 +38,28 @@ def chunk_size(res, chunk_px=2500, max_m=MAX_CHUNK_M):
     return max(64, min(chunk_px, int(max_m / res)))
 
 
+def catalog_count(service, where, bbox, epsg):
+    """Rasters of the service matching `where` over the box (None when the catalog does not answer)."""
+    params = dict(where=where, geometry=",".join(f"{v:.3f}" for v in bbox), geometryType="esriGeometryEnvelope",
+                  inSR=epsg, spatialRel="esriSpatialRelIntersects", returnCountOnly="true", f="json")
+    try:
+        r = requests.get(service + "/query", params=params, timeout=120, headers=UA)
+        return int(r.json()["count"])
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        print("  catalog query failed: fetching anyway", flush=True)
+        return None
+
+
 def fetch(spec, xmin, ymin, xmax, ymax, res, out, bands):
     """Write the `bands` (service band ids) of the extent at `res` m to the GeoTIFF `out`."""
     service = spec["url"]
     W, H, wins = chunks(xmin, ymin, xmax, ymax, res, chunk_size(res, spec.get("chunk_px", 2500), spec.get("max_chunk_m", MAX_CHUNK_M)))
     epsg = int(C.CRS.split(":")[1])
+    where = (spec.get("mosaic_rule") or {}).get("where")
+    if where:
+        n = catalog_count(service, where, (xmin, ymin, xmax, ymax), epsg)
+        if n == 0:
+            raise SystemExit(f"imagery: no raster of {service} matches {where!r} over the extent")
     img = np.zeros((len(bands), H, W), np.uint8)
     for k, (c0, r0, w, h, bb) in enumerate(wins):
         params = dict(bbox=",".join(f"{v:.3f}" for v in bb), bboxSR=epsg, imageSR=epsg, size=f"{w},{h}", format="tiff",
@@ -67,8 +84,11 @@ def fetch(spec, xmin, ymin, xmax, ymax, res, out, bands):
         else:
             raise SystemExit(f"failed chunk {k} {bb}")
         print(f"chunk {k + 1}/{len(wins)}", flush=True)
+    empty = float((img == 0).all(0).mean())
+    if empty == 1.0:
+        raise SystemExit(f"imagery: the service returned an empty photo for {out} (mosaic rule {spec.get('mosaic_rule')})")
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     with rasterio.open(out, "w", driver="GTiff", width=W, height=H, count=len(bands), dtype="uint8", crs=C.CRS,
                        transform=from_origin(xmin, ymax, res, res), compress="deflate", tiled=True, BIGTIFF="IF_SAFER") as d:
         d.write(img)
-    print("wrote", out, img.shape)
+    print("wrote", out, img.shape, f"{empty:.1%} empty")
