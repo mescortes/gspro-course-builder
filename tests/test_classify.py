@@ -89,3 +89,48 @@ def test_the_osm_cache_sees_an_edit_within_the_same_second(two_courses, monkeypa
     assert sum(o >= 7_000_000_000 for o in _ids(monkeypatch)) == 2
 
 
+_T = rasterio.transform.from_origin(0.0, 100.0, 0.25, 0.25)
+_row = lambda y: int((100 - y) / 0.25)
+_col = lambda x: int(x / 0.25)
+
+
+def _labels(G, monkeypatch):
+    monkeypatch.setattr(S, "osm_geoms", lambda: G)
+    lab, _ = S.osm_label_raster(400, 400, _T, np.zeros((400, 400), np.float32))
+    return lab
+
+
+def test_a_lateral_water_hazard_is_water(monkeypatch):
+    """A pond mapped golf=lateral_water_hazard only (no natural=water): check_course counted it as water, the build
+    labelled it rough."""
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 100, 100)),
+         (2, {"golf": "lateral_water_hazard"}, box(20, 20, 40, 40)),
+         (3, {"golf": "water_hazard"}, box(60, 60, 80, 80)),
+         (4, {"natural": "water"}, box(60, 10, 80, 30))]
+    lab = _labels(G, monkeypatch)
+    assert [lab[_row(y), _col(x)] for x, y in ((30, 30), (70, 70), (70, 20))] == [CID["water"]] * 3
+    assert S.is_water({"golf": "lateral_water_hazard"}) and not S.is_water({"golf": "bunker"})
+
+
+def test_primary_trunk_link_roads_and_tracks_are_road_labels(monkeypatch):
+    """highway=primary / trunk / *_link / living_street / track were not roads: inside the course they were rough
+    training labels. A track's road label is no wider than the track."""
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 100, 100)),
+         (2, {"highway": "primary"}, LineString([(10, 15), (90, 15)])),
+         (3, {"highway": "trunk_link"}, LineString([(10, 40), (90, 40)])),
+         (4, {"highway": "living_street"}, LineString([(10, 60), (90, 60)])),
+         (5, {"highway": "track"}, LineString([(10, 85), (90, 85)]))]
+    lab = _labels(G, monkeypatch)
+    assert [lab[_row(y), _col(50)] for y in (15, 40, 60, 85)] == [CID["road"]] * 4
+    assert lab[_row(15 + 2.0), _col(50)] == CID["road"]     # 2.5 m each side of a street centre line
+    assert lab[_row(85 + 2.0), _col(50)] != CID["road"]     # 1.5 m each side of a track
+    assert S.ROAD_HALF_WIDTH["track"] == 1.5 and S.ROAD_HALF_WIDTH["motorway"] == 7.0
+
+
+def test_road_widths_take_course_toml_tuning(monkeypatch):
+    """[tuning.road_half_width] changes or adds a class; 0 leaves a class out (tracks that are woodland footpaths)."""
+    monkeypatch.setattr(S.C, "tuning", lambda k, d: {"track": 0, "busway": 4} if k == "road_half_width" else d)
+    w = S.road_half_widths()
+    assert "track" not in w and w["busway"] == 4.0 and w["primary"] == S.ROAD_HALF_WIDTH["primary"]
+
+

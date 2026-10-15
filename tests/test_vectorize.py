@@ -158,3 +158,29 @@ def test_cart_paths_tagged_service_road_are_cart_path_labels(monkeypatch):
     assert lab[row(30), 200] == CID["cartpath"]
     assert lab[row(70), 200] == CID["road"]
     assert lab[row(30) - int(2.0 / 0.25), 200] != CID["road"]    # no 2.5 m road band around the cart path
+
+
+def test_tracks_on_the_course_are_cart_path_and_main_roads_are_road():
+    """highway=primary / trunk / *_link / living_street / track had no road width, so a highway past the course played
+    as rough, and the 'track inside the course is cart path' branch could never run. A pond mapped
+    golf=lateral_water_hazard only was no water surface (nor a water hazard in holes.json)."""
+    from shapely.geometry import LineString, Point, box
+    from shapely.ops import unary_union
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 400, 400)),
+         (2, {"highway": "track"}, LineString([(50, 100), (350, 100)])),            # maintenance track on the course
+         (3, {"highway": "primary"}, LineString([(-200, 450), (600, 450)])),         # the highway past the course
+         (4, {"highway": "trunk_link"}, LineString([(-200, 500), (600, 500)])),
+         (5, {"highway": "living_street"}, LineString([(-200, 550), (600, 550)])),
+         (6, {"highway": "track"}, LineString([(-300, 600), (-100, 600)])),         # a farm track off the course
+         (7, {"golf": "lateral_water_hazard"}, box(200, 200, 250, 240)),
+         (8, {"leisure": "swimming_pool"}, box(300, 300, 310, 320))]
+    vector, tracks, course = V.osm_vectors(G)
+    assert course.equals(box(0, 0, 400, 400))
+    assert len(tracks) == 1 and tracks[0].contains(Point(200, 100)) and abs(tracks[0].area - 300 * 2.8) < 30
+    roads = unary_union(vector["road"])
+    for p in ((0, 450), (0, 500), (0, 550), (-200, 600)):
+        assert roads.contains(Point(p)), p
+    assert not roads.contains(Point(200, 100))
+    primary = next(g for g in vector["road"] if g.contains(Point(0, 450)))
+    assert abs(primary.area - 800 * 2 * V.ROAD_HALF_WIDTH["primary"]) < 1e-6
+    assert sorted(g.area for g in vector["water"]) == [200.0, 2000.0]

@@ -16,7 +16,7 @@ from shapely import make_valid
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
-from surface_classify import CLASSES, CID, osm_geoms, grid
+from surface_classify import CLASSES, CID, osm_geoms, grid, ROAD_HALF_WIDTH, is_water
 
 RES = C.DEM_RES
 # OSM/override water outranks everything (dark water is easily mistaken for green by the classifier)
@@ -28,8 +28,6 @@ FORWARD_TEE_FRAC = C.tuning("forward_tee_frac", 0.45)   # tee pads past this fra
 BUNKER_CLEARANCE = C.tuning("bunker_clearance", (1.0, 10.0))  # unmapped bunkers: m clear of roads / of buildings
 MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 150, "cartpath": 6, "native": 25, "road": 25,
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
-ROAD_HALF_WIDTH = {"motorway": 7.0, "secondary": 6.0, "secondary_link": 4.0, "tertiary": 5.0, "residential": 4.0,
-                   "unclassified": 3.5, "service": 3.0}
 
 
 def under_canopy_labels(lab, canopy, leaf_off_photo):
@@ -134,6 +132,31 @@ def split_shared_greens(greens, ends, pins, reach=4.0, pin_near=8.0):
             for q in polys_of(p.intersection(cell)):
                 out.append((q, ref))
     return out
+
+
+def osm_vectors(G):
+    """OSM-authoritative non-golf surfaces ({road, building, court, water: [polygons]}), the service roads and tracks
+    that run inside the golf course, which are cart paths (GSPro surface: cart path, hole 98), and the course area.
+    Roads are the highway classes of ROAD_HALF_WIDTH, drawn that wide each side of the centre line."""
+    osm = lambda pred: [g for _, t, g in G if pred(t)]
+    course_area = unary_union(osm(lambda t: t.get("leisure") == "golf_course"))
+    roads, course_tracks = [], []
+    for _, t, g in G:
+        hw = t.get("highway")
+        if hw in ROAD_HALF_WIDTH and g.geom_type == "LineString":
+            if hw in ("service", "track") and not course_area.is_empty and g.intersection(course_area).length > 0.6 * g.length:
+                course_tracks.append(g.buffer(1.4, cap_style=1))
+                continue
+            roads.append(g.buffer(ROAD_HALF_WIDTH[hw], cap_style=2))
+    roads += osm(lambda t: t.get("amenity") == "parking")
+    vector = {
+        "road": [g for g in roads if g.geom_type in ("Polygon", "MultiPolygon")],
+        "building": [g for g in osm(lambda t: "building" in t) if g.geom_type in ("Polygon", "MultiPolygon")],
+        "court": [g for g in osm(lambda t: t.get("leisure") in ("pitch",) or t.get("sport") == "tennis") if g.geom_type in ("Polygon", "MultiPolygon")],
+        "water": [g for g in osm(lambda t: t.get("leisure") == "swimming_pool" or is_water(t))
+                  if g.geom_type in ("Polygon", "MultiPolygon")],
+    }
+    return vector, course_tracks, course_area
 
 
 def chaikin(coords, n=2):
@@ -268,24 +291,7 @@ def main():
     surf["cartpath"] = ((lab == CID["cartpath"]) & corridor) | (backbone & canopy)
     # stray classifier "path" pixels away from mapped paths are just worn turf -> rough
     # 4) OSM-authoritative non-golf features
-    # service roads / tracks that run inside the golf course are cart paths (GSPro surface: cart path, hole 98)
-    course_area = unary_union(osm(lambda t: t.get("leisure") == "golf_course"))
-    roads, course_tracks = [], []
-    for _, t, g in G:
-        hw = t.get("highway")
-        if hw in ROAD_HALF_WIDTH and g.geom_type == "LineString":
-            if hw in ("service", "track") and not course_area.is_empty and g.intersection(course_area).length > 0.6 * g.length:
-                course_tracks.append(g.buffer(1.4, cap_style=1))
-                continue
-            roads.append(g.buffer(ROAD_HALF_WIDTH[hw], cap_style=2))
-    roads += osm(lambda t: t.get("amenity") == "parking")
-    vector = {
-        "road": [g for g in roads if g.geom_type in ("Polygon", "MultiPolygon")],
-        "building": [g for g in osm(lambda t: "building" in t) if g.geom_type in ("Polygon", "MultiPolygon")],
-        "court": [g for g in osm(lambda t: t.get("leisure") in ("pitch",) or t.get("sport") == "tennis") if g.geom_type in ("Polygon", "MultiPolygon")],
-        "water": [g for g in osm(lambda t: t.get("leisure") == "swimming_pool" or t.get("natural") == "water" or t.get("golf") == "water_hazard")
-                  if g.geom_type in ("Polygon", "MultiPolygon")],
-    }
+    vector, course_tracks, course_area = osm_vectors(G)
     for n, gs in vector.items():
         surf[n] = burn_mask(gs)
     if course_tracks:
