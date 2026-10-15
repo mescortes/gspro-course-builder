@@ -36,7 +36,11 @@ course values said to be in `scripts/config.py` are in `courses/<slug>/course.to
   * Then **trim clearly green pixels** (a* < −14) outside canopy, because the classifier bleeds onto grass faces.
   * Keep a bunker only if it overlaps OSM or is a LiDAR hollow, and a closed one (`vectorize.closed_hollow`): an
     open channel (barranca floor, ditch, path cut) is lower than its banks too. Closed means it holds water, or it has
-    a real face (a quarter of Westmount's bunkers, cut into slopes and open on the low side, hold none).
+    a real face (a quarter of Westmount's bunkers, cut into slopes and open on the low side, hold none). The face is an
+    average, so a deep ditch or a scour hole on a barranca thalweg has one too: a faced hollow must not also be open on
+    two opposite sides, as a channel is at both ends (`vectorize.open_both_ends`; a bunker cut into a slope is open on
+    its low side only). The rule flags about one real faced bunker in twelve (Westmount's mapped ones, which it never
+    tests): a photo bunker it drops needs a mapped or drawn bunker.
   * A 0.6 m photo blurs sand into the grass faces, and dry turf is not "clearly green": cut the bunkers to their LiDAR
     pans instead (`vectorize.bunker_bowls`, photos of 0.3 m or coarser).
 * **Tees.**

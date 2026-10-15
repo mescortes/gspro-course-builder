@@ -41,9 +41,10 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
    hollows).
 6. **Surfaces**: a random forest on photo colour, near-infrared and LiDAR features, trained on the OSM golf features
    (plus `features/golf.geojson` where OSM is missing or wrong), then vectorised into a gap-free surface partition.
-   LiDAR checks keep an unmapped bunker only if it is a closed hollow (it holds water or has a real face; a coarse
-   photo's bunkers are cut to their LiDAR pans) and a tee only if it is a flat deck; a fairway several holes run along
-   is split between their corridors (a line that only crosses it takes none). Cart paths OSM lacks can be traced from the photo (`trace_paths.py`).
+   LiDAR checks keep an unmapped bunker only if it is a closed hollow (it holds water, or has a real face and is not
+   open at both ends like a channel; a coarse photo's bunkers are cut to their LiDAR pans) and a tee only if it is a
+   flat deck; a fairway several holes run along is split between their corridors (a line that only crosses it takes
+   none). Cart paths OSM lacks can be traced from the photo (`trace_paths.py`).
 7. **Trees** from the LiDAR canopy, sorted into the region's archetypes (`detect_trees.py`; leaf-off or leaf-on rules
    per region), each in several shape variants.
 8. **Structures**: OSM buildings with LiDAR roof shapes, plus what a course adds by hand (shelters, patios, fountains,

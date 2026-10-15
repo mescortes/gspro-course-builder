@@ -33,8 +33,8 @@ MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 15
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
 # Photo colour rules SAND, SHADOW_SAND and TURF ([tuning.sand], [tuning.shadow_sand], [tuning.turf]): surface_classify.py
 # An unmapped bunker's LiDAR hollow must be closed or faced ([tuning.bunker_hollow], closed_hollow; pond_frac = 0 turns
-# the test off) ...
-BUNKER_HOLLOW_DEFAULT = dict(pond=0.05, pond_frac=0.2, face=0.35)
+# the test off; open and outlet: open_both_ends) ...
+BUNKER_HOLLOW_DEFAULT = dict(pond=0.05, pond_frac=0.2, face=0.35, open=0.2, outlet=4.0)
 BUNKER_HOLLOW = tuned("bunker_hollow", BUNKER_HOLLOW_DEFAULT)
 # ... and with a photo of photo_res m or coarser the bunkers are cut to their LiDAR pans ([tuning.bunker_trim],
 # bunker_bowls; photo_res = 0 always, a large value never)
@@ -108,16 +108,57 @@ def held_water(z, basin):
     return reconstruction(np.where(basin, z.max(), z), z, method="erosion") - z
 
 
-def closed_hollow(z, inside, basin, sunk, H=None):
+def closed_hollow(z, inside, basin, sunk, H=None, res=None):
     """Is an unmapped bunker's hollow closed or faced? At least H pond_frac of the polygon (`inside`, on the DEM window
-    z) holds `pond` m of water before it spills out of `basin` (a bowl), or the polygon lies `face` m or more below the
-    ring around it (`sunk`, m: a bunker cut into a slope is open on its low side but has a real face). An open channel
-    (barranca floor, drainage ditch, path cut) drains along its length and is only 0.03-0.3 m below its banks (Brambles
-    QA round 1). H: BUNKER_HOLLOW ([tuning.bunker_hollow]); pond_frac 0 turns the test off."""
+    z, cells of `res` m) holds `pond` m of water before it spills out of `basin` (a bowl), or the polygon lies `face` m
+    or more below the ring around it (`sunk`, m) and the ring is not open at both ends (open_both_ends): a bunker cut
+    into a slope is open on its low side only but has a real face. An open channel (barranca floor, drainage ditch, path
+    cut) drains along its length: 0.03-0.3 m below its banks on Brambles (QA round 1), and a deeper one, or a scour hole
+    on a barranca thalweg, is open at both ends (round 3). H: BUNKER_HOLLOW ([tuning.bunker_hollow]); pond_frac 0 turns
+    the test off."""
     H = BUNKER_HOLLOW if H is None else H
-    if H["pond_frac"] <= 0 or sunk >= H["face"]:
+    if H["pond_frac"] <= 0:
+        return True
+    if sunk >= H["face"] and not open_both_ends(z, inside, basin, RES if res is None else res, H):
         return True
     return bool(inside.any()) and float(np.mean(held_water(z, basin)[inside] >= H["pond"])) >= H["pond_frac"]
+
+
+def open_both_ends(z, inside, basin, res, H=None, floor_r=1.5, apart=120.0):
+    """Is the ground round a polygon (`inside` on the DEM window z, cells of `res` m; the ring: `basin` outside it) open
+    on two opposite sides, as a channel is at both ends? A ring cell is open when it lies less than H `open` m above the
+    floor next to it - the lowest polygon cell within `floor_r` m of the one nearest to it (a polygon takes in a lip up
+    its faces) - or above the plane of the polygon's lower half (a channel's bed runs on up at its slope). An outlet is
+    a patch of open cells (8-connected, H `outlet` m2 or more) that leads out of the basin (reaches its outer edge);
+    two outlets `apart` degrees or more apart seen from the polygon's centre are opposite ends. A bunker cut into a
+    slope has one outlet, its low side. H: BUNKER_HOLLOW ([tuning.bunker_hollow])."""
+    import math
+    H = BUNKER_HOLLOW if H is None else H
+    ok = np.isfinite(z)
+    ring = basin & ~inside & ok
+    floor = inside & ok
+    if not ring.any() or floor.sum() < 3:
+        return False
+    rpx = max(1, int(round(floor_r / res)))
+    yy, xx = np.mgrid[-rpx:rpx + 1, -rpx:rpx + 1]
+    low = ndimage.grey_erosion(np.where(floor, z, np.inf), footprint=xx * xx + yy * yy <= rpx * rpx)
+    iy, ix = ndimage.distance_transform_edt(~floor, return_distances=False, return_indices=True)
+    fy, fx = np.nonzero(floor); fz = z[floor]; lo = fz <= np.median(fz)
+    coef, *_ = np.linalg.lstsq(np.c_[fx[lo], fy[lo], np.ones(lo.sum())], fz[lo], rcond=None)
+    YY, XX = np.mgrid[0:z.shape[0], 0:z.shape[1]]
+    bed = coef[0] * XX + coef[1] * YY + coef[2]
+    lab, n = ndimage.label(ring & ((z - low[iy, ix] < H["open"]) | (z - bed < H["open"])), structure=np.ones((3, 3)))
+    if n < 2:
+        return False
+    out = ndimage.binary_dilation(~basin)
+    cy, cx = fy.mean(), fx.mean()
+    dirs = []
+    for k in range(1, n + 1):
+        m = lab == k
+        if m.sum() * res * res >= H["outlet"] and (m & out).any():
+            ry, rx = np.nonzero(m)
+            dirs.append(math.degrees(math.atan2(cy - ry.mean(), rx.mean() - cx)))
+    return any(abs((a - b + 180.0) % 360.0 - 180.0) >= apart for i, a in enumerate(dirs) for b in dirs[i + 1:])
 
 
 def bunker_bowls(z, inside, basin, res, T=None):
@@ -194,7 +235,7 @@ def unmapped_hollow(dem, T, p, H=None):
     if m is None or not m[0] < m[1] - 0.08:
         return False
     z, _, inside, basin = dem_window(dem, T, p, 3.5)
-    return closed_hollow(z, inside, basin, float(m[1] - m[0]), H)
+    return closed_hollow(z, inside, basin, float(m[1] - m[0]), H, abs(T.a))
 
 
 def trims_bunkers(photo_res, Tr=None):

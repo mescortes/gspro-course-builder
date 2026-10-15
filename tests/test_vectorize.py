@@ -347,6 +347,27 @@ def test_an_open_channel_is_not_an_unmapped_bunker():
     assert V.closed_hollow(*args, H=dict(V.BUNKER_HOLLOW_DEFAULT, pond_frac=0.0)), "pond_frac 0: the closed test is off"
 
 
+def test_a_deep_ditch_open_at_both_ends_has_no_face():
+    """Round-3 review: the face rule (the polygon 0.35 m or more below the ring round it) is an average, and an open
+    ditch deeper than that passed it (3 m wide: 0.6 m deep kept, 0.4 m dropped; on Brambles an 88 m2 scour hole on the
+    barranca thalweg, 0.36 m below its ring, stayed a bunker). A bunker cut into a slope is open on its low side only;
+    a channel is open at both ends - its floor runs out of the polygon at grade on two opposite sides."""
+    for slope in (0.02, 0.05, 0.08):
+        z, X, Y = _dem(lambda x, y: slope * x + np.where(np.abs(y - 25) < 1.5, -0.6, 0.0))      # 0.6 m deep ditch
+        inside = (np.abs(Y - 25) < 1.4) & (np.abs(X - 25) < 6)
+        args = _hollow_args(z, X, Y, inside)
+        assert args[3] > V.BUNKER_HOLLOW_DEFAULT["face"], "deeper than a face"
+        assert not V.closed_hollow(*args, H=V.BUNKER_HOLLOW_DEFAULT), slope
+    # a pit at the head of a channel, open downhill only, is a faced hollow like a bunker cut into a slope
+    z, X, Y = _dem(lambda x, y: 0.02 * x + np.where((np.abs(y - 25) < 1.5) & (x > 19), -0.6, 0.0))
+    inside = (np.abs(Y - 25) < 1.4) & (np.abs(X - 25) < 6)
+    assert V.closed_hollow(*_hollow_args(z, X, Y, inside), H=V.BUNKER_HOLLOW_DEFAULT)
+    # open = the ring less than `open` m above the floor next to it: 0 counts only ground below the floor as open
+    z, X, Y = _dem(lambda x, y: 0.05 * x + np.where(np.abs(y - 25) < 1.5, -0.6, 0.0))
+    inside = (np.abs(Y - 25) < 1.4) & (np.abs(X - 25) < 6)
+    assert V.closed_hollow(*_hollow_args(z, X, Y, inside), H=dict(V.BUNKER_HOLLOW_DEFAULT, open=0.0))
+
+
 def test_a_bowl_and_a_bunker_cut_into_a_slope_are_closed_hollows():
     """A bowl holds water; a greenside bunker cut into a slope is open on its low side (Westmount: a quarter of the
     mapped bunkers hold no water in the LiDAR) but has a real face, 0.35 m or more over the ring."""
@@ -427,6 +448,8 @@ def test_unmapped_hollow_needs_a_closed_hollow_below_its_ring():
     ditch, _ = _dem_raster(lambda x, y: 0.02 * (x - 1000) + np.where(np.abs(y - 2030) < 1.5, -0.25, 0.0))
     assert V.is_hollow(ditch, T, box(1024, 2028.6, 1036, 2031.4)), "lower than its banks"
     assert not V.unmapped_hollow(ditch, T, box(1024, 2028.6, 1036, 2031.4), H)
+    deep, _ = _dem_raster(lambda x, y: 0.02 * (x - 1000) + np.where(np.abs(y - 2030) < 1.5, -0.6, 0.0))
+    assert not V.unmapped_hollow(deep, T, box(1024, 2028.6, 1036, 2031.4), H), "a deep ditch has no face either"
 
 
 def test_trim_faces_cuts_a_bunker_to_its_pans():
