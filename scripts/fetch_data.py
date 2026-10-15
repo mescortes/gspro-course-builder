@@ -1,11 +1,15 @@
 """Fetch every input for the course extent (idempotent; skips files that already exist).
 
   LiDAR    classified point-cloud tiles covering config.FETCH_CORE + 15 m, from the course's [sources.lidar] provider
-           (scripts/sources), into data/<slug>/lidar
+           (scripts/sources), into data/<slug>/lidar, listed in data/<slug>/lidar/tiles.json
   OSM      golf / building / road features via Overpass, or the OSM API when Overpass is down
            (courses/<slug>/research/osm_all.json, osm_golf.json, both in Overpass 'out geom' JSON)
   Imagery  the [sources.imagery] orthophoto (R, G, B, NIR) over FETCH_CORE + 20 m (config.IMAGERY_RAW)
   Backdrop handled by fetch_backdrop.py / build_backdrop.py
+
+Every file is written whole or not at all (scripts/sources/store.py), with <file>.source.json recording what it was
+fetched from. An existing photo or OSM snapshot is kept only while it is still what course.toml asks for: after
+[frame] core, [imagery] res or [sources.imagery] changed, the fetch stops and says which setting and what to do.
 """
 import sys, json, time
 from pathlib import Path
@@ -15,7 +19,8 @@ from pyproj import Transformer
 sys.path.insert(0, str(Path(__file__).parent))
 import config as C
 
-from sources.http import UA
+from sources import store
+from sources.http import UA, permanent
 OVERPASS = ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
             "https://overpass.private.coffee/api/interpreter")
 OSM_API = "https://api.openstreetmap.org/api/0.6/map"
@@ -35,17 +40,36 @@ def fetch_lidar():
     print("lidar tiles:", mod.fetch(spec, C.FETCH_CORE, C.DATA / "lidar", **kw))
 
 
+def overpass_error(text):
+    """Why an HTTP 200 Overpass reply is not a snapshot (None when it is one). A query that hits the timeout or the
+    memory limit still answers 200, with a 'remark' saying 'runtime error: ...' and empty or partial elements."""
+    try:
+        reply = json.loads(text)
+    except ValueError:
+        return "not JSON"
+    if not isinstance(reply, dict) or not isinstance(reply.get("elements"), list):
+        return "no elements"
+    remark = str(reply.get("remark", ""))
+    return f"remark: {remark}" if "error" in remark.lower() else None
+
+
 def overpass(query, path):
-    """Run an Overpass query against the public mirrors; True when `path` was written."""
+    """Run an Overpass query against the public mirrors; True when `path` was written. A runtime error on every mirror
+    (the query is too big for Overpass) returns False at once: the OSM API fallback fetches the box in tiles."""
     for attempt in range(3):
+        too_big = False
         for ep in OVERPASS:
             try:
                 r = requests.post(ep, data={"data": query}, headers=dict(UA, Accept="application/json"), timeout=300)
             except requests.RequestException as ex:
                 print("  overpass", ep, ex.__class__.__name__, flush=True); continue
-            if r.status_code == 200 and r.text.lstrip().startswith("{"):
-                Path(path).write_text(r.text); return True
-            print("  overpass", ep, r.status_code, flush=True)
+            why = f"HTTP {r.status_code}" if r.status_code != 200 else overpass_error(r.text)
+            if why is None:
+                store.write_text(path, r.text); return True
+            print("  overpass", ep, why[:200], flush=True)
+            too_big = too_big or why.startswith("remark")
+        if too_big:
+            return False
         time.sleep(10 * (attempt + 1))
     return False
 
@@ -103,52 +127,139 @@ def golf_only(elements):
     return [e for e in elements if "golf" in e.get("tags", {}) or e.get("tags", {}).get("leisure") == "golf_course"]
 
 
+def osm_api_tile(t, depth=0):
+    """The OSM API /map XML documents of one lon/lat tile: retried on network errors and 5xx / 429, split in four
+    (down to 1/64 of the tile) when the API refuses it as over its 50,000-node limit (a 400 no retry changes)."""
+    err = None
+    for attempt in range(5):
+        try:
+            r = requests.get(OSM_API, params={"bbox": ",".join(f"{v:.6f}" for v in t)}, headers=UA, timeout=300)
+        except requests.RequestException as ex:
+            err = ex.__class__.__name__
+        else:
+            if r.status_code == 200:
+                return [r.text]
+            if r.status_code == 400 and "too many nodes" in r.text.lower() and depth < 3:
+                w, s, e, n = t; mx, my = (w + e) / 2, (s + n) / 2
+                return [d for q in ((w, s, mx, my), (mx, s, e, my), (w, my, mx, n), (mx, my, e, n))
+                        for d in osm_api_tile(q, depth + 1)]
+            err = f"HTTP {r.status_code} {r.text[:120]}"
+            if permanent(r.status_code):
+                break
+        print("  osm api", err, flush=True); time.sleep(10 * (attempt + 1))
+    raise RuntimeError(f"OSM API failed for tile {t} ({err}); Overpass failed too: rerun fetch_data.py osm later")
+
+
 def osm_api_map(bb, step=0.012):
     """All OSM data in a lon/lat box from the main API, tile by tile (fallback when Overpass is down)."""
-    docs = []
-    for t in split_bbox(bb, step):
-        for attempt in range(5):
-            r = requests.get(OSM_API, params={"bbox": ",".join(f"{v:.6f}" for v in t)}, headers=UA, timeout=300)
-            if r.status_code == 200:
-                docs.append(r.text); break
-            print("  osm api", r.status_code, r.text[:120], flush=True); time.sleep(10 * (attempt + 1))
-        else:
-            raise RuntimeError(f"OSM API failed for tile {t}")
-    return osm_xml_to_elements(docs)
+    return osm_xml_to_elements([d for t in split_bbox(bb, step) for d in osm_api_tile(t)])
+
+
+def osm_snapshot():
+    return [C.RESEARCH / "osm_all.json", C.RESEARCH / "osm_golf.json"]
+
+
+def osm_problems(bbox=None):
+    """Snapshot files whose record says they were fetched for a lon/lat box that does not reach `bbox` (default:
+    FETCH_CORE + 400 m). A snapshot fetched before records existed has none and is taken as it is."""
+    w, s, e, n = bbox or lonlat_bbox(C.FETCH_CORE, 400)
+    out = []
+    for p in osm_snapshot():
+        rec = store.read_record(p) if p.exists() else None
+        if rec and rec.get("bbox"):
+            rw, rs, re_, rn = rec["bbox"]
+            if rw > w + 1e-7 or rs > s + 1e-7 or re_ < e - 1e-7 or rn < n - 1e-7:
+                out.append(f"{p.name} was fetched for lon/lat {rw:.5f},{rs:.5f},{re_:.5f},{rn:.5f}, which does not reach "
+                           f"[frame] core + 400 m ({w:.5f},{s:.5f},{e:.5f},{n:.5f})")
+    return out
 
 
 def fetch_osm():
     """courses/<slug>/research/osm_all.json + osm_golf.json. An existing snapshot is kept (the model and its QA
-    overrides were built from it); delete both files to refresh."""
-    snap = [C.RESEARCH / "osm_all.json", C.RESEARCH / "osm_golf.json"]
+    overrides were built from it); delete both files to refresh. A snapshot recorded for a box that no longer reaches
+    the course extent stops the fetch: the OSM features of the new strip would be missing."""
+    snap = osm_snapshot()
+    w, s, e, n = lonlat_bbox(C.FETCH_CORE, 400)
     if all(p.exists() for p in snap):
+        problems = osm_problems((w, s, e, n))
+        if problems:
+            sys.exit("osm: " + "; ".join(problems) + f". Delete osm_all.json and osm_golf.json in {C.RESEARCH} (and their "
+                     ".source.json) to fetch a snapshot of the new extent, then check the course's overrides against it")
         print(f"osm: keeping the snapshot in {C.RESEARCH} (delete osm_all.json and osm_golf.json to refresh)")
         return
-    w, s, e, n = lonlat_bbox(C.FETCH_CORE, 400)
     bb = f"{s},{w},{n},{e}"
     C.RESEARCH.mkdir(parents=True, exist_ok=True)
-    ok = overpass(f'[out:json][timeout:180];(nwr({bb}););out geom;', C.RESEARCH / "osm_all.json") and \
-        overpass(f'[out:json][timeout:180];(nwr({bb})["golf"];nwr({bb})["leisure"="golf_course"];);out geom;',
-                 C.RESEARCH / "osm_golf.json")
-    if not ok:
+    queries = (f'[out:json][timeout:180];(nwr({bb}););out geom;',
+               f'[out:json][timeout:180];(nwr({bb})["golf"];nwr({bb})["leisure"="golf_course"];);out geom;')
+    ok = overpass(queries[0], snap[0]) and overpass(queries[1], snap[1])
+    if ok:
+        for p, q in zip(snap, queries):
+            store.write_record(p, dict(provider="overpass", bbox=[w, s, e, n], query=q))
+    else:
         print("overpass unavailable: falling back to the OSM API", flush=True)
         els = osm_api_map((w, s, e, n))
         meta = {"version": 0.6, "generator": "fetch_data.py (OSM API /map fallback)",
                 "osm3s": {"copyright": "The data included in this document is from www.openstreetmap.org. The data is made "
                                        "available under ODbL."}}
-        json.dump(dict(meta, elements=els), open(C.RESEARCH / "osm_all.json", "w"))
-        json.dump(dict(meta, elements=golf_only(els)), open(C.RESEARCH / "osm_golf.json", "w"))
+        for p, keep in zip(snap, (els, golf_only(els))):
+            store.write_text(p, json.dumps(dict(meta, elements=keep)))
+            store.write_record(p, dict(provider="osm_api", bbox=[w, s, e, n], url=OSM_API))
     print("osm ok")
 
 
-def fetch_imagery():
-    e = C.FETCH_CORE; m = 20  # the course extent in both profiles (they share data/<slug>/)
-    dst = C.IMAGERY_RAW
-    if dst.exists():
-        return
+def imagery_request():
+    """(provider module, spec, box, bands, request) of the course photo: [sources.imagery] over FETCH_CORE + 20 m (the
+    course extent in both profiles: they share data/<slug>/) at [imagery] res."""
     import sources
     mod, spec = sources.provider("imagery")
-    mod.fetch(spec, e["xmin"] - m, e["ymin"] - m, e["xmax"] + m, e["ymax"] + m, C.IMAGERY_RES, dst, bands=tuple(spec["bands"]))
+    e, m = C.FETCH_CORE, 20
+    box, bands = (e["xmin"] - m, e["ymin"] - m, e["xmax"] + m, e["ymax"] + m), tuple(spec["bands"])
+    return mod, spec, box, bands, mod.request(spec, *box, C.IMAGERY_RES, bands)
+
+
+def imagery_problems():
+    """Why the photo on disk is not the one course.toml asks for ([] when it is, or when there is none). Its extent,
+    resolution and bands are read from the GeoTIFF itself, its source from its record (a photo fetched before records
+    existed has none: then only the GeoTIFF is checked)."""
+    dst = C.IMAGERY_RAW
+    if not dst.exists() or not C.DATA_SOURCES.get("imagery"):
+        return []
+    import rasterio
+    _, _, box, bands, req = imagery_request()
+    with rasterio.open(dst) as ds:
+        b, res, count = ds.bounds, ds.res[0], ds.count
+    out, tol = [], max(res, C.IMAGERY_RES)   # the grid is a whole number of pixels: within a pixel of the box
+    if b.left > box[0] + tol or b.bottom > box[1] + tol or b.right < box[2] - tol or b.top < box[3] - tol:
+        out.append(f"it covers E {b.left:.0f}-{b.right:.0f} N {b.bottom:.0f}-{b.top:.0f}, short of [frame] core + 20 m "
+                   f"(E {box[0]:.0f}-{box[2]:.0f} N {box[1]:.0f}-{box[3]:.0f})")
+    if abs(res - C.IMAGERY_RES) > 1e-6:
+        out.append(f"it is at {res:g} m, [imagery] res is {C.IMAGERY_RES:g} m")
+    if count < len(bands):
+        out.append(f"it has {count} bands, [sources.imagery] bands lists {len(bands)}")
+    for k, old, new in store.changes(dst, req, ignore=("bbox", "res")) or ():
+        out.append(f"it was fetched with [sources.imagery] {k} = {old!r}, course.toml now has {new!r}")
+    return out
+
+
+def fetch_imagery():
+    """The course photo, unless the one on disk is still what course.toml asks for (imagery_problems)."""
+    dst = C.IMAGERY_RAW
+    if dst.exists() and not C.DATA_SOURCES.get("imagery"):
+        return   # a photo put there by hand: no source to compare it with
+    if dst.exists():
+        problems = imagery_problems()
+        if problems:
+            sys.exit(f"imagery: {dst}: " + "; ".join(problems) + ". Delete it to fetch the photo course.toml asks for "
+                     "(fetch_data.py imagery), then re-measure [imagery] shift (measure_registration.py); or put the old "
+                     "setting back")
+        if store.read_record(dst) is None:
+            store.write_record(dst, imagery_request()[-1])
+            print(f"imagery: {dst.name} has no record of its source (an older fetch): taken as course.toml's "
+                  f"[sources.imagery], recorded in {store.record_path(dst).name}")
+        return
+    mod, spec, box, bands, _ = imagery_request()
+    # [sources.imagery] max_empty: the share of the photo the service may leave empty (black) before the fetch fails
+    mod.fetch(spec, *box, C.IMAGERY_RES, dst, bands=bands, max_empty=spec.get("max_empty", 0.01))
 
 
 if __name__ == "__main__":

@@ -109,6 +109,7 @@ def test_3dep_boxes_are_shrunk_by_their_real_excess_only(monkeypatch, tmp_path):
     box = dict(minX=min(p[0] for p in ll), maxX=max(p[0] for p in ll), minY=min(p[1] for p in ll), maxY=max(p[1] for p in ll))
     page = {"total": 1, "items": [{"title": "B23 538291", "downloadURL": "https://x/USGS_LPC_B23_538291.laz", "boundingBox": box}]}
     class R:
+        status_code = 200
         def json(self): return page
     monkeypatch.setattr(usgs_3dep.http.requests, "get", lambda *a, **k: R())
     ext = dict(xmin=537000.0, ymin=4291200.0, xmax=538495.0, ymax=4291800.0)   # 5 m short of the tile, inside the margin

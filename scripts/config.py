@@ -14,7 +14,7 @@ LiDAR; heights CGVD2013, m). WGS84 inputs (OSM, web imagery) are projected with 
 to the LiDAR empirically (measure_registration.py), which also absorbs the ~1 m WGS84 / NAD83(CSRS) difference.
 Model frame (glTF, Y-up, metres): x = E - ORIGIN_E, y = H - BASE_H, z = -(N - ORIGIN_N).
 """
-import os, re, sys, tomllib
+import json, os, re, sys, tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -137,7 +137,7 @@ for _d in (BUILD, FEATURES, OUTPUT):  # git-ignored: absent on a fresh clone
     _d.mkdir(parents=True, exist_ok=True)
 DEM_RES = float(_frame.get("dem_res", 0.25))  # metres
 
-LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))
+LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))  # the build reads them through lidar_tiles(), which checks tiles.json
 LIDAR_LEAF_OFF = bool(_T.get("lidar", {}).get("leaf_off", False))  # deciduous crowns sparse in the CHM (detect_trees closes them)
 IMAGERY_LEAF_OFF = bool(_img.get("leaf_off", False))  # ground visible through bare crowns (vectorize.py keeps it)
 
@@ -171,11 +171,39 @@ def course_hole(osm_ref):
     return r if r in PLAYABLE or r in SCENERY_HOLES else 99
 
 
+def lidar_problems():
+    """What is wrong with data/<slug>/lidar against the tiles.json its last fetch wrote (scripts/sources/store.py): []
+    when the folder holds exactly the listed tiles, fetched for the current [sources.lidar] and [frame] core. A folder
+    fetched before tiles.json existed has none and is taken as it is."""
+    folder = DATA / "lidar"
+    try:
+        m = json.loads((folder / "tiles.json").read_text())
+    except FileNotFoundError:
+        return []
+    except ValueError:
+        return [f"{folder / 'tiles.json'} is unreadable: rerun fetch_data.py lidar"]
+    out = []
+    if m.get("spec") != json.loads(json.dumps(DATA_SOURCES.get("lidar"))) or m.get("extent") != FETCH_CORE:
+        out.append(f"the tiles in {folder} were fetched for another [sources.lidar] or [frame] core than "
+                   f"courses/{SLUG}/course.toml's: rerun fetch_data.py lidar")
+    have, listed = {p.name for p in folder.glob("*.laz")}, set(m.get("tiles", ()))
+    if have - listed:
+        out.append(f"{folder}: {', '.join(sorted(have - listed))} not in tiles.json (the tiles fetch_data.py lidar "
+                   f"fetched): another project's? move them out of the folder, or rerun fetch_data.py lidar")
+    if listed - have:
+        out.append(f"{folder}: {', '.join(sorted(listed - have))} in tiles.json but missing: rerun fetch_data.py lidar")
+    return out
+
+
 def lidar_tiles():
-    """LIDAR_TILES, or exit naming the folder: an empty folder used to build all-NaN rasters without an error."""
+    """LIDAR_TILES, or exit naming the folder: an empty folder used to build all-NaN rasters without an error, and a
+    switched project's old tiles were built together with the new ones (lidar_problems)."""
     if not LIDAR_TILES:
         sys.exit(f"no lidar tiles in {DATA / 'lidar'}: run fetch_data.py lidar"
                  + (f" (or move the old data/ into data/{SLUG}/)" if (ROOT / "data" / "lidar").exists() else ""))
+    problems = lidar_problems()
+    if problems:
+        sys.exit("lidar: " + "\nlidar: ".join(problems))
     return LIDAR_TILES
 
 
