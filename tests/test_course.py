@@ -1,7 +1,7 @@
 """Built-course tests: data alignment, surface partition, per-hole data vs the scorecard, mesh integrity, glTF and the
 GSPro/OPCD package. `pytest --course <slug> tests/test_course.py` tests courses/<slug>'s build (default Westmount);
 MG_PROFILE=test checks the small test-profile build. Course-dependent limits come from course.toml [tests] (LIMITS
-below); the reference course's own regressions are in test_westmount_model.py."""
+below); the reference course's own regressions (marked WESTMOUNT) end the file."""
 import json, math, struct, sys
 from pathlib import Path
 
@@ -28,6 +28,8 @@ LIMITS = dict(green_area=[120.0, 1300.0], fairway_min_area=1500.0, min_bunkers=4
               green_slope_max=[7.0, 14.0], tee_gap=6.0, known_tee_gaps={})
 LIMITS.update(C.TESTS)
 KNOWN_TEE_GAPS = {(int(k.split(".")[0]), k.split(".")[1]): float(v) for k, v in LIMITS["known_tee_gaps"].items()}
+# the reference course's own regressions (end of this file), skipped for any other course
+WESTMOUNT = pytest.mark.skipif(C.SLUG != "westmount", reason="Westmount's own regressions")
 
 
 @pytest.fixture(scope="module")
@@ -591,3 +593,44 @@ def test_view_presets_are_not_inside_buildings():
     for name, v in views.items():
         e, n = v["pos"][0] + C.ORIGIN_E, -v["pos"][2] + C.ORIGIN_N
         assert not any(g.buffer(2.0).contains(Point(e, n)) for g in blds), f"{name} camera inside a building"
+
+
+# ---------------------------------------------------------------- Westmount's own regressions
+@WESTMOUNT
+def test_hole1_features(feats):
+    """Westmount #1 (par 5): a ~675 m2 green ringed by four bunkers, plus two fairway bunkers down the right."""
+    h1 = [(g, p) for g, p in feats if p["hole"] == 1]
+    green = max((g for g, p in h1 if p["surface"] == "green"), key=lambda g: g.area)
+    assert 450 < green.area < 900, f"hole 1 green {green.area:.0f} m2"
+    near_bunkers = [g for g, p in h1 if p["surface"] == "bunker" and g.distance(green) < 6]
+    assert len(near_bunkers) == 4, f"{len(near_bunkers)} greenside bunkers"
+    assert all(50 < b.area < 220 for b in near_bunkers), "bunker polygons should hug the sand"
+    assert len([g for g, p in h1 if p["surface"] == "bunker"]) >= 6
+
+
+@WESTMOUNT
+def test_water_hazard_on_hole3(holes):
+    if not FULL:
+        pytest.skip("hole 3 not in the test extent")
+    assert any(z["type"] == "water" for z in holes[3]["hazards"]), "the pond right of the 3rd (OSM 918946248) must be a water hazard"
+
+
+@WESTMOUNT
+def test_hole1_regression(holes):
+    h = holes[1]
+    ys = {t["key"]: t["yards"] for t in h["tees"]}
+    for k, card in zip(C.TEE_KEYS, C.SCORECARD[1][1:]):
+        assert abs(ys[k] - card) <= 4, f"hole 1 {k}: {ys[k]} vs {card}"
+    assert -8 < h["elevation_change_m"] < -3, "the 1st tee by the clubhouse sits ~6 m above the green"
+
+
+@WESTMOUNT
+def test_scorecard_totals():
+    """Golf Canada card: par 73 (37 out / 36 in); each tee's holes add up to its published total; SI permutations."""
+    assert sum(v[0] for v in C.SCORECARD.values()) == 73
+    assert sum(C.SCORECARD[h][0] for h in range(1, 10)) == 37
+    for i, k in enumerate(C.TEE_KEYS):
+        assert sum(v[1 + i] for v in C.SCORECARD.values()) == C.RATINGS[k][4], k
+    assert [C.RATINGS[k][4] for k in C.TEE_KEYS] == [7018, 6550, 6143, 5432]
+    assert sorted(C.HANDICAP.values()) == list(range(1, 19))
+    assert sorted(C.HANDICAP_WOMEN.values()) == list(range(1, 19))
