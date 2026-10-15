@@ -24,9 +24,9 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
 
 ## How a course is built
 
-1. **Research** (multi-agent, `workflows/course_research.js`): scorecard, ratings, tees, hole notes, changes since
-   the LiDAR was flown, and the LiDAR, DEM and imagery sources with their dates. An adversarial verifier re-checks
-   every claim.
+1. **Research** (multi-agent, `workflows/course_research.js` with `args: {name, location, slug, root}`): scorecard,
+   ratings, tees, hole notes, changes since the LiDAR was flown, and the LiDAR, DEM and imagery sources with their
+   dates. An adversarial verifier re-checks every claim.
 2. **Scaffold**: `scripts/new_course.py` writes `courses/<slug>/course.toml` with the frame (UTM CRS, origin, base
    height, build and terrain extents) and the likely data sources, from the OSM course outline or a bounding box.
    `scripts/check_course.py` lists what is still missing.
@@ -48,9 +48,10 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
    objects, joined without seams to the imagery-draped backdrop.
 10. **Hole data**: tee markers slid along the real tee decks to the card yardages, pins from a green-slope analysis,
     aim points from the line of play.
-11. **QA** (multi-agent, `workflows/hole_qa_round1.js` and `hole_qa_round2.js`): per-hole inspectors compare the model
-    with the photo and the LiDAR; adversarial verifiers approve or reject every proposed correction, which lands in
-    `courses/<slug>/features/overrides/`. Problems that recur across holes are fixed in the engine, with tests.
+11. **QA** (multi-agent, `workflows/hole_qa.js` with `args: {root, course, round}`; the course's context is in
+    `courses/<slug>/research/qa_brief.md`): per-hole inspectors compare the model with the photo and the LiDAR;
+    adversarial verifiers approve or reject every proposed correction, which lands in `courses/<slug>/features/overrides/`.
+    Problems that recur across holes are fixed in the engine, with tests.
 12. **Export**: glTF, the OPCD package, FBX (headless Blender), yardage-book maps and viewer camera presets.
 
 `instructions.md` is the long-form playbook (being replaced by `docs/PLAYBOOK.md`).
@@ -69,7 +70,7 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
 | `data/<slug>/`, `build/<slug>/`, `output/<slug>/` | Downloads, intermediate rasters, products (not tracked) |
 | `viewer/` | three.js viewer (`?course=<slug>`) |
 | `unity/` | Unity editor helper template for the GSPro package |
-| `workflows/` | Multi-agent workflow templates: course research, per-hole QA rounds, GSPro research |
+| `workflows/` | Multi-agent workflows (Claude Code): course research, per-hole QA rounds, GSPro research |
 
 ## Building a course
 

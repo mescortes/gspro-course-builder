@@ -122,7 +122,7 @@ The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the Mountain
    hole 14 Gold box) get a synthetic level deck with graded banks.
 9. **Hole data**: tee markers are slid along the real tee decks to the card yardages. Pins come from a green-slope
    analysis (<= 3 %, relaxed to <= 5 % on Westmount's steepest greens). Aim points come from the line of play.
-10. **QA** (multi-agent, `workflows/hole_qa_round1.js`, `hole_qa_round2.js`; 24 agents in two rounds). Per-hole
+10. **QA** (multi-agent, two rounds of 24 agents; the scripts are now `workflows/hole_qa.js`). Per-hole
     inspectors compare the model with the photo and LiDAR, and adversarial verifiers approve or reject every proposed
     correction.
     * Approved corrections (123 features) live in `features/overrides/`, with two later additions confirmed in
