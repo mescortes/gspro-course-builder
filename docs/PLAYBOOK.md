@@ -76,7 +76,10 @@ course and what changed on the course since the LiDAR was flown.
 ```
 
 It writes `courses/<slug>/course.toml`: the frame (UTM CRS from the region's datum, origin, base height, build extent
-CORE = outline + 100 m in 256 m tiles, the 2048 m GSPro terrain square) and the likely `[sources]`.
+CORE = outline + 100 m in 256 m tiles, the 2048 m GSPro terrain square) and the likely `[sources]`. `--crs EPSG:<code>`
+sets another frame, such as the national metre grid the LiDAR is delivered in. It is written as its EPSG code. A
+compound CRS, Web Mercator, or a grid whose metres are more than 0.5 % off ground metres at the course is refused
+(`new_course.py` MAX_SCALE_ERROR: yardages would be off by as much).
 
 **A region** (`regions/<name>.toml`) holds what is true of a whole area: tree archetypes and the rules that sort LiDAR
 crowns into them, foliage cards, 3D grass, the turf colour target, building palettes, backdrop vegetation, viewer sky,

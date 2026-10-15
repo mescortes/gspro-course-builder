@@ -150,6 +150,27 @@ def test_the_course_frame_must_be_a_projected_crs_in_metres():
             N.check_frame_crs(bad)
 
 
+def test_the_frame_crs_is_written_as_the_epsg_code_of_a_ground_metre_grid():
+    """The engine reads [frame] crs as EPSG:<code> (the photo request, the feature files' crs names): a CRS name, an
+    OGC URN or a PROJ string was accepted, then fetch_data.py imagery stopped with IndexError or ValueError. A compound
+    CRS (with heights) and Web Mercator were accepted too: Web Mercator's metres are 1.38 ground metres at 43 N, so
+    every distance and yardage came out 38 % long."""
+    for given in ("NAD83(CSRS) / UTM zone 17N", "urn:ogc:def:crs:EPSG::2958", "epsg:2958", "EPSG:2958"):
+        assert N.check_frame_crs(given) == "EPSG:2958", given
+    for bad, words in (("EPSG:2958+6647", r"compound.*--crs EPSG:2958"),
+                       ("+proj=tmerc +lon_0=-80 +k=1 +x_0=0 +y_0=0 +ellps=GRS80 +units=m", "no EPSG code"),
+                       ("EPSG:3857", "Web Mercator.*UTM"), ("ESRI:102100", "Web Mercator")):
+        with pytest.raises(SystemExit, match=words):
+            N.check_frame_crs(bad)
+    with pytest.raises(SystemExit, match=r"1\.02\d\d of its metres.*400-yard hole.*410"):   # Statistics Canada Lambert
+        N.check_frame_crs("EPSG:3347", -80.39, 43.36)
+    with pytest.raises(SystemExit, match="Web Mercator"):                                  # whatever the latitude
+        N.check_frame_crs("EPSG:3857", 103.8, 1.3)
+    assert N.check_frame_crs("EPSG:2958", -80.39, 43.36) == "EPSG:2958"
+    assert N.check_frame_crs("EPSG:2959", -80.39, 43.36) == "EPSG:2959"     # the neighbouring UTM zone: 0.2 % long
+    assert N.check_frame_crs("EPSG:3310", -122.57, 38.77) == "EPSG:3310"    # California Albers: 0.13 %
+
+
 # ---- regions
 @pytest.mark.parametrize("path", REGIONS, ids=[p.stem for p in REGIONS])
 def test_every_region_has_every_key_the_engine_reads(path):
