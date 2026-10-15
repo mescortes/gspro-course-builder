@@ -38,9 +38,9 @@ and 30 GB of disk, and no GPU (code.claude.com/docs/en/cloud-environments). For 
   `x-deny-reason: host_not_allowed`.
 * **Nothing in `data/`, `build/` or `output/` survives the session** (they are not in git): download and build in one
   session, and commit what the course needs (`courses/<slug>/`) before it ends.
-* **Memory**: 16 GB is at the edge for an 18-hole build; `build_all.py` prints each step's peak memory
-  (`rasters done in 312s, peak memory 8.4 GB`) and the highest at the end (not on Windows). Prefer your own machine
-  (or Remote Control to it) for full builds when a course peaks above about 14 GB.
+* **Memory**: 16 GB is at the edge for an 18-hole build; `build_all.py` prints each step's peak memory (e.g.
+  `rasters done in 312s, peak memory 8.4 GB`) and the highest at the end (not on Windows). Prefer your own
+  machine (or Remote Control to it) for full builds when a course peaks above about 14 GB.
 * **Long steps**: run builds as background commands with an explicit timeout (a background command gets 30 min by
   default and up to 2 h); run `build_all.py` in ranges of steps rather than all at once.
 * **Commit attribution**: cloud sessions add a session link to commits and PR bodies; the `attribution` settings
