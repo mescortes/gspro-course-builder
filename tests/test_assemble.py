@@ -58,3 +58,20 @@ def test_speck_touching_the_override_at_a_point_joins_its_real_neighbour():
     assert all(g.area > 1.0 for g in _surf(out, "fairway"))
     assert abs(unary_union([g for g, _ in out]).area - 100.0) < 1e-6
     assert abs(sum(g.area for g, _ in out) - 100.0) < 1e-6
+
+
+def test_an_override_reaching_past_the_build_area_is_clipped_to_it():
+    """The test profile builds a small extent, but every hole's QA overrides are read: those of neighbouring holes
+    reached up to 40 m past it, and the partition covered 8000 m2 outside its area (mesh cracks at the edge). An
+    override is clipped to the build area; one inside it is left exactly as drawn."""
+    from shapely.geometry import box
+    aoi = box(0, 0, 100, 100)
+    feats = [(box(0, 0, 100, 100), {"surface": "rough", "hole": 99, "area": 1e4})]
+    inside = box(10, 10, 20, 20)
+    over = [(box(80, 40, 140, 60), {"surface": "fairway", "hole": 3}), (inside, {"surface": "tee", "hole": 1})]
+    out = A.burn_overrides(feats, over, aoi=aoi)
+    from shapely.ops import unary_union
+    u = unary_union([g for g, _ in out])
+    assert u.difference(aoi).area < 1e-6 and abs(u.area - aoi.area) < 1e-6
+    tee = [g for g, p in out if p["surface"] == "tee"][0]
+    assert tee.equals_exact(inside.buffer(0), 0)   # as before: only buffer(0), no clipping

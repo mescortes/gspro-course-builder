@@ -10,13 +10,14 @@ south-west corner.
 
 A tile is taken from the first project folder that has it (HTTP HEAD), so a course on the seam of two projects gets
 both. Folder names do not tell the flight date (Deer Ridge's Lake_Erie_2018 tiles hold 2017-11-21 points): read the
-GPS times.
+GPS times. The fetched tiles are listed in <out>/tiles.json; other *.laz files are moved to <out>/unused/.
 """
 import math
-from sources import http
+from sources import http, store
 from sources.http import requests  # noqa: F401 (tests patch requests.head through here)
 
 BUCKET = "https://canelevation-lidar-point-clouds.s3.ca-central-1.amazonaws.com/pointclouds_nuagespoints"
+ACCEPT_ONLY = ("missing_ok",)   # keys that accept or refuse a fetch, not choose its tiles (config.lidar_problems)
 
 
 def tiles(ext, margin=15.0):
@@ -31,17 +32,18 @@ def url(spec, project, e, n):
 
 
 def fetch(spec, ext, out, margin=15.0):
-    """Download every tile reaching the extent into `out`; returns the number of tiles."""
+    """Download every tile reaching the extent into `out` and list them in out/tiles.json; returns the number of tiles."""
     import sys
     out.mkdir(parents=True, exist_ok=True)
-    n, missing = 0, []
+    names, missing = [], []
     ok = {tuple(t) for t in spec.get("missing_ok", ())}
     for e, nn in tiles(ext, margin):
         for p in spec["projects"]:
             u = url(spec, p, e, nn)
             size = http.size(u)
             if size:
-                http.download(u, out / u.split("/")[-1], size); n += 1
+                names.append(u.split("/")[-1])
+                http.download(u, out / names[-1], size)
                 break
         else:
             print(f"lidar: no tile {e} {nn} in", ", ".join(p["folder"] for p in spec["projects"]), flush=True)
@@ -49,4 +51,5 @@ def fetch(spec, ext, out, margin=15.0):
                 missing.append(f"{e} {nn}")
     if missing:
         sys.exit(f"lidar: no folder has tiles {', '.join(missing)} (list them in [sources.lidar] missing_ok if expected)")
-    return n
+    store.write_tiles(out, spec, ext, names)
+    return len(names)

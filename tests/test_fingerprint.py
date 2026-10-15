@@ -165,3 +165,17 @@ def test_environment_records_machine_os_and_packages():
     for k in ("machine", "os", "python", "cpus", "ram_gb", "packages", "gdal", "proj"):
         assert k in env, k
     assert "numpy" in env["packages"] and "rasterio" in env["packages"]
+
+
+def test_the_lock_file_pins_the_golden_package_set():
+    """requirements-lock.txt reproduces the environment the golden fingerprint was built with (a fresh machine that
+    installs it gets the same packages), so the two cannot drift apart."""
+    import json
+    golden = json.load(open(ROOT / "courses" / "westmount" / "fingerprint.json"))["env"]["packages"]
+    pins = {}
+    for line in (ROOT / "requirements-lock.txt").read_text().splitlines():
+        line = line.split("#")[0].strip()
+        if line:
+            name, _, ver = line.partition("==")
+            pins[name.split("[")[0].lower()] = ver
+    assert pins == {k.lower(): v for k, v in golden.items()}

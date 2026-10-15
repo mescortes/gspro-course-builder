@@ -91,7 +91,7 @@ licences do not allow derived textures to be redistributed.
 ## How it was built
 
 The pipeline (`scripts/`, run by `scripts/build_all.py`) comes from the MountainGate course-builder skeleton
-([instructions.md](../../instructions.md)) and was adapted to Ontario:
+([docs/LESSONS.md](../../docs/LESSONS.md)) and was adapted to Ontario:
 
 1. **Research** (multi-agent, `workflows/course_research.js`): scorecard, hole notes and course facts; LiDAR, DEM and
    imagery sources. Every claim was re-checked by an adversarial verifier.

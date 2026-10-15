@@ -1,0 +1,315 @@
+# Southern California suburban and canyon courses (Los Angeles, Orange and San Diego counties): warm-season turf
+# (bermuda / kikuyu fairways and rough, bent or Poa greens), irrigated through the dry summer; coast live oak, Aleppo
+# pine, sycamore and eucalyptus round the holes; chaparral and coastal sage scrub on the hills beyond. Leaf-on summer
+# photo (USDA NAIP) and leaf-on LiDAR (USGS 3DEP). The tree rule, shapes, foliage and bark are the MountainGate
+# build's (Los Angeles, 2026); turf tint, buildings, grass, backdrop and sky are first estimates, to be tuned on the
+# region's first build. A course.toml table of the same name overrides this file key by key.
+#
+# Known gaps:
+#   * Palms (Mexican fan palm, Canary Island date palm, queen palm: common round clubhouses, entries and streets)
+#     need a new tree model type (a bare trunk under a crown of fronds) that make_trees' branch growth cannot draw.
+#     Until then the classifier puts them in one of the archetypes below.
+#   * Course buildings keep the engine's grey roof tiles (add_structures); the terracotta here is the backdrop roofs.
+
+[region]
+name = "Southern California"
+
+# Turf colour of the glTF / viewer textures (sRGB): summer bermuda / kikuyu, greener than Northern California's dry
+# rough because the rough is irrigated too (Lab a* -14..-21, b* +25..+29); bunkers of pale washed sand.
+[turf_tint]
+green = [100, 128, 74]
+fringe = [98, 122, 70]
+fairway = [102, 124, 66]
+tee = [102, 126, 70]
+semirough = [104, 120, 64]
+rough = [110, 120, 64]
+bunker = [214, 202, 172]
+
+# Archetypes (MountainGate): coast live oak (dense, broad, low evergreen crowns), Aleppo pine (open, peaked, high crown
+# base; long paired needles), sycamore (California / London plane: light yellow-green crowns), eucalyptus (very tall,
+# narrow, open), shrub (under 4.5 m: toyon, laurel sumac, ornamental hedges). Bark: the Poly Haven sets MountainGate
+# fetched (fetch_textures adds them to its list).
+[trees]
+archetypes = ["coast_live_oak", "aleppo_pine", "sycamore", "eucalyptus", "shrub"]
+needles = { aleppo_pine = "pine" }
+classifier = "leaf_on_suburban_socal"
+bark = { coast_live_oak = "jolcham_oak_bark_01", aleppo_pine = "pine_bark", sycamore = "bark_platanus", eucalyptus = "eucalyptus_bark", shrub = "bark_brown_01" }
+# Backdrop billboards (DSM peaks over 5 m beyond the course): scrub oak and live oak on the chaparral / coastal sage
+# hills, eucalyptus windbreaks, a few pines.
+backdrop = { kinds = ["coast_live_oak", "shrub", "eucalyptus", "aleppo_pine"], share = [0.45, 0.3, 0.15, 0.1], crown = [0.35, 0.8, 2.0, 9.0] }
+
+# detect_trees.leaf_on_suburban_socal: robust z-scores (over the trees taller than z_min_h m) of crown structure
+# (LiDAR) and crown colour (photo). shrub under shrub_h m; eucalyptus taller than euc_min_h m, crown radius / height
+# under euc_max_ratio and penetration over euc_min_pen; sycamore a crown colour score over syc_min_z, taller than
+# syc_min_h m; pine when its structure score beats the oak score by pine_margin; the rest oak.
+# lidar_leaf_off / imagery_leaf_off: the data these rules need (leaf-on LiDAR: penetration is crown form, not leaf
+# state; a summer photo: sycamores are bare in winter). check_course.py flags a course whose [lidar] / [imagery]
+# leaf_off differs.
+[trees.leaf_on_suburban_socal]
+lidar_leaf_off = false
+imagery_leaf_off = false
+shrub_h = 4.5
+z_min_h = 6.0
+euc_min_h = 19.0
+euc_max_ratio = 0.3
+euc_min_pen = 0.3
+syc_min_z = 1.6
+syc_min_h = 6.0
+pine_margin = 0.3
+names = { shrub = "shrub", eucalyptus = "eucalyptus", sycamore = "sycamore", pine = "aleppo_pine", oak = "coast_live_oak" }
+
+# make_trees space-colonisation shapes (MountainGate's oak, pine, sycamore, eucalyptus and shrub).
+[trees.shapes.coast_live_oak]
+H = 11.0
+R = 6.0
+crown = ["ellipsoid", 0.22, 1.0]
+trunk = 0.2
+attract = 1100
+seg = 0.45
+infl = 3.5
+kill = 0.9
+tropism = [0, 0.1, 0]
+tip_r = 0.012
+exp = 2.05
+cards = 1100
+card = [1.3, 1.9]
+lean = 0.15
+nsides = 10
+up_bias = 0.65
+trunk_r = 0.32
+clumps = 22
+clump_sd = 0.25
+
+[trees.shapes.aleppo_pine]
+H = 15.0
+R = 4.8
+crown = ["irregular", 0.45, 1.0]
+trunk = 0.4
+attract = 900
+seg = 0.5
+infl = 5.0
+kill = 0.9
+tropism = [0, 0.2, 0]
+tip_r = 0.014
+exp = 2.05
+cards = 950
+card = [1.4, 2.1]
+lean = 0.16
+nsides = 9
+clumps = 13
+clump_sd = 0.15
+up_bias = 0.55
+trunk_r = 0.32
+tip_depth = 3
+
+[trees.shapes.sycamore]
+H = 13.0
+R = 5.0
+crown = ["ovoid", 0.3, 1.0]
+trunk = 0.28
+attract = 900
+seg = 0.5
+infl = 3.8
+kill = 1.0
+tropism = [0, 0.25, 0]
+tip_r = 0.012
+exp = 2.05
+cards = 850
+card = [1.4, 2.0]
+lean = 0.08
+nsides = 9
+up_bias = 0.5
+trunk_r = 0.3
+clumps = 18
+clump_sd = 0.28
+
+[trees.shapes.eucalyptus]
+H = 22.0
+R = 5.0
+crown = ["ovoid", 0.4, 1.0]
+trunk = 0.4
+attract = 800
+seg = 0.7
+infl = 5.0
+kill = 1.4
+tropism = [0, 0.3, 0]
+tip_r = 0.013
+exp = 2.05
+cards = 700
+card = [1.6, 2.4]
+lean = 0.1
+nsides = 9
+droop = 0.35
+up_bias = 0.2
+trunk_r = 0.38
+clumps = 16
+clump_sd = 0.25
+
+[trees.shapes.shrub]
+H = 3.2
+R = 2.0
+crown = ["ellipsoid", 0.05, 1.0]
+trunk = 0.05
+attract = 260
+seg = 0.25
+infl = 1.5
+kill = 0.4
+tropism = [0, 0.1, 0]
+tip_r = 0.008
+exp = 2.1
+cards = 260
+card = [0.8, 1.2]
+lean = 0.0
+nsides = 6
+up_bias = 0.5
+trunk_r = 0.06
+
+# Leaf cards (MountainGate): dark glossy live-oak leaves, large light sycamore leaves with a few autumn tones, sparse
+# grey-green eucalyptus leaves; Aleppo pine as procedural needle cards (src "", [trees] needles).
+[foliage.coast_live_oak]
+src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg"
+hsv = [0.21, 0.58, 0.27]
+n = 420
+scale = [0.04, 0.06]
+twig = [70, 58, 45]
+alt = [[[0.19, 0.5, 0.36], 0.2]]
+
+[foliage.aleppo_pine]
+src = ""
+hsv = [0.26, 0.45, 0.3]
+n = 0
+scale = [0, 0]
+twig = [85, 70, 55]
+alt = []
+
+[foliage.sycamore]
+src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg"
+hsv = [0.2, 0.55, 0.45]
+n = 90
+scale = [0.1, 0.15]
+twig = [110, 100, 85]
+alt = [[[0.11, 0.65, 0.55], 0.12], [[0.16, 0.6, 0.5], 0.15]]
+
+[foliage.eucalyptus]
+src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg"
+hsv = [0.25, 0.25, 0.42]
+n = 90
+scale = [0.12, 0.18]
+twig = [120, 95, 75]
+alt = []
+
+[foliage.shrub]
+src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg"
+hsv = [0.19, 0.42, 0.3]
+n = 380
+scale = [0.035, 0.055]
+twig = [80, 70, 55]
+alt = [[[0.12, 0.35, 0.4], 0.15]]
+
+[grass]
+about = "3D grass settings per OPCD surface. 3dg = Stix Games DirectX 11 Grass Shader material settings to start from (estimates, tune in Unity); viewer = our three.js preview. Masks: FBX colour layer 'Col' (R = grass type 1 density, G = grass type 2 / dry, B = 0) for 3DG 'Vertex density' mode."
+
+[grass.3dg.common]
+"Density Mode" = "Vertex density"
+"Grass Types" = "2 textures (type 1 = green blades, type 2 = dry blades)"
+layer = "600m cull"
+"Density Falloff Start" = 12.0
+"Grass Fade End" = 90.0
+"Lighting Mode" = "Default PBR"
+notes = "Target Density: smaller number = denser grass (Stix docs)"
+
+[grass.3dg.SemiRough]
+blade_height_m = [0.025, 0.045]
+blade_width_m = 0.006
+relative_density = 1.0
+
+[grass.3dg.Rough]
+blade_height_m = [0.04, 0.075]
+blade_width_m = 0.007
+relative_density = 0.95
+
+[grass.3dg.DeepRough]
+blade_height_m = [0.1, 0.28]
+blade_width_m = 0.008
+relative_density = 0.55
+
+[grass.viewer]
+radius_m = 55
+full_density_m = 22
+far_density = 0.18
+tile_m = 6
+max_instances = 400000
+
+[grass.viewer.wind]
+strength = 0.35
+speed = 1.0
+
+[grass.viewer.surfaces.SemiRough]
+height = [0.03, 0.05]
+width = 0.008
+density = 45
+blades = 8
+colour_tip = [1.06, 1.1, 1.02]
+dry = 0.0
+
+[grass.viewer.surfaces.Rough]
+height = [0.045, 0.08]
+width = 0.009
+density = 42
+blades = 9
+colour_tip = [1.07, 1.12, 1.02]
+dry = 0.1
+
+[grass.viewer.surfaces.DeepRough]
+height = [0.12, 0.28]
+width = 0.01
+density = 14
+blades = 9
+colour_tip = [1.2, 1.12, 0.86]
+dry = 0.55
+
+[grass.viewer.surfaces.Pinestraw]
+height = [0.2, 0.42]
+width = 0.008
+density = 7
+blades = 10
+colour_tip = [1.22, 1.12, 0.82]
+dry = 0.75
+
+# Wall tints (on the white stucco texture: white, cream, sand, peach and tan stucco, light grey), backdrop roofs (clay
+# tile terracotta in three shades, brown and grey concrete tile), US parking stalls (9 x 18 ft, 24 ft aisle), more SUVs
+# and pickups.
+[buildings]
+wall_palette = [[0.98, 0.96, 0.9], [0.95, 0.9, 0.78], [0.88, 0.8, 0.66], [0.92, 0.8, 0.68], [0.8, 0.7, 0.56], [0.78, 0.77, 0.74]]
+roof_palette = [[0.62, 0.33, 0.22], [0.7, 0.4, 0.28], [0.55, 0.3, 0.22], [0.42, 0.32, 0.26], [0.45, 0.44, 0.42]]
+parking_stall = [2.74, 5.49, 7.3]
+suv_share = 0.55
+
+# Summer photo: no grading (the chaparral and sage scrub hills stay olive and tan).
+[backdrop]
+summer_grade = false
+summer_green = [112, 118, 70]
+ndvi = [0.08, 0.22]
+
+# Ground textures (Poly Haven sets): oak leaf litter under the trees, dry grass in the native areas.
+[materials]
+deeprough = "forest_leaves_02"
+native = "withered_grass"
+
+# Viewer: crown tints per archetype and the sky (hazy blue, a warm pale horizon over olive-tan hills).
+[viewer]
+species_tint = { coast_live_oak = [0.78, 0.86, 0.8], aleppo_pine = [0.86, 0.94, 0.9], sycamore = [1.0, 1.04, 0.86], eucalyptus = [0.86, 0.92, 0.9], shrub = [0.95, 0.94, 0.84] }
+sky = [[0.0, "#3a74bc"], [0.3, "#6b9fd6"], [0.45, "#b6cfe5"], [0.5, "#e6e3d8"], [0.53, "#cdbf98"], [1.0, "#8d8058"]]
+
+# new_course.py: NAD83(2011) UTM (zone 11N for most of the region), NAVD88 heights, USGS 3DEP LiDAR and 1 m DEM, NAIP
+# 2024 (pinned: the USDA service keeps only the latest year per state). Leaf state: written into a new course's
+# [lidar] / [imagery] leaf_off, to be checked against its own flight and photo dates.
+[scaffold]
+datum = "NAD83(2011)"
+vertical = "NAVD88"
+imagery_res = 0.6
+lidar_leaf_off = false    # USGS 3DEP: leaf-on
+imagery_leaf_off = false  # NAIP: summer photo
+lidar = { provider = "usgs_3dep" }
+backdrop = { provider = "cog_dem" }
+imagery = { provider = "arcgis_imageserver", url = "https://apps.geo.fpac.usda.gov/geo-imagery/rest/services/naip/conus_naip/ImageServer", mosaic_rule = { mosaicMethod = "esriMosaicNorthwest", where = "Name LIKE 'm%2024____'" }, bands = [0, 1, 2, 3], max_chunk_m = 1500.0 }

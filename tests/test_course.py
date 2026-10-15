@@ -454,17 +454,18 @@ def test_greenkeeper_covers_all_holes():
 
 
 def test_greenkeeper_gkd_hints():
-    """greenkeeper.json speaks GreenKeeper's GKD vocabulary (research/GSPRO_COSMETICS.md 5): tee slots (Gold -> Yellow),
-    'rating/slope' strings, four day pins on the green, an OB ring (pOOB) on the ground around the property, 3D water
+    """greenkeeper.json speaks GreenKeeper's GKD vocabulary (research/GSPRO_COSMETICS.md 5): tee slots (course.toml
+    gkd_slot), 'rating/slope' strings, four day pins on the green, an OB ring (pOOB) on the ground around the property, 3D water
     hazards, and the distance GreenKeeper will compute from the geometry (tee -> aim points -> green centre)."""
     gk = json.load(open(GSPRO / "greenkeeper.json"))
     g = gk["gkd"]
-    assert g["tee_slots"] == {"blue": "Blue", "white": "White", "red": "Red", "gold": "Yellow"}
-    assert g["ratings"]["BlueSR"] == "73.0/132" and g["ratings"]["YellowSR"] == "66.3/113"
+    from export_gspro import gkd_ratings
+    assert g["tee_slots"] == dict(C.TEE_GKD)
+    assert g["ratings"] == gkd_ratings(C.RATINGS, dict(C.TEE_GKD))
     ring = np.asarray(g["pOOB"]["coords"])
     assert ring.shape[1] == 3 and len(ring) > 50 and np.linalg.norm(ring[0] - ring[-1]) < 8
     te = C.TERRAIN
-    assert (ring[:, 0] > 0).all() and (ring[:, 0] < te["xmax"] - te["xmin"]).all() and (ring[:, 2] > 0).all()
+    assert (ring[:, 0] >= 0).all() and (ring[:, 0] <= te["xmax"] - te["xmin"]).all() and (ring[:, 2] >= 0).all()  # on the terrain (a clipped ring runs along its edge)
     meta = json.load(open(GSPRO / "terrain.json"))
     assert (ring[:, 1] >= -0.5).all() and (ring[:, 1] <= meta["terrain_size_m"]["height_y"] + 0.5).all()
     for h in gk["holes"]:
