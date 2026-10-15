@@ -72,12 +72,19 @@ def osm_geoms():
     Golf features drawn for a course OSM lacks or maps wrongly (courses/<slug>/features/golf.geojson: OSM tags, UTM
     geometry, tag source=course) join them. course.toml [osm] exclude drops OSM elements, and [osm] outline keeps only
     the golf features (and golf-course outlines) of this course: more than half inside its outline(s) + 30 m.
-    Cached per process and on disk."""
+    Cached per process and on disk, keyed on the source files and on the course.toml settings applied here (a newcomer
+    sets [osm] exclude / outline after check_course reports a neighbour's holes: the next run must see them)."""
     import pickle, os
     traced = C.BUILD / "paths_detected.geojson" if C.tuning("trace_paths", True) else None   # course.toml [tuning]
     src = [C.RESEARCH / "osm_all.json", C.RESEARCH / "osm_golf.json", traced, C.SOURCES / "structures.geojson",
            C.SOURCES / "golf.geojson"]
-    stamp = tuple(int(os.path.getmtime(p)) if p is not None and p.exists() else 0 for p in src)
+    def key(p):  # nanoseconds and size: a file saved twice within one second is seen too
+        if p is None or not p.exists():
+            return 0
+        st = os.stat(p)
+        return st.st_mtime_ns, st.st_size
+    margin = C.tuning("osm_outline_margin", 30.0)
+    stamp = tuple(key(p) for p in src) + (C.CRS, tuple(sorted(C.OSM_EXCLUDE)), tuple(C.OSM_OUTLINE), margin)
     cache = C.BUILD / "osm_geoms.pkl"
     if stamp in _OSM_CACHE:
         return _OSM_CACHE[stamp]
@@ -138,7 +145,7 @@ def osm_geoms():
             g = g.buffer(0)
         out.append((oid, t, g))
     if C.OSM_OUTLINE:
-        out = this_course(out, {oid for _, oid in C.OSM_OUTLINE}, C.tuning("osm_outline_margin", 30.0))
+        out = this_course(out, {oid for _, oid in C.OSM_OUTLINE}, margin)
     if src[4].exists():
         for i, f in enumerate(json.load(open(src[4]))["features"]):
             out.append((7_000_000_000 + i, dict(f["properties"], source="course"), shape(f["geometry"])))
