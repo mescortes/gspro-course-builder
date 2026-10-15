@@ -169,6 +169,28 @@ def write(lines):
     print(f"traced {len(lines)} path lines, {sum(g.length for g in lines):.0f} m -> {OUT}")
 
 
+def masks(G, W, H, T):
+    """(inside the course, excluded) on the grid: the course outline + 5 m, and the ground no path is traced on
+    (mapped greens, bunkers, water, buildings, parking, roads, fairway interiors, sports pitches and their rims)."""
+    from surface_classify import is_water   # a pond mapped golf=lateral_water_hazard only is water too
+    def burn(geoms):
+        geoms = [g for g in geoms if not g.is_empty]
+        return rasterize([(g, 1) for g in geoms], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) \
+            if geoms else np.zeros((H, W), bool)
+    course = burn([g.buffer(5) for _, t, g in G if t.get("leisure") == "golf_course"])
+    excl = burn([g.buffer(3.0) for _, t, g in G if t.get("golf") == "green" and g.geom_type == "Polygon"])
+    excl |= burn([g.buffer(2.0) for _, t, g in G if (t.get("golf") == "bunker" or is_water(t)
+                                                        or "building" in t or t.get("amenity") == "parking") and g.geom_type != "LineString"])
+    excl |= burn([g.buffer(4.0) for _, t, g in G if t.get("highway") and t.get("highway") not in ("path", "footway", "track")
+                  and g.geom_type == "LineString"])
+    # paths run beside fairways, not inside them: mowing stripes and dormant patches inside a fairway are NDVI ridges too
+    excl |= burn([g.buffer(-0.5) for _, t, g in G if t.get("golf") == "fairway" and g.geom_type == "Polygon"])
+    excl |= burn([g.buffer(2.0) for _, t, g in G if (t.get("leisure") in ("pitch", "sports_centre") or t.get("sport") not in (None, "golf"))
+                  and t.get("leisure") != "golf_course"
+                  and g.geom_type == "Polygon"])
+    return course, excl
+
+
 def main():
     from skimage.color import rgb2lab
     from surface_classify import grid, has_nir, read_imagery_window, read_nir_window, osm_geoms
@@ -181,21 +203,7 @@ def main():
         return
     W, H, T = grid()
     G = [x for x in osm_geoms() if x[1].get("source") != "trace_paths"]
-    def burn(geoms):
-        geoms = [g for g in geoms if not g.is_empty]
-        return rasterize([(g, 1) for g in geoms], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) \
-            if geoms else np.zeros((H, W), bool)
-    course = burn([g.buffer(5) for _, t, g in G if t.get("leisure") == "golf_course"])
-    excl = burn([g.buffer(3.0) for _, t, g in G if t.get("golf") == "green" and g.geom_type == "Polygon"])
-    excl |= burn([g.buffer(2.0) for _, t, g in G if (t.get("golf") in ("bunker", "water_hazard") or t.get("natural") == "water"
-                                                        or "building" in t or t.get("amenity") == "parking") and g.geom_type != "LineString"])
-    excl |= burn([g.buffer(4.0) for _, t, g in G if t.get("highway") and t.get("highway") not in ("path", "footway", "track")
-                  and g.geom_type == "LineString"])
-    # paths run beside fairways, not inside them: mowing stripes and dormant patches inside a fairway are NDVI ridges too
-    excl |= burn([g.buffer(-0.5) for _, t, g in G if t.get("golf") == "fairway" and g.geom_type == "Polygon"])
-    excl |= burn([g.buffer(2.0) for _, t, g in G if (t.get("leisure") in ("pitch", "sports_centre") or t.get("sport") not in (None, "golf"))
-                  and t.get("leisure") != "golf_course"
-                  and g.geom_type == "Polygon"])
+    course, excl = masks(G, W, H, T)
     cand = np.zeros((H, W), bool)
     pad = 32
     for r0 in range(0, H, 1024):
