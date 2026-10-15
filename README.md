@@ -116,6 +116,10 @@ COURSE=<slug> .venv/bin/python scripts/measure_registration.py        # prints t
 COURSE=<slug> .venv/bin/python scripts/build_all.py                   # the build on the registered photo
 ```
 
+A rerun of `fetch_data.py` or `fetch_textures.py` keeps the files already downloaded. When course.toml no longer
+matches them, `fetch_data.py` (or the build, for the LiDAR) stops and names the setting. `docs/PLAYBOOK.md` §3 lists
+the keys that allow an expected data gap (open water).
+
 Feature files drawn by hand (`features/`, `research/layout.geojson`) are in the course CRS (`[frame] crs`, metres),
 not lon/lat. A course outside the existing regions needs a region preset: copy `regions/TEMPLATE.toml.example` to
 `regions/<name>.toml` and run the unit tests, which check every region against `scripts/region_spec.py`.

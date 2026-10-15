@@ -114,8 +114,30 @@ export COURSE=<slug>
 .venv/bin/python scripts/check_course.py      # the data section: coverage, bands, empty pixels
 ```
 
-The OSM snapshot is saved in `courses/<slug>/research/` and is what the model is built from: commit it. Delete it and
-fetch again to refresh. LiDAR goes to `data/<slug>/lidar/`; keep only the tiles of the chosen project there.
+The OSM snapshot is saved in `courses/<slug>/research/` and is what the model is built from: commit it. Delete
+`osm_all.json` and `osm_golf.json` and fetch again to refresh.
+
+Every file is written whole or not at all, with a `<file>.source.json` next to it that records what it was fetched
+from. The LiDAR tiles are listed in `data/<slug>/lidar/tiles.json`. A rerun of `fetch_data.py` keeps what is on disk,
+but first checks it against course.toml:
+
+* If the photo or the OSM snapshot no longer fits `[frame] core`, `[imagery] res` or `[sources.imagery]`, the fetch
+  stops and names the setting. Delete the file and fetch again.
+* If the LiDAR tiles were fetched for another `[sources.lidar]` or `[frame] core`, the build stops and names the key.
+  Rerun `fetch_data.py lidar` (it needs the network). It moves every tile that is not part of the new fetch into
+  `data/<slug>/lidar/unused/`.
+
+Deleting a photo or snapshot can leave its `.source.json` behind. That is harmless: the next fetch overwrites it.
+
+A fetch also stops when the data does not cover the course. When the gap is expected (open water, ground out of play),
+allow it in course.toml. These keys only accept or refuse a fetch, so changing one later does not ask for a refetch:
+
+| Setting | Default | What it allows |
+|---|---|---|
+| `[sources.lidar] max_uncovered` (`usgs_3dep`) | 0.0 | share of core + 15 m that the tiles leave uncovered |
+| `[sources.lidar] missing_ok` (`nrcan_copc`) | none | tiles that no project folder has, as `[[E/100 m, N/100 m], ...]` |
+| `[sources.imagery] max_empty` | 0.01 | share of the course photo that the service leaves black |
+| `[sources.backdrop] max_missing` | 0.01 | share of the backdrop square with no DTM (filled from the heights around it) |
 
 **Checkpoint:** check_course's data section shows LiDAR covering CORE, the photo 0 % empty, the backdrop DTM present.
 
@@ -237,8 +259,14 @@ can take an hour on a slow server); first build 0.5-1 h; two QA rounds with rebu
 
 * **Blender crashes at start on macOS** in a sandboxed shell (it opens a Metal device even with `-b`): run the `fbx`
   step outside the sandbox.
-* **Overpass is down** (HTTP 500 / 504): fetch_data falls back to the OSM API.
-* **An image server is slow or times out**: the downloads are chunked and retried; rerun the step.
+* **Overpass is down or busy** (HTTP 429 / 504, or a "too busy" remark): fetch_data tries the three mirrors for up to
+  three rounds, then falls back to the OSM API. A query that every answering mirror says is too big (it timed out or
+  ran out of memory) goes to the OSM API at once.
+* **An image server is slow or times out**: the downloads are chunked and retried; rerun the step to resume. A service
+  error about a parameter (bands, the mosaic rule's where clause) stops the fetch at once and names it: fix
+  `[sources.imagery]`.
+* **fetch_textures says Poly Haven has no asset**: the id is mistyped. The message says where the id comes from (the
+  region's `[trees] bark` or `[materials]`, or course.toml).
 * **The course is wider than about 1.85 km**: the build extent no longer fits the 2048 m terrain square;
   check_course says so.
 * **Changing `[osm]`, `[frame]` or a source** takes effect on the next run of the steps that read it; rebuild from the
