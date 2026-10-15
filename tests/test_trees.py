@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -166,11 +167,29 @@ def test_vegetation_classes_3_to_5_are_tree_returns(tmp_path, monkeypatch):
     assert base.tolist() == base1.tolist() and pen.tolist() == pen1.tolist()
 
 
-def test_no_vegetation_returns_is_a_warning_not_a_crash(tmp_path, monkeypatch, capsys):
-    """A tile whose trees are in a class the engine does not read (here 6): crown bases fall back to the default, and
-    the warning names the classes found and the setting."""
-    lab, T = _one_crown_tile(tmp_path, monkeypatch, [6])
-    base, pen = D.crown_base(lab, T, 1)
-    assert np.isnan(base).all() and pen[0] == 1.0
-    out = capsys.readouterr().out
-    assert "lidar_vegetation_classes" in out and "6: 400" in out
+def test_trees_in_classes_the_engine_does_not_read_stop_with_the_classes_found(tmp_path, monkeypatch):
+    """A tile whose trees are in a class the engine does not read (here 6, then 0 with 3 stray class-1 returns): every
+    crown's penetration came out ~1 and its base the default, so the classifier found no conifers (leaf-off) or made
+    every tall narrow tree a pine (leaf-on). The warning fired only without a single vegetation return and said the
+    archetypes rested on the canopy shape. It now stops, names the classes found and the setting, with a way out for
+    sparse LiDAR."""
+    for cls, found in (([6], "6: 400"), ([0] * 397 + [1] * 3, "0: 397")):
+        lab, T = _one_crown_tile(tmp_path, monkeypatch, cls)
+        with pytest.raises(SystemExit) as e:
+            D.crown_base(lab, T, 1)
+        msg = str(e.value)
+        assert found in msg and "2: 6400" in msg and "lidar_vegetation_classes = [1, 3, 4, 5]" in msg
+        assert "penetration" in msg and "build_all.py trees" in msg and "lidar_vegetation_min_share = 0" in msg
+    monkeypatch.setattr(D.C, "tuning", lambda k, d: 0.0 if k == "lidar_vegetation_min_share" else d)
+    base, pen = D.crown_base(lab, T, 1)                        # sparse LiDAR, classes right: the default crown bases
+    assert np.isnan(base).all() and pen[0] > 0.95
+
+
+def test_a_share_of_crowns_without_vegetation_returns_is_what_stops():
+    """Small or sparse crowns may miss the 8 returns a crown base needs (Westmount: 3 %); the stop is for the build
+    whose vegetation classes miss most crowns."""
+    seen = np.bincount([1, 2, 2], minlength=256)
+    D.require_vegetation(np.array([True, True, False, False]), seen)            # half: built
+    D.require_vegetation(np.array([], bool), seen)                              # no crown at all
+    with pytest.raises(SystemExit, match=r"only 1 of the 4 crowns \(25%\)"):
+        D.require_vegetation(np.array([True, False, False, False]), seen)

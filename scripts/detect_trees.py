@@ -188,7 +188,7 @@ def crown_base(lab, T, n):
     hag_all = [[] for _ in range(n + 1)]
     out = np.full(n, np.nan)
     sums = []; gcount = []; acount = []
-    seen = np.zeros(256, np.int64)  # returns per class inside CORE, for the warning below
+    seen = np.zeros(256, np.int64)  # returns per class inside CORE, for require_vegetation's message
     for f in C.lidar_tiles():
         with laspy.open(f) as rr:
             h = rr.header
@@ -214,12 +214,6 @@ def crown_base(lab, T, n):
                 sel = (L > 0) & (hag > 0.8) & ~g_
                 sums.append(np.c_[L[sel], hag[sel]])
     S = np.concatenate(sums) if sums else np.zeros((0, 2))
-    if n and not len(S):
-        found = ", ".join(f"{c}: {k}" for c, k in enumerate(seen) if k)
-        print(f"warning: no return of the LiDAR vegetation classes {tuple(VEG_CLASSES)} in any of the {n} crowns: every "
-              f"crown base is the default (0.35 x height) and the archetypes rest on the canopy shape alone. Returns per "
-              f"class inside CORE: {found or 'none'}. Set [tuning] lidar_vegetation_classes in "
-              f"courses/{C.SLUG}/course.toml to the classes that hold the trees.", flush=True)
     S = S[np.argsort(S[:, 0])]
     ids = S[:, 0].astype(int)
     bounds = np.flatnonzero(np.r_[True, ids[1:] != ids[:-1], True]) if len(S) else []
@@ -228,8 +222,31 @@ def crown_base(lab, T, n):
         i = ids[a]
         if b - a >= 8:
             out[i - 1] = np.percentile(S[a:b, 1], 8)
+    require_vegetation(np.isfinite(out), seen)
     pen = np.sum(gcount, 0)[1:] / np.maximum(np.sum(acount, 0)[1:], 1)
     return out, pen
+
+
+def require_vegetation(has_base, seen):
+    """Stop when fewer than [tuning] lidar_vegetation_min_share (0.5) of the crowns hold the 8 vegetation returns a
+    crown base needs (Westmount 97 %, Brambles over 99 %): the vegetation is then in classes VEG_CLASSES leaves out.
+    `has_base`: per crown, True when it has them; `seen`: returns per ASPRS class inside CORE. A warning used to fire
+    only when not one return was found (a few stray ones kept it silent) and said the archetypes rested on the canopy
+    shape, while every crown's penetration came out about 1: the tree species were wrong either way."""
+    n = len(has_base)
+    share = float(np.mean(has_base)) if n else 1.0
+    if share >= C.tuning("lidar_vegetation_min_share", 0.5):
+        return
+    found = ", ".join(f"{c}: {k}" for c, k in enumerate(seen) if k)
+    sys.exit(f"detect_trees: only {int(np.sum(has_base))} of the {n} crowns ({share:.0%}) hold 8 or more returns of the "
+             f"LiDAR vegetation classes {tuple(VEG_CLASSES)}. Without them a crown's base is the default (0.35 x its "
+             "height) and its penetration about 1 (all ground returns), so the tree classifier sorts the trees on a "
+             "wrong signal: leaf_off_parkland finds no conifers, leaf_on_woodland makes every tall narrow tree a pine. "
+             f"Returns per ASPRS class inside CORE: {found or 'none'}. Set the classes that hold the trees in "
+             f"courses/{C.SLUG}/course.toml, e.g. [tuning] lidar_vegetation_classes = [1, 3, 4, 5] (ASPRS 1 = "
+             "unclassified, 3 / 4 / 5 = low / medium / high vegetation), then rerun from the trees step "
+             "(scripts/build_all.py trees). If the classes are right and the LiDAR is only sparse, [tuning] "
+             "lidar_vegetation_min_share = 0 builds with the default crown bases.")
 
 
 def crown_colour(lab, T, n, W, H):
