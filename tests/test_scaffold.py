@@ -358,7 +358,7 @@ def test_a_tuning_key_or_table_the_engine_does_not_read_is_named(tmp_path):
     assert "[tuning.sand] Lmin" in p[2] and "did you mean L_min" in p[2] and "b_max" in p[2]
     assert "[tuning] zzz_unknown" in p[3] and "trace_paths" in p[3]                        # no close name: the list
     assert "regions/southern_ontario.toml" in p[4] and "did you mean forward_tee_frac" in p[4]
-    assert C.TUNING == {} and C.REGION_TUNING == {} and not [x for x in K.course_report(C) if "tuning" in x]
+    assert not [x for x in K.course_report(C) if "tuning" in x]   # Westmount's own [tuning] keys are all read
 
 
 def test_nines_must_cover_the_playable_holes():

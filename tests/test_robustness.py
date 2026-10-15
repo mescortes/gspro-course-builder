@@ -46,7 +46,8 @@ def test_the_region_check_lists_every_parameter_each_classifier_reads():
     n = 400
     h = rng.uniform(1.0, 35.0, n)
     P = {"height": h, "crown_r": rng.uniform(0.5, 10.0, n), "crown_base": h * rng.uniform(0.0, 0.8, n),
-         "sharpness": rng.uniform(0.0, 5.0, n), "penetration": rng.uniform(0.0, 1.0, n)}
+         "sharpness": rng.uniform(0.0, 5.0, n), "penetration": rng.uniform(0.0, 1.0, n),
+         "L": rng.uniform(20.0, 70.0, n), "A": rng.uniform(-20.0, 5.0, n), "B": rng.uniform(0.0, 30.0, n)}  # crown colour
     nd = rng.uniform(-1.0, 1.0, n)
     tables = [(P, nd), ({k: v[:0] for k, v in P.items()}, nd[:0])]
     regions = [tomllib.load(open(p, "rb")) for p in REGIONS + [ROOT / "regions/TEMPLATE.toml.example"]]
