@@ -34,8 +34,14 @@ outline (OSM way 382278772): its features are background (hole 99), not part of 
   (bare soil, machines); by June 2025 it was a finished rectangular feature with a long dark interior inside a new
   cart-path loop. Its purpose is unknown: model it as rough unless the photo clearly shows water.
 
-## Open questions (first build)
+## QA round 1 (63 override features, features/overrides/)
 
-* Black tees short of the card: hole 1 426/468, hole 10 391/417, hole 11 433/442, hole 9 506/512. Look for a back deck
-  (in the photo, and in dem_raw if it predates 2017) behind the current marker.
-* Forward markers off any pad: Red on holes 3, 5, 8, 14, 17; White on hole 5.
+* Fixed by overrides: cart paths traced along tree rows, hedges and mowing lines; false bunkers (pond-bank grass);
+  tee decks reassigned to the holes they serve (White and Red on hole 5, two decks to hole 8); the grass islands in
+  hole 5's big bunker; a hole-4 bunker that was hole 99.
+* Black tees: hole 10 now matches the card. Holes 1 (426 / 468) and 11 (433 / 442) cannot reach it from any deck and
+  are documented in course.toml [tests] known_tee_gaps: do not invent a tee.
+* Left for the engine (seen on several holes): false green and fringe under the forest canopy (holes 17, 18) and on a
+  green metal roof; traced paths along shadows and forest edges; small false native blobs on mown rough (holes
+  13-15); OSM middle vertices kept as aim points on straight holes; front pin yardages measured from a bunker
+  cut-in (holes 7, 10); bunker islands drawn as sand in the GreenKeeper SVG.

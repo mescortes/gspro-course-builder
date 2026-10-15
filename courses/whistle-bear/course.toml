@@ -111,6 +111,11 @@ gkd_slot = "Red"
 17 = [3, 212, 196, 166, 144, 100]
 18 = [4, 506, 466, 430, 384, 340]
 
+[tests]
+# Black yardages of the 2021 card no deck reaches: the markers stand at the back of the rearmost decks (QA round 1;
+# hole 1 backs onto the clubhouse parking lot, hole 11 onto the rock wall and pond), see research/NOTES.md
+known_tee_gaps = { "1.black" = 43.0, "11.black" = 10.0 }
+
 [stroke_index]  # the 2021 card
 men = [3, 1, 11, 7, 17, 5, 9, 13, 15, 6, 10, 16, 12, 18, 8, 4, 14, 2]
 women = [3, 1, 11, 9, 15, 13, 7, 17, 5, 6, 10, 2, 14, 18, 12, 8, 16, 4]

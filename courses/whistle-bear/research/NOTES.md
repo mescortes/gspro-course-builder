@@ -25,6 +25,12 @@ Phase 0 research of 2026-10-14: researchers, then independent verifiers re-check
   Blue and White were rated at their pre-2019 par-71 lengths (6936 / 6414 / 5803). Nothing newer is public (Golf Canada
   Score Centre needs a member login).
 * Tee slots in GreenKeeper: Black -> Black, Gold -> Yellow, Blue, White, Red.
+* Card gaps (QA round 1, 2026-10-15): from the real decks hole 1 Black measures 426 yd against the card's 468 and
+  hole 11 Black 433 against 442. Both markers stand at the back of the rearmost deck: hole 1's backs onto the bank
+  down to the paved clubhouse parking lot, hole 11's onto the rock wall and pond. Neither the 2025 photo nor the 2017
+  LiDAR shows a deck behind or beside them, and the other tee sets of both holes match the card. No tee was
+  invented; course.toml [tests] known_tee_gaps records the gaps. Hole 9 Black (506 / 512) and hole 14 Blue
+  (182 / 188) are within the 6 yd tolerance.
 
 ## Data
 
