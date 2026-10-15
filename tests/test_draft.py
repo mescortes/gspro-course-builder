@@ -129,3 +129,24 @@ def test_outline_covers_the_corridors_and_the_turf():
     assert o.contains(Point(0, 150)) and o.contains(Point(100, 150)) and o.contains(Point(50, 300))
     assert o.contains(Point(50, 150))          # the gap between two parallel holes is course (closed)
     assert not o.contains(Point(0, -100))
+
+
+def test_gravel_paths_are_the_long_thin_bare_strips():
+    """Bare gravel of bunker colour: compact blobs are bunkers, long strips are paths (centre lines)."""
+    T = from_origin(0.0, 300.0, RES, RES)
+    m = np.zeros((300, 300), bool)
+    m[40:53, 40:50] = True                      # bunker
+    m[150:157, 10:290] = True                   # 4.2 m wide, 168 m long track
+    lines = D.path_lines(m, T, min_len=25.0, width=(1.5, 7.0), max_elong=6.0)
+    assert len(lines) == 1 and 150 < lines[0].length < 175
+    assert abs(lines[0].interpolate(0.5, normalized=True).y - (300 - 153.5 * RES)) < 0.6
+
+
+def test_gravel_path_pieces_across_short_gaps_are_joined():
+    """The tracks fade in places (dust, wheel ruts): aligned pieces 10 m apart make one path."""
+    T = from_origin(0.0, 300.0, RES, RES)
+    m = np.zeros((300, 300), bool)
+    m[150:157, 10:130] = True
+    m[150:157, 147:290] = True                  # a 10 m gap
+    lines = D.path_lines(m, T, min_len=25.0, width=(1.5, 7.0), max_elong=6.0, gap=15.0)
+    assert len(lines) == 1 and lines[0].length > 160

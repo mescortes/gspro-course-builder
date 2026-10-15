@@ -204,7 +204,7 @@ _osm_ref = lambda s: (s.partition("/")[0], int(s.partition("/")[2]))   # "way/15
 OSM_OUTLINE = tuple(_osm_ref(s) for s in _osm.get("outline", ()))  # the course's leisure=golf_course outline(s)
 OSM_EXCLUDE = {_osm_ref(s) for s in _osm.get("exclude", ())}       # OSM elements left out (a disused runway ...)
 DATA_SOURCES = _T.get("sources", {})  # [sources.lidar], [sources.imagery], [sources.backdrop]: scripts/sources
-DRAFT = _T.get("draft", {})  # draft_features.py thresholds (sections turf, green, tee, sand, water, outline)
+DRAFT = _T.get("draft", {})  # draft_features.py thresholds (sections turf, green, tee, sand, water, outline, path)
 
 
 def to_model(e, n, h):
