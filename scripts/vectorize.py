@@ -352,7 +352,8 @@ def runs_along(line, p, min_run=None, reach=None):
     line lie inside p (default [tuning] shared_fairway_min_run), or its green end (the line's last point) is within
     `reach` m of p (shared_fairway_green_reach: the approach and green surround of a par 3). A line that only crosses p
     does not: a tee shot over another hole's fairway or green surround (Brambles: the tees of holes 7, 9, 12, 16 and 17
-    sit by other holes' greens), or a dogleg over its corner."""
+    sit by other holes' greens), or a dogleg over its corner, unless its green end is within `reach` (a par 3 played
+    over another fairway to a green beside it: it takes a part)."""
     min_run = SHARED_FAIRWAY_MIN_RUN if min_run is None else min_run
     reach = SHARED_FAIRWAY_GREEN_REACH if reach is None else reach
     run = line.intersection(p).length
@@ -393,7 +394,8 @@ def split_shared_fairways(fairways, lines, min_part=None, step=2.0, min_run=None
                 i = tree.query(c, predicate="contains")
                 if len(i):
                     cells[own[min(i)]].append(c)
-            parts = {h: p.intersection(unary_union(cs)) for h, cs in cells.items()}
+            # each cell made valid first: Voronoi sites on an exact lattice give cells the union cannot join
+            parts = {h: p.intersection(unary_union([make_valid(c) for c in cs])) for h, cs in cells.items()}
             small = min(parts, key=lambda h: parts[h].area)
             if parts[small].area >= min_part:
                 break

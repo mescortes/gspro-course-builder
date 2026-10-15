@@ -439,6 +439,13 @@ def main():
     tr = C.REGION.get("trees", {})
     print(f"course {C.SLUG}: {C.COURSE_NAME} ({C.REGION_NAME}, {C.CRS}, scorecard in {C.SCORECARD_UNITS})")
     print(f"leaf-off: LiDAR {C.LIDAR_LEAF_OFF}, photo {C.IMAGERY_LEAF_OFF}; tree classifier {tr.get('classifier')}")
+    from pyproj import CRS
+    from pyproj.exceptions import CRSError
+    try:
+        CRS(C.CRS)
+    except CRSError:   # every check below reads the frame: say what is wrong instead of a traceback
+        sys.exit("\n".join(["!! " + x for x in frame_crs_report()]) or
+                 f"!! courses/{C.SLUG}/course.toml [frame] crs = {C.CRS!r} is not a CRS pyproj knows")
     features = feature_files_report()
     if features:
         print("\n== course feature files")

@@ -80,7 +80,12 @@ def fetch(name, folder, listing, record):
             sys.exit(f"textures: Poly Haven lists no 2k maps for {name!r}: {fix}")
         for f, url in want.items():
             if not (folder / f).exists():
-                http.download(url, folder / f)
+                try:
+                    http.download(url, folder / f)
+                except http.PermanentError as ex:   # the file host refuses, e.g. a cloud allowlist without it
+                    host = url.split("/")[2] if "//" in url else url
+                    sys.exit(f"textures: {host} refuses the download of {name}/{f} ({ex}): a proxy, firewall or "
+                             f"network allowlist between here and {host}? allow it and rerun fetch_textures.py")
         record[name] = done = dict(sorted(want.items()))   # file name: url
     for f in done:
         print(name, f, (folder / f).stat().st_size)

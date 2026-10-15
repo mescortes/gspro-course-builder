@@ -265,7 +265,8 @@ one). A mistyped key or a value that is not a number stops `check_course.py` wit
 Read failures as data: a tee yardage gap means a wrong or missing pad, or a card that disagrees with the ground; a
 green size or slope failure means a green outline that takes in banks or misses half the putting surface; "no
 fairway" means a fairway that carries another hole's number (a fairway polygon several lines of play run along is
-split between their corridors, a line that only crosses it takes none; one that misses its own line goes to the
+split between their corridors, a line that only crosses it takes none unless its green ends within
+`shared_fairway_green_reach` of it; one that misses its own line goes to the
 nearest one); a step around a green is
 usually the bank of a synthetic tee deck nearby (§2, `[tuning.level_tees]`; the `mesh` step's `level_tees: ... step`
 lines say which). Course-dependent limits go in

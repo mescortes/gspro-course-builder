@@ -647,3 +647,19 @@ def test_check_course_reports_downloads_that_do_not_fit_course_toml(tmp_path, mo
     assert any("photo" in x and "empty" in x for x in flagged), r
     assert any("photo" in x and "core" in x for x in flagged), r
     assert any("backdrop DTM" in x and "square" in x for x in flagged), r
+
+
+def test_a_refused_texture_file_download_names_the_host(tmp_path, monkeypatch):
+    """A Claude cloud environment that allows api.polyhaven.com but not dl.polyhaven.org got a bare PermanentError
+    traceback ('download failed (HTTP 403)') for the map files, not the 'refuses the request' message."""
+    from sources import http
+    monkeypatch.setattr(C, "DATA", tmp_path); _no_sleep(monkeypatch)
+    import fetch_textures as T
+    def fake_download(url, dst, *a, **k):
+        raise http.PermanentError(f"download failed (HTTP 403): {url}", 403)
+    monkeypatch.setattr(http, "download", fake_download)
+    folder = tmp_path / "textures" / "sand_01"
+    with pytest.raises(SystemExit) as ex:
+        T.fetch("sand_01", folder, lambda: {"sand_01_diff_2k.jpg": "https://dl.polyhaven.org/file/x.jpg"}, {})
+    msg = str(ex.value)
+    assert "dl.polyhaven.org" in msg and "HTTP 403" in msg and "network" in msg and "has no asset" not in msg, msg

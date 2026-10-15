@@ -547,3 +547,13 @@ def test_drafted_bunkers_get_the_lidar_test_of_unmapped_ones():
     assert not ok(ditch) and ok(bowl) and ok(box(1040.5, 2040.5, 1044.5, 2044.5))
     assert [V.mapped_bunker_hollow(dem, T, g, t, course, H=H) for _, t, g in G[:2]] == [False, True]
     assert V.mapped_bunker_hollow(dem, T, ditch, {"golf": "bunker"}, course, H=H), "surveyed: a 5 cm hollow will do"
+
+
+def test_a_fairway_split_survives_voronoi_cells_on_an_exact_lattice():
+    """On integer synthetic coordinates the clipped lines of play give Voronoi sites on an exact lattice, and the union
+    of a hole's cells raised a GEOS TopologyException (unable to assign free hole to a shell), stopping vectorize."""
+    from shapely.geometry import LineString, box
+    fw = box(-20, 0, 20, 300)
+    lines = {4: LineString([(0, -20), (0, 320)]), 9: LineString([(-150, 150), (49, 150)])}
+    out = V.split_shared_fairways([fw], lines, min_run=30.0)
+    assert abs(sum(p.area for p, _ in out) - fw.area) < 1.0 and {h for _, h in out} <= {4, 9}

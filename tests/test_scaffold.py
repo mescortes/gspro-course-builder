@@ -605,3 +605,14 @@ def test_a_photo_in_another_crs_is_named(tmp_path):
         p = K.photo_crs_report(Course)
         assert len(p) == n and all(x.startswith("!!") and "WGS 84" in x and "EPSG:2958" in x for x in p), p
 
+
+
+def test_check_course_stops_on_a_frame_crs_pyproj_does_not_know(monkeypatch, capsys):
+    """A hand-edit typo ([frame] crs = "ESPG:2958") crashed check_course.py with a CRSError traceback in the feature-file
+    check, before its own '[frame] crs ... not a CRS pyproj knows' message could print."""
+    import check_course as K
+    monkeypatch.setattr(K.C, "CRS", "ESPG:2958")
+    with pytest.raises(SystemExit) as ex:
+        K.main()
+    msg = str(ex.value)
+    assert "[frame] crs" in msg and "ESPG:2958" in msg and "course.toml" in msg, msg
