@@ -27,6 +27,15 @@ def _tuning_files():
     return f"courses/{C.SLUG}/course.toml" + (f" or regions/{C.REGION_NAME}.toml" if C.REGION_NAME else "")
 
 
+def _rel(p):
+    """`p` relative to the repository (the commands in messages run from its root), else as it is."""
+    from pathlib import Path
+    try:
+        return Path(p).relative_to(C.ROOT)
+    except ValueError:
+        return Path(p)
+
+
 def _number(x):
     return isinstance(x, (int, float)) and not isinstance(x, bool)
 
@@ -62,12 +71,28 @@ ROAD_HALF_WIDTH_DEFAULT = {
     "motorway_link": 4.0, "trunk_link": 4.0, "primary_link": 4.0, "secondary_link": 4.0, "tertiary_link": 3.5}
 
 
+# The OSM highway values a way can carry (wiki.openstreetmap.org/wiki/Key:highway: roads, link roads, special road
+# types, paths, lifecycle). [tuning.road_half_width] may add any of them; a key outside them is a typo.
+OSM_HIGHWAY_WAYS = frozenset(ROAD_HALF_WIDTH_DEFAULT) | {
+    "pedestrian", "bus_guideway", "escape", "raceway", "road", "busway", "footway", "bridleway", "steps", "corridor",
+    "path", "via_ferrata", "cycleway", "construction", "proposed", "disused", "abandoned", "platform"}
+
+
 def road_half_widths():
     """ROAD_HALF_WIDTH_DEFAULT with course.toml [tuning.road_half_width] over it: a class can be added or widened, and
-    0 leaves a class out (tracks that are woodland footpaths)."""
+    0 leaves a class out (tracks that are woodland footpaths). A key that is not an OSM highway value (OSM_HIGHWAY_WAYS)
+    stops with the closest one: residental = 5 was taken as a new class, and the residential roads kept 4 m."""
+    import difflib
     v = C.tuning("road_half_width", {})
     if not isinstance(v, dict):
         sys.exit(f"[tuning.road_half_width] in {_tuning_files()} must be a table of highway class = metres, not {v!r}")
+    for k in v:
+        if k not in OSM_HIGHWAY_WAYS:
+            m = difflib.get_close_matches(k, sorted(OSM_HIGHWAY_WAYS), 1)
+            sys.exit(f"[tuning.road_half_width] in {_tuning_files()}: {k} is not an OSM highway value"
+                     + (f": did you mean {m[0]}?" if m else "") + " (a key is the highway=* value of the ways it sizes: "
+                     f"{', '.join(ROAD_HALF_WIDTH_DEFAULT)}, or to add a class "
+                     f"{', '.join(sorted(OSM_HIGHWAY_WAYS - set(ROAD_HALF_WIDTH_DEFAULT)))})")
     for k, x in v.items():
         if not _number(x):
             sys.exit(f"[tuning.road_half_width] in {_tuning_files()}: {k} = {x!r} is not a number (half the road's "
@@ -324,14 +349,22 @@ def has_nir():
     key = (str(C.IMAGERY), C.IMAGERY.stat().st_mtime_ns)
     if key not in _PHOTO:
         with rasterio.open(C.IMAGERY) as ds:
-            if ds.count < 3 or ds.dtypes[0] != "uint8":
+            if ds.count < 3:
+                sys.exit(f"{C.IMAGERY}: {ds.count} band(s), but the engine reads a colour photo (R, G, B, + NIR): a "
+                         f"greyscale photo cannot be used. Put a colour orthophoto at {_rel(C.IMAGERY_RAW)} (or set "
+                         f"[sources.imagery] in courses/{C.SLUG}/course.toml and run fetch_data.py imagery), then rerun "
+                         "from the registration: scripts/build_all.py register")
+            if ds.dtypes[0] != "uint8":
+                # one ratio for every band kept (photo_8bit.py): `rio info --stats` gives band 1's maximum only, and
+                # NIR scaled by red's maximum went past 255 and wrapped (rio convert casts unchecked)
+                raw = _rel(C.IMAGERY_RAW)
+                keep = raw.with_name(raw.stem + "_original" + raw.suffix)
                 sys.exit(f"{C.IMAGERY}: {ds.count} band(s) of {ds.dtypes[0]}, but the engine reads an 8-bit R, G, B (+ NIR) "
-                         f"photo. Convert {C.IMAGERY_RAW.name} in {C.IMAGERY_RAW.parent} with the rasterio tools of the "
-                         ".venv: .venv/bin/rio stack in.tif --bidx 1,2,3[,<NIR band>] rgbn.tif (keep R, G, B and NIR), "
-                         "then .venv/bin/rio convert rgbn.tif out.tif --dtype uint8 --scale-ratio <255 / the photo's "
-                         "maximum> (.venv/bin/rio info --stats in.tif gives it); or with GDAL's tools, gdal_translate -ot "
-                         "Byte -scale <min> <max> 0 255 -b 1 -b 2 -b 3 [-b <NIR band>] in.tif out.tif. Save out.tif as "
-                         f"{C.IMAGERY_RAW.name} (keep the original elsewhere) and rerun from the registration: "
+                         f"photo. Convert the photo you put in, {raw}: mv {raw} {keep} && .venv/bin/python "
+                         f"scripts/photo_8bit.py {keep} {raw} --bands 1,2,3[,<NIR band>] (the R, G, B and NIR band "
+                         "numbers of the photo, from its metadata). It scales those bands by one ratio, 255 / the "
+                         "largest value among them, so NDVI is kept and no band wraps past 255 (--max <value> to scale "
+                         "by the sensor's range instead, e.g. 4095 for 12-bit data). Then rerun from the registration: "
                          "scripts/build_all.py register")
             nir = False
             if ds.count >= 4:   # a central block is enough to tell a mask from a photo band

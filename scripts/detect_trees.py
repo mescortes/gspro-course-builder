@@ -227,26 +227,46 @@ def crown_base(lab, T, n):
     return out, pen
 
 
+# ASPRS classes that never hold tree returns: ground, building, low noise, model key-point (LAS 1.0-1.3), water, rail,
+# road surface, overlap (LAS 1.0-1.3), wires and towers, bridge deck, high noise, overhead structure, ignored ground,
+# snow, temporal exclusion. The others (0, 1, 3-5, 23-63 reserved, 64-255 a programme's own) may.
+NOT_TREE_CLASSES = frozenset({2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22})
+
+
 def require_vegetation(has_base, seen):
     """Stop when fewer than [tuning] lidar_vegetation_min_share (0.5) of the crowns hold the 8 vegetation returns a
     crown base needs (Westmount 97 %, Brambles over 99 %): the vegetation is then in classes VEG_CLASSES leaves out.
     `has_base`: per crown, True when it has them; `seen`: returns per ASPRS class inside CORE. A warning used to fire
     only when not one return was found (a few stray ones kept it silent) and said the archetypes rested on the canopy
-    shape, while every crown's penetration came out about 1: the tree species were wrong either way."""
+    shape, while every crown's penetration came out about 1: the tree species were wrong either way. The setting to
+    paste is the classes in force plus those found that may hold trees (not NOT_TREE_CLASSES): the default list it
+    used to give gave the same stop."""
     n = len(has_base)
     share = float(np.mean(has_base)) if n else 1.0
     if share >= C.tuning("lidar_vegetation_min_share", 0.5):
         return
     found = ", ".join(f"{c}: {k}" for c, k in enumerate(seen) if k)
+    extra = [c for c, k in enumerate(seen) if k and c not in NOT_TREE_CLASSES and c not in VEG_CLASSES]
+    where = f"courses/{C.SLUG}/course.toml"
+    rerun = "then rerun from the trees step (scripts/build_all.py trees)"
+    if extra:
+        one = len(extra) == 1
+        fix = (f"Class{'' if one else 'es'} {', '.join(map(str, extra))} (found here, and not ground, buildings, noise, "
+               f"water, bridges, wires or roads) may hold the trees: if so, set in {where} [tuning] "
+               f"lidar_vegetation_classes = {sorted(set(VEG_CLASSES) | set(extra))} (the classes in force plus "
+               f"{'it' if one else 'them'}), {rerun}.")
+    else:
+        fix = ("None of the other classes found is a vegetation class (ASPRS 0 / 1 = never classified / unclassified, "
+               "3 / 4 / 5 = low / medium / high vegetation, 64-255 a LiDAR programme's own): look up the class that "
+               "holds the trees in the LiDAR project's classification report, set it in "
+               f"{where} [tuning] lidar_vegetation_classes, {rerun}.")
     sys.exit(f"detect_trees: only {int(np.sum(has_base))} of the {n} crowns ({share:.0%}) hold 8 or more returns of the "
              f"LiDAR vegetation classes {tuple(VEG_CLASSES)}. Without them a crown's base is the default (0.35 x its "
              "height) and its penetration about 1 (all ground returns), so the tree classifier sorts the trees on a "
              "wrong signal: leaf_off_parkland finds no conifers, leaf_on_woodland makes every tall narrow tree a pine. "
-             f"Returns per ASPRS class inside CORE: {found or 'none'}. Set the classes that hold the trees in "
-             f"courses/{C.SLUG}/course.toml, e.g. [tuning] lidar_vegetation_classes = [1, 3, 4, 5] (ASPRS 1 = "
-             "unclassified, 3 / 4 / 5 = low / medium / high vegetation), then rerun from the trees step "
-             "(scripts/build_all.py trees). If the classes are right and the LiDAR is only sparse, [tuning] "
-             "lidar_vegetation_min_share = 0 builds with the default crown bases.")
+             f"Returns per ASPRS class inside the build extent ([frame] core): {found or 'none'}. {fix} If the classes "
+             "are right and the LiDAR is only sparse, [tuning] lidar_vegetation_min_share = 0 builds with the default "
+             "crown bases.")
 
 
 def crown_colour(lab, T, n, W, H):

@@ -224,13 +224,24 @@ def test_trees_in_classes_the_engine_does_not_read_stop_with_the_classes_found(t
     every tall narrow tree a pine (leaf-on). The warning fired only without a single vegetation return and said the
     archetypes rested on the canopy shape. It now stops, names the classes found and the setting, with a way out for
     sparse LiDAR."""
-    for cls, found in (([6], "6: 400"), ([0] * 397 + [1] * 3, "0: 397")):
+    # the example to paste is the classes in force plus those found that are not ground, buildings, noise, water or
+    # bridges: it used to be [1, 3, 4, 5], the default, so pasting it gave the same stop
+    for cls, found, example in (([0] * 397 + [1] * 3, "0: 397", "lidar_vegetation_classes = [0, 1, 3, 4, 5]"),
+                                ([1] * 3 + [25] * 397, "25: 397", "lidar_vegetation_classes = [1, 3, 4, 5, 25]")):
         lab, T = _one_crown_tile(tmp_path, monkeypatch, cls)
         with pytest.raises(SystemExit) as e:
             D.crown_base(lab, T, 1)
         msg = str(e.value)
-        assert found in msg and "2: 6400" in msg and "lidar_vegetation_classes = [1, 3, 4, 5]" in msg
+        assert found in msg and "2: 6400" in msg and example in msg and "inside the build extent ([frame] core)" in msg
         assert "penetration" in msg and "build_all.py trees" in msg and "lidar_vegetation_min_share = 0" in msg
+        assert "CORE" not in msg
+    # trees in a class that is not vegetation (6, buildings): no list to paste, and never the one in force
+    lab, T = _one_crown_tile(tmp_path, monkeypatch, [6])
+    with pytest.raises(SystemExit) as e:
+        D.crown_base(lab, T, 1)
+    msg = str(e.value)
+    assert "6: 400" in msg and "lidar_vegetation_classes = [1, 3, 4, 5]" not in msg
+    assert "None of the other classes found is a vegetation class" in msg and "classification report" in msg
     monkeypatch.setattr(D.C, "tuning", lambda k, d: 0.0 if k == "lidar_vegetation_min_share" else d)
     base, pen = D.crown_base(lab, T, 1)                        # sparse LiDAR, classes right: the default crown bases
     assert np.isnan(base).all() and pen[0] > 0.95
