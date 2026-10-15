@@ -25,7 +25,10 @@ classifier = "leaf_on_woodland"
 bark = { valley_oak = "jolcham_oak_bark_01", live_oak = "bark_brown_01", gray_pine = "pine_bark", shrub = "bark_brown_01" }
 backdrop = { kinds = ["live_oak", "valley_oak", "gray_pine"], share = [0.5, 0.35, 0.15], crown = [0.35, 0.8, 2.0, 9.0] }
 
+# lidar_leaf_off: the LiDAR these rules need (check_course.py flags a course whose [lidar] leaf_off differs: bare
+# hardwoods pass many pulses, as the pines these rules look for do). They do not read the photo.
 [trees.leaf_on_woodland]
+lidar_leaf_off = false
 shrub_h = 4.5
 pine_min_h = 10.0
 pine_max_ratio = 0.22
@@ -242,11 +245,14 @@ species_tint = { valley_oak = [0.95, 0.96, 0.82], live_oak = [0.78, 0.86, 0.8], 
 sky = [[0.0, "#3a78c0"], [0.3, "#6aa0d6"], [0.45, "#b2cde4"], [0.5, "#e2e4de"], [0.53, "#cfc29a"], [1.0, "#9a8a5a"]]
 
 # new_course.py: NAD83(2011) UTM, NAVD88 heights, USGS 3DEP LiDAR and 1 m DEM, NAIP 2024 (pinned: the USDA service
-# keeps only the latest year per state).
+# keeps only the latest year per state). Leaf state: written into a new course's [lidar] / [imagery] leaf_off, to be
+# checked against its own flight and photo dates.
 [scaffold]
 datum = "NAD83(2011)"
 vertical = "NAVD88"
 imagery_res = 0.6
+lidar_leaf_off = false    # USGS 3DEP: leaf-on
+imagery_leaf_off = false  # NAIP: summer photo
 lidar = { provider = "usgs_3dep" }
 backdrop = { provider = "cog_dem" }
 imagery = { provider = "arcgis_imageserver", url = "https://apps.geo.fpac.usda.gov/geo-imagery/rest/services/naip/conus_naip/ImageServer", mosaic_rule = { mosaicMethod = "esriMosaicNorthwest", where = "Name LIKE 'm%2024____'" }, bands = [0, 1, 2, 3], max_chunk_m = 1500.0 }

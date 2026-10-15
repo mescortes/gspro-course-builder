@@ -1,0 +1,105 @@
+# Template for a new region preset: copy it to regions/<name>.toml (lower-case, '_' between words), replace every value,
+# set [course] region = "<name>" in the course.toml, then run the unit tests (tests/test_scaffold.py checks every
+# regions/*.toml against scripts/region_spec.py, the list of what the engine reads) and check_course.py.
+# The values below are placeholders, not a real region. regions/southern_ontario.toml and northern_california.toml are
+# complete worked examples. A course.toml table of the same name overrides a region table key by key.
+
+[region]
+name = "Example region"
+
+# Optional. Summer turf colour of the glTF / viewer textures (sRGB) per surface; leave the table out to keep the photo's
+# own colours (export_course).
+[turf_tint]
+green = [100, 128, 72]
+fringe = [98, 122, 70]
+fairway = [104, 124, 72]
+tee = [104, 126, 74]
+semirough = [96, 113, 68]
+rough = [89, 105, 65]
+bunker = [200, 184, 150]
+
+# Tree archetypes: every archetype needs a shape, a bark set and a foliage entry (detect_trees, make_trees, add_vegetation).
+# classifier: one of detect_trees.CLASSIFIERS (scripts/region_spec.py lists each one's parameters):
+#   leaf_off_parkland  leaf-off LiDAR and photo: evergreens stop the pulses and are the only green crowns
+#   leaf_on_woodland   leaf-on LiDAR: crown form and size decide
+# needles: archetypes drawn as procedural needle cards ("pine" or "spruce" style; their foliage src is "").
+# backdrop: billboard species of the 5 km backdrop, their shares, crown radius = clip(a * height + b, lo, hi).
+[trees]
+archetypes = ["broadleaf", "conifer", "shrub"]
+needles = { conifer = "pine" }
+classifier = "leaf_on_woodland"
+bark = { broadleaf = "jolcham_oak_bark_01", conifer = "pine_bark", shrub = "bark_brown_01" }   # Poly Haven sets
+backdrop = { kinds = ["broadleaf", "conifer"], share = [0.7, 0.3], crown = [0.35, 0.8, 2.0, 9.0] }
+
+# The classifier's parameters, and which archetype each of its names becomes. lidar_leaf_off / imagery_leaf_off: the
+# leaf state of the data the rules were tuned on (check_course.py flags a course whose [lidar] / [imagery] leaf_off
+# differs; leave imagery_leaf_off out when the rules do not read the photo).
+[trees.leaf_on_woodland]
+lidar_leaf_off = false
+shrub_h = 4.5
+pine_min_h = 10.0
+pine_max_ratio = 0.22
+pine_min_pen = 0.35
+big_h = 12.0
+names = { shrub = "shrub", pine = "conifer", big = "broadleaf", other = "broadleaf" }
+
+# make_trees space-colonisation shapes: height H and crown radius R (m), crown envelope (kind, start, end as fractions of
+# the height), trunk height fraction, growth parameters and leaf cards. Optional: clumps, clump_sd, leader, droop,
+# tip_depth.
+[trees.shapes]
+broadleaf = { H = 14.0, R = 6.0, crown = ["ovoid", 0.24, 1.0], trunk = 0.24, attract = 1100, seg = 0.45, infl = 3.6, kill = 0.9, tropism = [0, 0.18, 0], tip_r = 0.012, exp = 2.05, cards = 1150, card = [1.3, 1.9], lean = 0.08, nsides = 10, up_bias = 0.6, trunk_r = 0.34 }
+conifer = { H = 16.0, R = 4.0, crown = ["irregular", 0.45, 1.0], trunk = 0.42, attract = 700, seg = 0.55, infl = 5.0, kill = 0.9, tropism = [0, 0.12, 0], tip_r = 0.014, exp = 2.05, cards = 600, card = [1.5, 2.2], lean = 0.12, nsides = 9, up_bias = 0.7, trunk_r = 0.36 }
+shrub = { H = 3.0, R = 2.0, crown = ["ellipsoid", 0.05, 1.0], trunk = 0.05, attract = 260, seg = 0.25, infl = 1.5, kill = 0.4, tropism = [0, 0.1, 0], tip_r = 0.008, exp = 2.1, cards = 260, card = [0.8, 1.2], lean = 0.0, nsides = 6, up_bias = 0.5, trunk_r = 0.06 }
+
+# make_foliage leaf cards per archetype: sprite file in data/<slug>/textures/leaf_refs ("" for a needle archetype),
+# target HSV, leaves per card, leaf scale (fraction of the card), twig colour (sRGB), extra hues [[hsv], share].
+[foliage]
+broadleaf = { src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv = [0.23, 0.6, 0.38], n = 200, scale = [0.06, 0.09], twig = [90, 78, 62], alt = [] }
+conifer = { src = "", hsv = [0.3, 0.38, 0.33], n = 0, scale = [0, 0], twig = [92, 74, 58], alt = [] }
+shrub = { src = "island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv = [0.22, 0.48, 0.32], n = 380, scale = [0.035, 0.055], twig = [80, 70, 55], alt = [] }
+
+# 3D grass hand-off (gspro/grass_3dg.json, grass_spec): 3dg = Stix Games 3D grass material settings per OPCD surface;
+# viewer = the three.js preview. The existing regions carry a fuller block to start from.
+[grass]
+about = "3D grass settings per OPCD surface (estimates, tune in Unity)."
+3dg = { SemiRough = { blade_height_m = [0.025, 0.045], blade_width_m = 0.006, relative_density = 1.0 }, Rough = { blade_height_m = [0.045, 0.085], blade_width_m = 0.007, relative_density = 0.9 }, DeepRough = { blade_height_m = [0.12, 0.32], blade_width_m = 0.008, relative_density = 0.55 } }
+viewer = { radius_m = 55, full_density_m = 22, far_density = 0.18, tile_m = 6, max_instances = 400000 }
+
+# add_structures / backdrop_objects: wall tints (multipliers on a white texture), backdrop roof colours, parking stall
+# width / length / aisle (m), share of SUVs among parked cars.
+[buildings]
+wall_palette = [[1.0, 1.0, 1.0], [0.9, 0.84, 0.72], [0.74, 0.74, 0.72]]
+roof_palette = [[0.34, 0.33, 0.32], [0.45, 0.42, 0.38]]
+parking_stall = [2.5, 5.0, 6.0]
+suv_share = 0.3
+
+# build_backdrop: grade the vegetated pixels (NDVI ramp) of the 5 km backdrop photo to summer_green (sRGB) when the photo
+# is not a summer one.
+[backdrop]
+summer_grade = false
+summer_green = [90, 108, 60]
+ndvi = [0.08, 0.22]
+
+# export_course / fetch_textures: Poly Haven ground sets for wooded rough and native areas.
+[materials]
+deeprough = "forest_leaves_02"
+native = "withered_grass"
+
+# Optional. Viewer crown tints per archetype and the sky gradient (export_course viewer.json).
+[viewer]
+species_tint = { broadleaf = [1.0, 1.0, 0.9], conifer = [0.8, 0.9, 0.88], shrub = [1.0, 1.0, 0.9] }
+
+# new_course.py: the datum (the frame is its UTM zone), the heights' vertical datum, the photo resolution (m), the usual
+# leaf state of the region's LiDAR and photo (written into a new course's [lidar] / [imagery] leaf_off, to be checked
+# against its own dates) and the providers (scripts/sources/; new_course.py searches nrcan_copc and usgs_3dep, and
+# copies any other provider's table for you to fill in). crs is optional: an EPSG code, or a name with {zone} and
+# {hemisphere} where EPSG does not call the zones "UTM" (e.g. "GDA2020 / MGA zone {zone}").
+[scaffold]
+datum = "WGS 84"
+vertical = "EGM2008"
+imagery_res = 0.25
+lidar_leaf_off = false
+imagery_leaf_off = false
+lidar = { provider = "usgs_3dep" }
+backdrop = { provider = "cog_dem" }
+imagery = { provider = "arcgis_imageserver", url = "https://example.org/arcgis/rest/services/Imagery/ImageServer", bands = [0, 1, 2, 3] }

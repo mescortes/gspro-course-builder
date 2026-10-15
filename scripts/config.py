@@ -109,7 +109,8 @@ OUTPUT = ROOT / "output" / SLUG
 COURSE_NAME = _course["name"]
 COURSE_SHORT = _course.get("short", COURSE_NAME)
 MODEL_NAME = _course.get("model_name", SLUG)    # output/<slug>/<MODEL_NAME>.glb, <MODEL_NAME>_noveg.glb
-UNITY_SCRIPT = _course.get("unity_script", "".join(w.title() for w in SLUG.split("-")) + "Setup.cs")
+_unity = "".join(w.title() for w in SLUG.split("-"))  # a C# class name starts with a letter: 18-oaks -> Course18Oaks
+UNITY_SCRIPT = _course.get("unity_script", ("" if _unity[:1].isalpha() else "Course") + _unity + "Setup.cs")
 UNITY_NAME = UNITY_SCRIPT.removesuffix(".cs").removesuffix("Setup")  # class <UNITY_NAME>Setup, menu and Assets/<UNITY_NAME>
 
 CRS = _frame["crs"]
@@ -139,8 +140,12 @@ for _d in (BUILD, FEATURES, OUTPUT):  # git-ignored: absent on a fresh clone
 DEM_RES = float(_frame.get("dem_res", 0.25))  # metres
 
 LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))  # the build reads them through lidar_tiles(), which checks tiles.json
-LIDAR_LEAF_OFF = bool(_T.get("lidar", {}).get("leaf_off", False))  # deciduous crowns sparse in the CHM (detect_trees closes them)
+_lidar = _T.get("lidar", {})
+LIDAR_LEAF_OFF = bool(_lidar.get("leaf_off", False))  # deciduous crowns sparse in the CHM (detect_trees closes them)
 IMAGERY_LEAF_OFF = bool(_img.get("leaf_off", False))  # ground visible through bare crowns (vectorize.py keeps it)
+# The flags course.toml leaves out, which check_course flags: a missing flag reads as leaf-on, and leaf-off data then
+# builds without a warning (bare crowns split into several trees, bunkers under bare branches dropped).
+LEAF_OFF_UNSET = tuple(t for t, d in (("lidar", _lidar), ("imagery", _img)) if "leaf_off" not in d)
 
 # Aerial imagery covering CORE (+20 m). The pipeline reads the registered copy written by register_imagery.py; band 4
 # (NIR), when present, feeds the classifier, everything else reads bands 1-3.
@@ -208,6 +213,39 @@ def lidar_tiles():
     return LIDAR_TILES
 
 
+def lidar_crs_problems(tiles):
+    """The tiles whose header CRS is not the course frame ([frame] crs), as messages. The engine reads LiDAR coordinates
+    as they are, so tiles in State Plane feet, the neighbouring UTM zone or a national grid failed later as 'no LiDAR
+    tile covers ...', which reads as a download gap. A tile whose header names no CRS is not checked."""
+    import laspy
+    from pyproj import CRS as _CRS
+    frame = _CRS(CRS)
+    bad = {}  # problem -> tile names
+    for f in tiles:
+        with laspy.open(f) as r:
+            try:
+                tc = r.header.parse_crs()
+            except Exception:  # an odd or broken CRS record: nothing to compare
+                tc = None
+        if tc is None:
+            continue
+        h = tc.sub_crs_list[0] if tc.is_compound else tc
+        v = tc.sub_crs_list[1] if tc.is_compound and len(tc.sub_crs_list) > 1 else None
+        code = h.to_epsg()
+        if not (h.equals(frame, ignore_axis_order=True) or (code is not None and code == frame.to_epsg())):
+            why = (f"in {h.name!r}{f' (EPSG:{code})' if code else ''}, the course frame is {frame.name!r} ({CRS}, "
+                   f"courses/{SLUG}/course.toml [frame] crs): reproject the tiles to {CRS} (e.g. pdal translate with "
+                   f"filters.reprojection), or move the course to the tiles' CRS (new_course.py with --crs "
+                   f"{f'EPSG:{code}' if code else '<code>'} --dry-run prints the [frame] table to copy)")
+        elif v is not None and v.axis_info and v.axis_info[0].unit_conversion_factor != 1.0:
+            why = (f"heights in {v.axis_info[0].unit_name} ({v.name!r}): the engine reads them as metres; convert the "
+                   "tiles' heights to metres")
+        else:
+            continue
+        bad.setdefault(why, []).append(Path(f).name)
+    return [f"{len(n)} tile{'s' * (len(n) > 1)} ({', '.join(n[:3])}{', ...' * (len(n) > 3)}) {why}" for why, n in bad.items()]
+
+
 LAYOUT = _course.get("layout", f"{len(PLAYABLE)} holes")
 NINE = {h: n for n, spec in _holes_t.get("nines", {}).items() for h in _holes(spec)} or \
     {h: "Front" if h <= 9 else "Back" for h in PLAYABLE}
@@ -232,10 +270,20 @@ def tee_labels(keys):
 
 
 TEE_LABEL = tee_labels(TEE_KEYS)  # hole summaries and QA images
-SCORECARD = {int(h): tuple(v) for h, v in _T.get("scorecard", {}).items()}  # hole: (par, yards per tee...)
+# [scorecard] units: the unit of the card's distances, "yards" (the default) or "metres". The engine works in yards, so a
+# metric card is converted to whole yards here (read as yards, a 400 m hole had its markers 34 m forward).
+_card = dict(_T.get("scorecard", {}))
+SCORECARD_UNITS = _card.pop("units", "yards")
+SCORECARD_UNITS = "metres" if SCORECARD_UNITS == "meters" else SCORECARD_UNITS
+if SCORECARD_UNITS not in ("yards", "metres"):
+    sys.exit(f'courses/{SLUG}/course.toml: [scorecard] units = {SCORECARD_UNITS!r}: "yards" or "metres"')
+SCORECARD = {int(h): tuple(v) if SCORECARD_UNITS == "yards" else (*v[:1], *(round(d * YARDS_PER_M) for d in v[1:]))
+             for h, v in _card.items()}  # hole: (par, yards per tee...)
 _si = _T.get("stroke_index", {})
 HANDICAP = dict(zip(PLAYABLE, _si.get("men", ())))
-HANDICAP_WOMEN = dict(zip(PLAYABLE, _si.get("women", ())))
+if isinstance(_si.get("women"), str) and _si["women"] != "same":  # "same": one stroke index for everyone
+    sys.exit(f'courses/{SLUG}/course.toml: [stroke_index] women = {_si["women"]!r}: a list, or "same" (the men\'s)')
+HANDICAP_WOMEN = dict(HANDICAP) if _si.get("women") == "same" else dict(zip(PLAYABLE, _si.get("women", ())))
 RATINGS = {t: (*r.get("men", (None, None)), *r.get("women", (None, None)), r.get("yards"))  # (men rating, slope,
            for t, r in _T.get("ratings", {}).items()}                                      # women rating, slope, yards)
 

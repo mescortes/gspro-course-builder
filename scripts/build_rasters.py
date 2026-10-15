@@ -74,6 +74,9 @@ def pass1(ext, res):
     buckets = {k: [] for k, _ in tl}
     nx = int(np.ceil((ext["xmax"] - ext["xmin"]) / C.TILE))
     used = 0
+    bad = C.lidar_crs_problems(C.lidar_tiles())  # points are read as course-CRS metres: a tile in another CRS stops here
+    if bad:
+        sys.exit("LiDAR tiles not in the course frame:\n  " + "\n  ".join(bad))
     for f in C.lidar_tiles():
         with laspy.open(f) as r:
             h = r.header

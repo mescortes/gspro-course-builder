@@ -1,12 +1,14 @@
 """Start a new course: courses/<slug>/course.toml with the frame, extents and likely data sources filled in.
 
-  new_course.py <slug> "Course name" --region <region> (--osm way/123 [--osm way/456] | --bbox=w,s,e,n) [--force]
+  new_course.py <slug> "Course name" --region <region> (--osm way/123 [--osm way/456] | --bbox=w,s,e,n) [--crs EPSG:n] [--force]
 
 --osm names the course's OSM leisure=golf_course outline(s) (a practice area can be a second one); --bbox (lon/lat)
-stands in for a course OSM does not map. The region file's [scaffold] table gives the datum, the providers and the
-photo resolution. Found from the network: the outline, the OSM hole lines inside it, the LiDAR project(s) covering it
-(NRCan: the S3 folders that hold its tiles; USGS 3DEP: the newest project), the backdrop DEM files and the median
-ground height. Scorecard, tees, ratings and tuning are left for research (check_course.py lists what is missing).
+stands in for a course OSM does not map. The region file's [scaffold] table gives the datum, the providers, the photo
+resolution and the usual leaf state of the data. The frame is the datum's UTM zone ([scaffold] crs or --crs for a grid
+EPSG names otherwise, e.g. GDA2020 / MGA). Found from the network: the outline, the OSM hole lines inside it, the LiDAR
+project(s) covering it (NRCan: the S3 folders that hold its tiles; USGS 3DEP: the newest project), the backdrop DEM
+files and the median ground height; another provider's tables are copied from the region for you to fill in.
+Scorecard, tees, ratings and tuning are left for research (check_course.py lists what is missing).
 
 Frame (the rules Westmount was set up with): CORE = the outline + 100 m, rounded up to whole 256 m tiles and centred on
 it; TERRAIN = a 2048 m square centred on CORE (a 4097^2 GSPro heightmap at 0.5 m); ORIGIN = the CORE centre floored to
@@ -22,16 +24,46 @@ from sources.http import UA  # noqa: E402
 TILE, MARGIN, TERRAIN = 256.0, 100.0, 2048.0
 
 
-def utm_crs(lon, lat, datum):
-    """EPSG code of `datum` / UTM zone <n>N at lon/lat (the course's map frame)."""
+def utm_crs(lon, lat, datum, template=None):
+    """EPSG code of the course's map frame at lon/lat: `datum` / UTM zone <n>N|S, or the region's [scaffold] crs
+    `template` (an EPSG code, or a CRS name with {zone} and {hemisphere}, e.g. "GDA2020 / MGA zone {zone}": EPSG names
+    the UTM zones of some datums otherwise)."""
+    from pyproj.aoi import AreaOfInterest
     from pyproj.database import query_crs_info
     from pyproj.enums import PJType
     zone = int((lon + 180) // 6) + 1
-    name = f"{datum} / UTM zone {zone}{'N' if lat >= 0 else 'S'}"
+    hemisphere = "N" if lat >= 0 else "S"
+    if template and template.upper().startswith("EPSG:"):
+        return template.upper()
+    name = (template or "{datum} / UTM zone {zone}{hemisphere}").format(datum=datum, zone=zone, hemisphere=hemisphere)
     for c in query_crs_info(auth_name="EPSG", pj_types=PJType.PROJECTED_CRS):
         if c.name == name and not c.deprecated:
             return f"EPSG:{c.code}"
-    sys.exit(f"no EPSG code for {name!r}")
+    here = [c for c in query_crs_info(auth_name="EPSG", pj_types=PJType.PROJECTED_CRS, contains=True,
+                                      area_of_interest=AreaOfInterest(lon, lat, lon, lat))
+            if not c.deprecated and c.name.startswith(f"{datum} /")]
+    sys.exit(f"no EPSG CRS is named {name!r}. " + (f"The {datum} CRSs covering the course: " + "; ".join(
+        f"EPSG:{c.code} {c.name}" for c in here[:12]) + ". " if here else f"No {datum} CRS covers the course. ") +
+        "Pass the frame CRS with --crs EPSG:<code> (the CRS the LiDAR is delivered in), or set the region's "
+        "[scaffold] crs to an EPSG code or a name with {zone} / {hemisphere} (e.g. \"GDA2020 / MGA zone {zone}\").")
+
+
+def check_frame_crs(crs):
+    """`crs`, or exit: the engine reads every course coordinate as metres east / north."""
+    from pyproj import CRS
+    from pyproj.exceptions import CRSError
+    try:
+        c = CRS(crs)
+    except CRSError:
+        sys.exit(f"frame CRS {crs} (--crs or the region's [scaffold] crs): not a CRS pyproj knows (an EPSG code such "
+                 "as EPSG:2958)")
+    if not c.is_projected:
+        sys.exit(f"frame CRS {crs} ({c.name}) is not a projected CRS: the course frame is a map grid in metres")
+    if any(a.unit_conversion_factor != 1.0 for a in c.axis_info):
+        units = sorted({a.unit_name for a in c.axis_info})
+        sys.exit(f"frame CRS {crs} ({c.name}) is in {', '.join(units)}: the engine reads the frame as metres, so use a "
+                 "metre CRS of the same datum (a UTM zone or the national metre grid) and reproject the LiDAR to it")
+    return crs
 
 
 def frame(outline_xy, median_ground):
@@ -71,25 +103,38 @@ def _ranges(holes):
     return ",".join(f"{r[0]}-{r[-1]}" if len(r) > 1 else str(r[0]) for r in out)
 
 
-def course_toml(name, region_name, region, crs, fr, holes, lidar, backdrop, outline=(), notes=()):
-    """The course.toml skeleton text."""
+def course_toml(name, region_name, region, crs, fr, holes, lidar, backdrop, outline=(), notes=(), ground_known=True):
+    """The course.toml skeleton text. holes: the OSM hole refs ([] writes 1-18 marked TODO); ground_known=False marks
+    base_h TODO (no DTM gave a ground height)."""
     sc = region["scaffold"]
+    base_note = ("metres subtracted from heights in the model frame" if ground_known else
+                 "TODO: no DTM gave a ground height: set the median ground height (m) rounded to 5 m")
     lines = [f"# {name}. Skeleton written by new_course.py: check every value, then run check_course.py.", ""]
     lines += [f"# {n}" for n in notes] + ([""] if notes else [])
     lines += ["[course]", f"name = {_toml(name)}", f"region = {_toml(region_name)}", "",
               "[frame]", f"crs = {_toml(crs)}", f"crs_label = {_toml(crs + '; heights ' + sc['vertical'] + ' (m)')}",
-              f"origin = {_toml(fr['origin'])}", f"base_h = {_toml(fr['base_h'])}  # metres subtracted from heights in the model frame",
+              f"origin = {_toml(fr['origin'])}", f"base_h = {_toml(fr['base_h'])}  # {base_note}",
               f"core = {_toml(fr['core'])}  # the outline + 100 m, whole 256 m tiles",
               f"terrain = {_toml(fr['terrain'])}  # 2048 m GSPro terrain square", ""]
     if outline:
         lines += ["[osm]", f"outline = {_toml(list(outline))}  # this course's leisure=golf_course outline(s)", ""]
+    # leaf-off LiDAR / photo change the tree detection and the surfaces under canopy: the region's usual data is only a
+    # guess for this course
+    lines += ["[lidar]", f"leaf_off = {_toml(sc['lidar_leaf_off'])}  # regions/{region_name}.toml's usual LiDAR: check the "
+              "flight dates (true = flown with the deciduous trees bare)", ""]
     lines += ["[sources.lidar]"] + [f"{k} = {_toml(v)}" for k, v in lidar.items()] + [""]
     lines += ["[sources.imagery]"] + [f"{k} = {_toml(v)}" for k, v in sc["imagery"].items()] + [""]
     lines += ["[sources.backdrop]"] + [f"{k} = {_toml(v)}" for k, v in backdrop.items()] + [""]
     lines += ["[imagery]", 'raw = "photo.tif"', 'registered = "photo_reg.tif"', f"res = {_toml(sc['imagery_res'])}",
-              "shift = [0.0, 0.0]  # measure_registration.py after the first build", ""]
-    lines += ["[holes]", f'playable = "{_ranges(holes)}"', "", "# [[tees]] key / name / colour / gkd_slot, back to front",
-              "# [scorecard] hole = [par, yards per tee...]; [stroke_index] men / women; [ratings]: from research", ""]
+              "shift = [0.0, 0.0]  # measure_registration.py after the first build (it prints the line to paste)",
+              f"leaf_off = {_toml(sc['imagery_leaf_off'])}  # regions/{region_name}.toml's usual photo: check the photo "
+              "date (true = taken with the deciduous trees bare)", ""]
+    play = (f'playable = "{_ranges(holes)}"' if holes else
+            'playable = "1-18"  # TODO: OSM has no golf=hole lines here: set the course\'s holes')
+    lines += ["[holes]", play, "", "# [[tees]] key / name / colour / gkd_slot, back to front",
+              '# [scorecard] units = "yards" (or "metres", as the card gives them); hole = [par, distance per tee...]',
+              '# [stroke_index] men / women (women = "same" for one index); [ratings] tee = { men = [rating, slope], '
+              "women = [...], yards = the tee's total in yards } ({} for an unrated tee): from research", ""]
     return "\n".join(lines)
 
 
@@ -173,7 +218,7 @@ def usgs_dem(bbox_ll, project):
 
 
 def median_ground(dtm_urls, crs, ext, res=10.0):
-    """Median of the DTM over ext (course CRS), read from the COGs."""
+    """Median of the DTM over ext (course CRS), read from the COGs; None when no DTM covers it."""
     import numpy as np, rasterio
     from rasterio.transform import from_origin
     from rasterio.vrt import WarpedVRT
@@ -191,7 +236,66 @@ def median_ground(dtm_urls, crs, ext, res=10.0):
             except rasterio.errors.RasterioIOError:
                 continue
     v = np.concatenate(vals) if vals else np.array([])
-    return float(np.median(v)) if v.size else 0.0
+    return float(np.median(v)) if v.size else None
+
+
+def load_region(name):
+    """regions/<name>.toml, or exit naming the known regions or what its [scaffold] lacks."""
+    import region_spec
+    path = ROOT / "regions" / f"{name}.toml"
+    try:
+        with open(path, "rb") as f:
+            region = tomllib.load(f)
+    except FileNotFoundError:
+        known = sorted(p.stem for p in (ROOT / "regions").glob("*.toml"))
+        sys.exit(f"--region {name}: no regions/{name}.toml (regions/ has {', '.join(known) or 'none'}; "
+                 "regions/TEMPLATE.toml.example starts a new one)")
+    except tomllib.TOMLDecodeError as e:
+        sys.exit(f"regions/{name}.toml: {e}")
+    bad = region_spec.scaffold_problems(region)
+    if bad:
+        sys.exit(f"regions/{name}.toml: " + "; ".join(bad) + " (see regions/TEMPLATE.toml.example)")
+    return region
+
+
+def discover_sources(sc, fr, bbox_ll, crs, zone):
+    """([sources.lidar], [sources.backdrop], notes) for the course: the LiDAR projects and backdrop DEM files found
+    for the region's providers (NRCan, USGS 3DEP), or the region's [scaffold] tables as they are for a provider
+    new_course.py cannot search. Exits when no LiDAR project covers the course."""
+    from pyproj import Transformer
+    provider, notes = sc["lidar"]["provider"], []
+    if provider == "nrcan_copc":
+        province = sc["lidar"]["province"]
+        projects = nrcan_projects(fr["core"], zone, province)
+        if not projects:
+            sys.exit(f"no NRCan point-cloud folder under pointclouds_nuagespoints/{province}/ holds the course's 1 km "
+                     f"tiles (zone {zone}): check --osm / --bbox, or the region's [scaffold] lidar")
+        lidar = {"provider": "nrcan_copc", "zone": zone, "projects": projects}
+        dtm = [sc["backdrop"]["url"].format(province=province, project=p["folder"].split("/", 1)[1], kind="dtm")
+               for p in projects]
+        backdrop = {"provider": "cog_dem", "dtm": dtm, "dsm": [u.replace("-1m-dtm.tif", "-1m-dsm.tif") for u in dtm]}
+        notes.append("LiDAR folders: " + ", ".join(p["folder"] for p in projects) +
+                     " (folder names do not tell the flight date: read the points' GPS times)")
+    elif provider == "usgs_3dep":
+        projects = usgs_projects(bbox_ll)
+        if not projects:
+            sys.exit(f"no USGS 3DEP point-cloud project covers {bbox_ll} (TNM API; retry if it was down): check --osm / "
+                     "--bbox, or the region's [scaffold] lidar")
+        lidar = {"provider": "usgs_3dep", "project": projects[0][0]}
+        bt = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+        b = fr["terrain"]; cx, cy = (b["xmin"] + b["xmax"]) / 2, (b["ymin"] + b["ymax"]) / 2
+        bl = [bt.transform(cx + dx, cy + dy) for dx in (-2500, 2500) for dy in (-2500, 2500)]
+        dem = usgs_dem((min(p[0] for p in bl), min(p[1] for p in bl), max(p[0] for p in bl), max(p[1] for p in bl)), lidar["project"])
+        backdrop = {"provider": "cog_dem", "dtm": dem}
+        notes.append("3DEP projects, newest first: " + ", ".join(f"{p} ({d})" for p, d in projects))
+        if not dem:
+            notes.append(f"TODO: no 3DEP 1 m DEM named for {lidar['project']}: list the backdrop DTM files in "
+                         "[sources.backdrop] dtm")
+    else:  # a provider with no search here: the region's tables as they are
+        lidar, backdrop = dict(sc["lidar"]), dict(sc["backdrop"])
+        notes.append(f"TODO: new_course.py cannot search provider {provider!r}: [sources.lidar] and [sources.backdrop] "
+                     f"are the region's [scaffold] tables; fill in this course's tiles (scripts/sources/{provider}.py)")
+    return lidar, backdrop, notes
 
 
 def main(argv=None):
@@ -199,13 +303,14 @@ def main(argv=None):
     ap.add_argument("slug"); ap.add_argument("name"); ap.add_argument("--region", required=True)
     ap.add_argument("--osm", action="append", default=[]); ap.add_argument("--bbox")
     ap.add_argument("--force", action="store_true"); ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--crs", help="the course frame, e.g. EPSG:7856 (default: the region's datum in the UTM zone)")
     a = ap.parse_args(argv)
     if not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", a.slug) or a.slug.endswith("-test"):
         sys.exit("slug: lower-case words joined by '-', not ending in '-test'")
     out = ROOT / "courses" / a.slug / "course.toml"
     if out.exists() and not (a.force or a.dry_run):
         sys.exit(f"{out} exists (--force to overwrite)")
-    region = tomllib.load(open(ROOT / "regions" / f"{a.region}.toml", "rb"))
+    region = load_region(a.region)
     sc = region["scaffold"]
     if a.osm:
         rings = osm_outline(a.osm)
@@ -216,7 +321,7 @@ def main(argv=None):
     else:
         sys.exit("--osm or --bbox")
     lon = sum(p[0] for p in ll) / len(ll); lat = sum(p[1] for p in ll) / len(ll)
-    crs = utm_crs(lon, lat, sc["datum"])
+    crs = check_frame_crs(a.crs or utm_crs(lon, lat, sc["datum"], sc.get("crs")))
     from pyproj import Transformer
     tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
     xy = [tr.transform(*p) for p in ll]
@@ -226,27 +331,12 @@ def main(argv=None):
     holes = osm_holes(bbox_ll) if a.osm else []
     notes.append(f"OSM: {len(holes)} golf=hole refs inside the outline box" + (f" ({_ranges(holes)})" if holes else
                  " - draw the holes in courses/<slug>/features/golf.geojson"))
-    holes = holes or list(range(1, 19))
     zone = int((lon + 180) // 6) + 1
-    if sc["lidar"]["provider"] == "nrcan_copc":
-        projects = nrcan_projects(fr["core"], zone, sc["lidar"]["province"])
-        lidar = {"provider": "nrcan_copc", "zone": zone, "projects": projects}
-        dtm = [sc["backdrop"]["url"].format(province=sc["lidar"]["province"], project=p["folder"].split("/", 1)[1], kind="dtm")
-               for p in projects]
-        backdrop = {"provider": "cog_dem", "dtm": dtm, "dsm": [u.replace("-1m-dtm.tif", "-1m-dsm.tif") for u in dtm]}
-        notes.append("LiDAR folders: " + (", ".join(p["folder"] for p in projects) or "none found") +
-                     " (folder names do not tell the flight date: read the points' GPS times)")
-    else:
-        projects = usgs_projects(bbox_ll)
-        lidar = {"provider": "usgs_3dep", "project": projects[0][0] if projects else "?"}
-        bt = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
-        b = fr["terrain"]; cx, cy = (b["xmin"] + b["xmax"]) / 2, (b["ymin"] + b["ymax"]) / 2
-        bl = [bt.transform(cx + dx, cy + dy) for dx in (-2500, 2500) for dy in (-2500, 2500)]
-        dem = usgs_dem((min(p[0] for p in bl), min(p[1] for p in bl), max(p[0] for p in bl), max(p[1] for p in bl)), lidar["project"])
-        backdrop = {"provider": "cog_dem", "dtm": dem}
-        notes.append("3DEP projects, newest first: " + ", ".join(f"{p} ({d})" for p, d in projects))
-    fr = frame(xy, median_ground(backdrop["dtm"], crs, fr["core"]))
-    text = course_toml(a.name, a.region, region, crs, fr, holes, lidar, backdrop, a.osm, notes)
+    lidar, backdrop, found = discover_sources(sc, fr, bbox_ll, crs, zone)
+    notes += found
+    ground = median_ground(backdrop.get("dtm") or [], crs, fr["core"])
+    fr = frame(xy, 0.0 if ground is None else ground)
+    text = course_toml(a.name, a.region, region, crs, fr, holes, lidar, backdrop, a.osm, notes, ground_known=ground is not None)
     if a.dry_run:
         print(text); return
     out.parent.mkdir(parents=True, exist_ok=True)
