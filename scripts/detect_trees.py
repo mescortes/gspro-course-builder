@@ -18,13 +18,9 @@ from rasterio.enums import Resampling
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
-from surface_classify import osm_geoms
+from surface_classify import osm_geoms, VEG_CLASSES   # VEG_CLASSES: the ASPRS classes of the tree returns ([tuning])
 
 MIN_H = 2.5
-# ASPRS classes of the tree returns: 1 (unclassified: the Ontario and USGS QL2 tiles leave vegetation there) and 3-5
-# (low / medium / high vegetation: Spain PNOA, Denmark, many 3DEP QL1 projects). Ground is 2; buildings, noise, water,
-# bridges and overlap stay out. course.toml [tuning] lidar_vegetation_classes for a programme that uses others (0).
-VEG_CLASSES = C.tuning("lidar_vegetation_classes", (1, 3, 4, 5))
 
 
 def smooth_chm(chm, r, leaf_off=None):
