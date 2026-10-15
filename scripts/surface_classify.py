@@ -176,8 +176,11 @@ def osm_label_raster(W, H, T, chm):
     feats = polys(lambda t: t.get("golf") in ("green", "fairway", "tee", "bunker", "water_hazard") or t.get("natural") == "water")
     feat_m = rasterize([(g, 1) for g in feats], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if feats else np.zeros((H, W), bool)
     # unlabelled bands where the real edge of a path/road is unknown (OSM gives centre lines only)
+    # a golf=cartpath is a cart path whatever its highway tag (Whistle Bear: golf=cartpath + highway=service)
+    road = lambda t: t.get("highway") in ("service", "residential", "tertiary", "secondary", "unclassified",
+                                          "secondary_link", "motorway") and t.get("golf") != "cartpath"
     lines = polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway"), 1.8) + \
-        polys(lambda t: t.get("highway") in ("service", "residential", "tertiary", "secondary", "unclassified", "secondary_link", "motorway"), 6.0)
+        polys(road, 6.0)
     line_m = rasterize([(g, 1) for g in lines], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if lines else np.zeros((H, W), bool)
     rough = course_m & ~ndimage.binary_dilation(feat_m, iterations=int(4 / C.DEM_RES)) & ~line_m & (chm < 0.5)
     lab[rough] = CID["rough"]
@@ -187,7 +190,7 @@ def osm_label_raster(W, H, T, chm):
     burn(polys(lambda t: t.get("golf") == "bunker"), CID["bunker"], 0.5)
     burn(polys(lambda t: t.get("golf") == "water_hazard" or t.get("natural") == "water"), CID["water"], 1.0)
     burn(polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway"), 0.6), CID["cartpath"], 0)
-    burn(polys(lambda t: t.get("highway") in ("service", "residential", "tertiary", "secondary", "unclassified", "secondary_link", "motorway"), 2.5), CID["road"], 0)
+    burn(polys(road, 2.5), CID["road"], 0)
     burn(polys(lambda t: t.get("amenity") == "parking"), CID["road"], 1.0)
     burn(polys(lambda t: "building" in t), CID["building"], 1.0)
     lab[(chm > 3.0) & ~np.isin(lab, [CID["building"]])] = CID["tree"]

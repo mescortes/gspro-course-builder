@@ -1,0 +1,123 @@
+# Whistle Bear Golf Club, 1316 Dickie Settlement Road, Cambridge, Ontario (architect John Robinson), with its practice
+# facility (Golf Academy: driving range, target greens, short-game area). Frame and sources from new_course.py; the facts
+# below are from Phase 0 research (2026-10-14), see research/NOTES.md.
+
+[course]
+name = "Whistle Bear Golf Club"
+short = "Whistle Bear"
+layout = "18 holes + practice facility"
+model_name = "whistle_bear"
+region = "southern_ontario"
+
+[frame]
+# NAD83(CSRS) / UTM zone 17N, the frame of the Ontario LiDAR; heights CGVD2013 (m)
+crs = "EPSG:2958"
+crs_label = "NAD83(CSRS) / UTM zone 17N (EPSG:2958); heights CGVD2013 (m)"
+origin = [548650.0, 4801850.0]
+base_h = 305.0  # metres subtracted from heights in the model frame
+core = { xmin = 547930.0, ymin = 4801100.0, xmax = 549466.0, ymax = 4802636.0 }  # the outline + 100 m, whole 256 m tiles
+terrain = { xmin = 547674.0, ymin = 4800844.0, xmax = 549722.0, ymax = 4802892.0 }  # 2048 m GSPro terrain square
+
+[osm]
+outline = ["way/152133739", "way/382278772"]  # the course; the practice facility 89 m north (unnamed in OSM)
+
+[sources.lidar]
+# OMAFRA Lidar 2016-18, Lake Erie package: the course tiles flown 2017-11-21 (leaf-off), 1 km COPC tiles from NRCan
+# CanElevation. Licence: Open Government Licence - Ontario / - Canada.
+provider = "nrcan_copc"
+zone = 17
+projects = [{ folder = "ON/Lake_Erie_Fall_2017", suffix = "2017LLAKEERIE" }]
+
+[sources.imagery]
+# Ontario SWOOP 2025 (Geospatial Ontario), 16 cm, R G B NIR, flown 2025-04-07 over the course.
+provider = "arcgis_imageserver"
+url = "https://ws.geoservices.lrc.gov.on.ca/arcgis5/rest/services/AerialImagery/GEO_Imagery_Data_Service_2023to2027/ImageServer"
+mosaic_rule = { mosaicMethod = "esriMosaicNorthwest", where = "Project='SWOOP2025'" }
+bands = [0, 1, 2, 3]  # R, G, B, NIR
+
+[sources.backdrop]
+# NRCan HRDEM 1 m DTM / DSM from the same 2017 survey.
+provider = "cog_dem"
+dtm = ["https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/ON-Lake_Erie_Fall_2017-1m-dtm.tif"]
+dsm = ["https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/ON-Lake_Erie_Fall_2017-1m-dsm.tif"]
+
+[lidar]
+leaf_off = true  # November 2017 flights: deciduous crowns are sparse in the CHM (detect_trees.py closes them)
+
+[imagery]
+# Ontario SWOOP 2025, 0.16 m, 4 bands (R, G, B, NIR), native EPSG:2958, Open Government Licence - Ontario.
+raw = "swoop2025_course.tif"
+registered = "swoop2025_course_reg.tif"
+res = 0.16
+shift = [0.0, 0.0]  # measure_registration.py after the first build
+leaf_off = true  # spring photo: the ground is visible through the bare crowns
+credit = "Contains information licensed under the Open Government Licence - Ontario (SWOOP 2025 orthoimagery)"
+
+[holes]
+playable = "1-18"
+nines = { Front = "1-9", Back = "10-18" }
+
+[[tees]]
+key = "black"
+name = "Black"
+colour = "#1a1a1a"
+gkd_slot = "Black"  # GreenKeeper TeeType (GKD tee slot)
+
+[[tees]]
+key = "gold"
+name = "Gold"
+colour = "#d4a017"
+gkd_slot = "Yellow"
+
+[[tees]]
+key = "blue"
+name = "Blue"
+colour = "#2a52be"
+gkd_slot = "Blue"
+
+[[tees]]
+key = "white"
+name = "White"
+colour = "#f5f5f5"
+gkd_slot = "White"
+
+[[tees]]
+key = "red"
+name = "Red"
+colour = "#c8102e"
+gkd_slot = "Red"
+
+# Club card WB-ScoreCard-2021.pdf (linked from whistlebear.ca/golf/course-layout, re-uploaded 2026-05 unchanged): par 72;
+# Black 7562, Gold 6966 (the card prints 6936), Blue 6422, White 5831, Red 5111. hole = [par, black, gold, blue, white, red]
+[scorecard]
+1 = [4, 468, 424, 410, 388, 342]
+2 = [4, 406, 404, 390, 368, 336]
+3 = [5, 610, 567, 500, 480, 410]
+4 = [4, 436, 395, 364, 332, 297]
+5 = [3, 236, 182, 132, 108, 86]
+6 = [4, 478, 428, 404, 313, 282]
+7 = [4, 401, 376, 360, 330, 300]
+8 = [3, 172, 162, 147, 132, 90]
+9 = [5, 512, 502, 472, 464, 394]
+10 = [4, 417, 384, 343, 314, 287]
+11 = [4, 442, 405, 376, 340, 324]
+12 = [5, 522, 491, 472, 449, 384]
+13 = [4, 403, 373, 337, 306, 272]
+14 = [3, 238, 204, 188, 138, 105]
+15 = [4, 468, 414, 376, 346, 304]
+16 = [5, 635, 593, 555, 495, 458]
+17 = [3, 212, 196, 166, 144, 100]
+18 = [4, 506, 466, 430, 384, 340]
+
+[stroke_index]  # the 2021 card
+men = [3, 1, 11, 7, 17, 5, 9, 13, 15, 6, 10, 16, 12, 18, 8, 4, 14, 2]
+women = [3, 1, 11, 9, 15, 13, 7, 17, 5, 6, 10, 2, 14, 18, 12, 8, 16, 4]
+
+# Men: Golf Ontario certificate effective 2016-08-19; women: the club's 2017 card. Gold, Blue and White were rated at
+# their pre-2019 par-71 lengths (no newer public rating: Golf Canada Score Centre needs a member login).
+[ratings]  # tee = { men = [rating, slope], women = [rating, slope], yards }
+black = { men = [76.7, 137], yards = 7562 }
+gold = { men = [73.6, 130], yards = 6936 }
+blue = { men = [71.1, 126], women = [77.2, 136], yards = 6414 }
+white = { men = [67.8, 121], women = [73.5, 127], yards = 5803 }
+red = { men = [64.5, 107], women = [69.2, 118], yards = 5111 }
