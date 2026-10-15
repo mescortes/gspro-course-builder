@@ -163,6 +163,20 @@ def test_a_fairway_shared_by_several_holes_is_split_between_their_corridors():
     assert o is own, "a fairway one line runs through is left whole, for the nearest-line assignment"
 
 
+def test_a_shared_fairway_split_leaves_no_shards():
+    """The corridor boundary can cut a small piece off a fairway's ragged edge (Brambles: 0.1 to 35 m2 pieces), a
+    fairway smaller than any vectorize keeps. A shard joins the piece it shares the longest edge with."""
+    from shapely.geometry import LineString, Point, box
+    from shapely.ops import unary_union
+    lines = {13: LineString([(0, 0), (0, 300)]), 14: LineString([(60, 0), (60, 300)])}
+    fw = unary_union([box(-20, 0, 29, 300), box(31, 0, 80, 300), box(29, 140, 31, 160),     # two fairways, joined
+                      box(25, 300, 27, 310), box(25, 310, 34, 312)])                       # a hook over the boundary
+    out = V.split_shared_fairways([fw], lines)
+    assert min(p.area for p, _ in out) >= 0.25 * V.MIN_AREA["fairway"]
+    assert abs(sum(p.area for p, _ in out) - fw.area) < 1e-6
+    assert next(h for p, h in out if p.distance(Point(33, 311)) < 1e-9) == 13, "the hook's tip stays with its hole"
+
+
 def test_a_line_clipping_a_fairway_corner_does_not_take_a_sliver():
     """A neighbouring line of play that just clips a fairway (a green or tee beside it) takes no part smaller than a
     fairway; the polygon stays whole."""

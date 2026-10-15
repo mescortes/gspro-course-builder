@@ -238,8 +238,20 @@ def split_shared_fairways(fairways, lines, min_part=None, step=2.0):
         if len(parts) < 2:
             out.append((p, None))
             continue
-        for h, q in parts.items():
-            out.extend((r, h) for r in polys_of(q))
+        # a shard the corridor boundary cuts off a ragged edge (smaller than any fairway part vectorize keeps) joins
+        # the piece it shares the longest edge with
+        speck = 0.25 * MIN_AREA["fairway"]
+        pieces = sorted(((r, h) for h, q in parts.items() for r in polys_of(q)), key=lambda x: -x[0].area)
+        keep = [[r, h] for r, h in pieces if r.area >= speck]
+        for r, h in pieces:
+            if r.area >= speck:
+                continue
+            edge = max(((r.boundary.intersection(k[0].boundary).length, i) for i, k in enumerate(keep)), default=(0, 0))
+            if edge[0] > 0:
+                keep[edge[1]][0] = keep[edge[1]][0].union(r)
+            else:
+                keep.append([r, h])
+        out.extend((r, h) for r, h in keep)
     return out
 
 
