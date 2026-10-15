@@ -34,7 +34,16 @@ NAVD88. Hole notes: research/hole_descriptions.json (playing reports and golfcou
 * Fixed in the engine since: connected fairways are split between holes; unmapped and drafted bunkers must be closed
   hollows (channels are not); bunkers on this coarse photo are cut to their LiDAR pans; two tee sets never share one
   marker spot; no synthetic tee decks.
-* Open: the green outlines of holes 3 and 5 take in banks (green slope p95 14 and 16 %, max 19 and 27 %).
+* Open after round 1: the green outlines of holes 3 and 5 took in banks (green slope p95 14 and 16 %).
+
+## QA round 2 (157 override features)
+
+* Hole 5's green banks cut (p95 16.5 -> 10.5 %); hole 3's p95 of 14.3 % is the real tier between its south-west lobe
+  and the main body, so course.toml [tests] allows green slope p95 up to 15 %. A Back deck on hole 2, false bunkers,
+  tree shadows taken for water, dry hillside taken for fairway.
+* Left for the engine (seen on several holes): dry tan meadow and bare soil classified as fairway or native, tree
+  shadows classified as water, tee pads that take in the banks around their decks, markers placed on deck rims,
+  bare soil with 0.1 m of relief passing the bunker hollow test, the clubhouse road and parking modelled as rough.
 
 ## Open card questions
 

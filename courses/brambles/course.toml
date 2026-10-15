@@ -129,6 +129,8 @@ gkd_slot = "Red"
 [tests]
 green_area = [120.0, 2000.0]
 min_bunkers = 20  # few, large bunkers: 25 over 40 m2 after the closed-hollow check (Westmount: 40)
+green_slope_max = [7.0, 15.0]  # bold Coore & Crenshaw tiers: the 3rd green's tier between its south-west lobe and
+                                # the main body gives p95 14.3 % in the LiDAR; 8, 13 and 10 are 13.1-13.5 % (Westmount: 14)
 known_tee_gaps = { "1.back" = 8.0, "1.middle" = 12.0, "7.back" = 40.0, "7.middle" = 57.0, "18.middle" = 10.0 }
 
 [stroke_index]  # the feed's handicap row (the women's row is the same)
