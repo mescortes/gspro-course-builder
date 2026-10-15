@@ -291,6 +291,21 @@ def gkd_hole(h, hmin):
             "bunkers": [{"coords": ring3d(z["polygon_utm"], hmin, 2.0)} for z in h["hazards"] if z["type"] == "bunker"]}
 
 
+def gkd_ratings(ratings, slots):
+    """GreenKeeper 'rating/slope' strings per tee slot: {slot}SR (men) and {slot}SR_women, each only where rated (a
+    tee can be rated for women only, Brambles Front). ratings: config.RATINGS, slots: card tee -> GKD slot."""
+    sr = {}
+    for k, slot in slots.items():
+        r = ratings.get(k)
+        if not r:
+            continue
+        if r[0] is not None:
+            sr[f"{slot}SR"] = f"{r[0]:.1f}/{r[1]}"
+        if r[2] is not None:
+            sr[f"{slot}SR_women"] = f"{r[2]:.1f}/{r[3]}"
+    return sr
+
+
 def greenkeeper(hmin):
     """greenkeeper.json: per hole tees / pins / aim points / hazards in Unity terrain coordinates, plus a 'gkd' view in
     GreenKeeper's own vocabulary (tee slots, rating/slope strings, Thursday-Sunday pins, pOOB ring, 3D hazard rings)
@@ -314,13 +329,7 @@ def greenkeeper(hmin):
     from surface_classify import osm_geoms
     course = max((g for _, t, g in osm_geoms() if t.get("leisure") == "golf_course" and g.geom_type == "Polygon"),
                  key=lambda g: g.area, default=None)
-    sr = {}
-    for k, slot in GKD_TEE_SLOT.items():
-        r = C.RATINGS.get(k)
-        if r:
-            sr[f"{slot}SR"] = f"{r[0]:.1f}/{r[1]}"
-            if r[2] is not None:
-                sr[f"{slot}SR_women"] = f"{r[2]:.1f}/{r[3]}"
+    sr = gkd_ratings(C.RATINGS, GKD_TEE_SLOT)
     gk = {"course": C.COURSE_NAME, "layout": C.LAYOUT, "frame": "Unity terrain (x east, y up, z north) metres",
           "tee_sets": [{"key": k, "name": n, "colour": c} for k, n, c in C.TEES],
           "ratings": {k: dict(zip(("men_rating", "men_slope", "women_rating", "women_slope", "total_yards"), v)) for k, v in C.RATINGS.items()},
