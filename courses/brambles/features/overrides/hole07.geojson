@@ -669,6 +669,154 @@
     "reason": "Not a pond: the 72 m2 \"water\" right of the 7th tee shot (E 537140-537153, N 4290830-4290848) is the shadow of the oak clump just south of it (photo RGB ~58/58/64, canopy height 0 inside it); dem_raw falls 1.8 m across it, so there is no water surface.",
     "frame": "lidar"
    }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "surface": "fairway",
+    "hole": 7,
+    "reason": "Not a tee: the 59 m2 hole-7 \"tee\" at the north-west tip of the 7th fairway (E 537204-537219, N 4290900-4290908) is the drafted pad around the 18Birdies Front point, which round 1 rejected (the Front plays from the deck at E 537160 and measures 449 / 449). dem_raw shows no deck: the ground falls 7 % to the north-west across it (303.4 -> 302.9 m over 6 m) and the photo shows the same zoysia as the fairway around it, which bounds 26 of its 35 m perimeter. Burned as hole-7 fairway, 0.3 m wider so no tee sliver is left. Verified round 2: dem_raw slope 6.7 % median over the pad, no raised deck (pad 303.13 m vs surround 303.16 m); the Front marker stays on the E 537160 deck (449 / 449). Clipped to the tee and the hole-7 fairway so no rough edge is changed.",
+    "frame": "lidar"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       537204.21,
+       4290902.74
+      ],
+      [
+       537204.34,
+       4290902.87
+      ],
+      [
+       537204.54,
+       4290902.71
+      ],
+      [
+       537206.69,
+       4290904.94
+      ],
+      [
+       537208.12,
+       4290906.26
+      ],
+      [
+       537209.51,
+       4290906.96
+      ],
+      [
+       537209.96,
+       4290907.03
+      ],
+      [
+       537210.35,
+       4290907.21
+      ],
+      [
+       537212.27,
+       4290907.2
+      ],
+      [
+       537212.08,
+       4290907.45
+      ],
+      [
+       537212.51,
+       4290907.46
+      ],
+      [
+       537213.49,
+       4290906.88
+      ],
+      [
+       537215.31,
+       4290905.25
+      ],
+      [
+       537216.99,
+       4290905.75
+      ],
+      [
+       537218.08,
+       4290905.77
+      ],
+      [
+       537218.77,
+       4290905.4
+      ],
+      [
+       537219.04,
+       4290904.76
+      ],
+      [
+       537218.47,
+       4290904.05
+      ],
+      [
+       537217.11,
+       4290903.2
+      ],
+      [
+       537215.97,
+       4290902.11
+      ],
+      [
+       537214.87,
+       4290901.42
+      ],
+      [
+       537214.27,
+       4290900.61
+      ],
+      [
+       537213.67,
+       4290900.3
+      ],
+      [
+       537209.61,
+       4290899.97
+      ],
+      [
+       537207.71,
+       4290900.06
+      ],
+      [
+       537207.18,
+       4290900.41
+      ],
+      [
+       537206.83,
+       4290901.74
+      ],
+      [
+       537206.41,
+       4290902.19
+      ],
+      [
+       537206.03,
+       4290902.24
+      ],
+      [
+       537205.37,
+       4290901.76
+      ],
+      [
+       537205.01,
+       4290901.71
+      ],
+      [
+       537204.37,
+       4290902.23
+      ],
+      [
+       537204.21,
+       4290902.74
+      ]
+     ]
+    ]
+   }
   }
  ]
 }

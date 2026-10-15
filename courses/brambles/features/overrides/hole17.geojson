@@ -633,6 +633,94 @@
      ]
     ]
    }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "surface": "tee",
+    "hole": 17,
+    "reason": "17th Middle tee deck: the raised oval deck E 536614-536636 N 4291413-4291437 (dem_raw top 300.3-300.7, 0.3-0.5 m above the ground around, median slope 3 %), pale zoysia in the photo; the 18Birdies Middle point and the marker are on its east side. Only its east third is tee 17: the west two thirds (about 270 m2) are 'fairway 16'.",
+    "frame": "lidar"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       536619.0,
+       4291437.0
+      ],
+      [
+       536624.0,
+       4291437.5
+      ],
+      [
+       536628.0,
+       4291436.0
+      ],
+      [
+       536631.0,
+       4291433.0
+      ],
+      [
+       536633.5,
+       4291429.0
+      ],
+      [
+       536635.0,
+       4291424.0
+      ],
+      [
+       536636.0,
+       4291419.0
+      ],
+      [
+       536635.5,
+       4291415.0
+      ],
+      [
+       536633.0,
+       4291413.0
+      ],
+      [
+       536626.0,
+       4291412.8
+      ],
+      [
+       536618.0,
+       4291413.0
+      ],
+      [
+       536614.5,
+       4291414.0
+      ],
+      [
+       536613.5,
+       4291418.0
+      ],
+      [
+       536613.5,
+       4291423.0
+      ],
+      [
+       536614.0,
+       4291428.0
+      ],
+      [
+       536615.5,
+       4291432.0
+      ],
+      [
+       536617.0,
+       4291435.0
+      ],
+      [
+       536619.0,
+       4291437.0
+      ]
+     ]
+    ]
+   }
   }
  ]
 }

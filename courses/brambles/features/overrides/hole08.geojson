@@ -1377,6 +1377,82 @@
     "reason": "Missing 45 m of the gravel path right of the 8th green, between the modelled piece along the green (ends N 4291053) and the one by the 9th back tee (starts N 4291089); continuous grey strip in the photo and a shallow cut in dem_raw.",
     "frame": "lidar"
    }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "surface": "cartpath",
+    "hole": 98,
+    "reason": "Missing 50 m of the gravel track that crosses between the 8th front tee and the 8th fairway (E 537555-537610, N 4290937-4290944): the modelled pieces end at E 537560 (from the west) and start at E 537607 (toward the right of hole 8), with a further gap up to the branch that runs north-east (starts N 4290950). The photo shows one continuous grey strip and NDVI is negative (bare) across it on transects every 6 m (N 4290937.5-4290943.5); dem_raw is a flat track bed. Drawn 5-6 m wide on the bare core, plus the junction with the north-east branch; cut 0.3 m off the 8th front tee. Verified round 2: photo NDVI -0.06 and grey-tan inside, the strip joins the modelled track ends at E 537559 and E 537607 and the NE branch at N 4290950; it touches no tee, fairway or native polygon.",
+    "frame": "lidar"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       537555.0,
+       4290944.2
+      ],
+      [
+       537558.5,
+       4290945.0
+      ],
+      [
+       537566.0,
+       4290951.5
+      ],
+      [
+       537574.5,
+       4290951.5
+      ],
+      [
+       537576.0,
+       4290944.0
+      ],
+      [
+       537585.0,
+       4290942.8
+      ],
+      [
+       537598.0,
+       4290943.8
+      ],
+      [
+       537610.0,
+       4290943.2
+      ],
+      [
+       537610.0,
+       4290938.3
+      ],
+      [
+       537598.0,
+       4290938.3
+      ],
+      [
+       537585.0,
+       4290937.0
+      ],
+      [
+       537570.0,
+       4290937.6
+      ],
+      [
+       537556.0,
+       4290937.8
+      ],
+      [
+       537555.0,
+       4290940.0
+      ],
+      [
+       537555.0,
+       4290944.2
+      ]
+     ]
+    ]
+   }
   }
  ]
 }
