@@ -292,7 +292,29 @@ def leaf_off_parkland(P, nd, prm):
     return out
 
 
-CLASSIFIERS = {"leaf_off_parkland": leaf_off_parkland}
+def leaf_on_woodland(P, nd, prm):
+    """Leaf-on oak woodland (Northern California): archetype names per tree. With leaves on, penetration no longer
+    separates evergreens; crown form does. Pines (gray pine: tall, narrow, sparse open needles) pass many pulses through
+    a narrow crown; the oaks are told apart by size: the big, broad crowns ('big': valley oak) and the rest ('other':
+    live / blue oak); under shrub_h m: 'shrub' (chaparral)."""
+    names = prm["names"]
+    h, pen = P["height"], P["penetration"]
+    ratio = P["crown_r"] / np.maximum(h, 1)
+    pine = (h >= prm["pine_min_h"]) & (ratio <= prm["pine_max_ratio"]) & (pen >= prm["pine_min_pen"])
+    out = []
+    for i in range(len(h)):
+        if h[i] < prm["shrub_h"]:
+            out.append(names["shrub"])
+        elif pine[i]:
+            out.append(names["pine"])
+        elif h[i] >= prm["big_h"]:
+            out.append(names["big"])
+        else:
+            out.append(names["other"])
+    return out
+
+
+CLASSIFIERS = {"leaf_off_parkland": leaf_off_parkland, "leaf_on_woodland": leaf_on_woodland}
 
 
 if __name__ == "__main__":

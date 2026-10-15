@@ -97,6 +97,28 @@ def test_cleared_tree_list_is_reviewed_and_local():
         assert p.get("note") and p.get("hole") in (5, 8) and f["geometry"]["type"] == "Point"
 
 
+def test_leaf_on_woodland_rules_separate_oaks_and_pines():
+    """Northern California oak woodland (Brambles: leaf-on LiDAR, Sept 2023): gray pines are tall, narrow and open
+    (the pulses pass their sparse needles), valley oaks big and broad, live oaks smaller dense rounded crowns."""
+    rng = np.random.default_rng(5)
+    rows = []
+    for k in range(30):   # valley oaks
+        rows.append(dict(height=rng.uniform(13, 20), crown_r=rng.uniform(6, 10), crown_base=rng.uniform(2, 4), sharpness=1.0,
+                         penetration=rng.uniform(0.15, 0.3)))
+    for k in range(30):   # live oaks
+        rows.append(dict(height=rng.uniform(6, 11), crown_r=rng.uniform(3, 5), crown_base=rng.uniform(1, 2), sharpness=1.0,
+                         penetration=rng.uniform(0.05, 0.15)))
+    for k in range(10):   # gray pines
+        rows.append(dict(height=rng.uniform(13, 22), crown_r=rng.uniform(2, 3.5), crown_base=rng.uniform(4, 8), sharpness=1.8,
+                         penetration=rng.uniform(0.4, 0.6)))
+    rows.append(dict(height=3.0, crown_r=1.5, crown_base=0.5, sharpness=0.7, penetration=0.2))
+    P = {k: np.array([r[k] for r in rows], float) for k in rows[0]}
+    prm = dict(shrub_h=4.5, pine_min_h=10.0, pine_max_ratio=0.22, pine_min_pen=0.35, big_h=12.0,
+               names=dict(shrub="shrub", pine="gray_pine", big="valley_oak", other="live_oak"))
+    got = D.leaf_on_woodland(P, np.full(len(rows), -1.0), prm)
+    assert got[:30].count("valley_oak") >= 28 and got[30:60].count("live_oak") >= 28
+    assert got[60:70].count("gray_pine") >= 9 and got[70] == "shrub"
+    assert "leaf_on_woodland" in D.CLASSIFIERS
 def test_trees_in_a_cleared_area_are_dropped():
     """Whistle Bear: a ~70 x 65 m conifer grove the 2017 LiDAR has was stripped between 2022 and 2025. A reviewed
     clearance polygon drops every tree inside it; points still drop trees within the radius."""

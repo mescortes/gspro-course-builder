@@ -113,6 +113,29 @@ def sand_hysteresis(strong, weak):
     return keep[lab]
 
 
+def split_shared_greens(greens, ends, pins, reach=4.0, pin_near=8.0):
+    """[(green polygon, hole)] in the order of `greens`. A green belongs to the hole whose line of play ends in it
+    (within `reach` m, or a golf=pin in it within pin_near m of the end); one that holds the ends of several holes (a
+    double green, or neighbouring greens the classifier joined: Brambles 3 and 14) is split between them along the
+    Voronoi cells of their ends. No end: hole 99. ends: {hole: Point}."""
+    from shapely.geometry import MultiPoint
+    from shapely.ops import voronoi_diagram
+    out = []
+    for p in greens:
+        zone = p.buffer(reach)
+        mine = [(ref, e) for ref, e in sorted(ends.items())
+                if zone.contains(e) or any(zone.contains(q) and q.distance(e) < pin_near for q in pins)]
+        if len(mine) < 2:
+            out.append((p, mine[-1][0] if mine else 99))
+            continue
+        cells = voronoi_diagram(MultiPoint([e for _, e in mine]), envelope=p.envelope.buffer(50))
+        for ref, e in mine:
+            cell = next(c for c in cells.geoms if c.contains(e))
+            for q in polys_of(p.intersection(cell)):
+                out.append((q, ref))
+    return out
+
+
 def chaikin(coords, n=2):
     pts = np.asarray(coords)[:-1]
     for _ in range(n):
@@ -505,14 +528,7 @@ def main():
 
     # hole assignment
     pins = [g for _, t, g in G if t.get("golf") == "pin" and g.geom_type == "Point"]
-    green_hole = []
-    for p in polys_of(final["green"]):
-        h = 99
-        for ref, line in holes.items():
-            end = Point(line.coords[-1])
-            if p.buffer(4).contains(end) or any(p.buffer(4).contains(q) and q.distance(end) < 8 for q in pins):
-                h = ref
-        green_hole.append((p, h))
+    green_hole = split_shared_greens(polys_of(final["green"]), {ref: Point(l.coords[-1]) for ref, l in holes.items()}, pins)
     def nearest_green(p, maxd):
         best = (None, 1e9)
         for g, h in green_hole:
@@ -526,7 +542,7 @@ def main():
         if n in ("rough", "road", "building", "court", "native", "semirough", "water", "deeprough"):
             return 99
         if n == "green":
-            return next(h for g, h in green_hole if g.equals(p))
+            return next(h for g, h in green_hole if g.equals(p))   # (greens are emitted from green_hole below)
         if n == "fringe":
             h = nearest_green(p, 1.5)
             return h if h is not None else 99
@@ -538,10 +554,10 @@ def main():
         return nearest_line(p, 45)
     feats = []
     for n, g in final.items():
-        for p in polys_of(g):
+        for p, h in (green_hole if n == "green" else [(q, None) for q in polys_of(g)]):
             if p.area < 1e-6:
                 continue
-            h = assign(p, n)
+            h = assign(p, n) if h is None else h
             feats.append({"type": "Feature", "geometry": mapping(p),
                           "properties": {"surface": n, "hole": h, "area": round(p.area, 2), "stroke": STROKE.get(n, "#ff00ff")}})
     # fringe/semirough adopt the hole of the green/fairway they surround

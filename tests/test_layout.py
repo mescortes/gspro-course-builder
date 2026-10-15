@@ -6,7 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = sorted((ROOT / "scripts").glob("*.py")) + sorted((ROOT / "scripts/sources").glob("*.py"))
 # engine files that are shared by every course on purpose
-SHARED = {("export_gspro.py", "unity/Editor"), ("readme_table.py", "README.md")}
+SHARED = {("export_gspro.py", "unity/Editor")}
 
 
 def _strings(tree):

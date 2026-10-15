@@ -77,3 +77,13 @@ def test_long_bridges_need_facing_ends_and_a_clear_corridor():
     # the same gap is refused when the connector would cross an excluded area (a green, a bunker, a fairway ...)
     out = P.bridge([a, b, c], max_gap=35.0, max_angle=25, ok=lambda seg: False)
     assert sorted(round(g.length) for g in out) == [60, 65, 65]
+
+
+def test_centrelines_take_a_width_range():
+    """Brambles' gravel tracks are 3-6 m wide (NAIP 0.6 m): a 5 m strip is no path at the default 0.6-4.5 m range,
+    but is one with width=(1.5, 7.0)."""
+    m = np.zeros((400, 400), bool)
+    strip(m, 100, 120, 20, 380)        # 5 m wide, 90 m long
+    assert P.centrelines(m, T) == []
+    lines = P.centrelines(m, T, width=(1.5, 7.0))
+    assert 80 < sum(g.length for g in lines) < 95

@@ -46,3 +46,14 @@ def test_duplicate_hole_refs_are_reported():
     G += [(4, {"leisure": "golf_course"}, Polygon([(-50, -50), (400, -50), (400, 50), (-50, 50)])),
           (5, {"leisure": "golf_course"}, Polygon([(-50, 850), (400, 850), (400, 950), (-50, 950)]))]
     assert any("[osm] outline" in p for p in K.osm_report(G, playable=(1, 2))[1])
+
+
+def test_a_build_extent_wider_than_the_gspro_terrain_is_reported():
+    """Deer Ridge: the OSM outline is 2121 m wide, so its CORE (outline + 100 m, whole tiles) is 2560 m against the
+    2048 m GSPro terrain square: the heightmap would cut off both ends of the course."""
+    class Big(_Card):
+        CORE = dict(xmin=545530.0, ymin=4805420.0, xmax=548090.0, ymax=4806956.0)
+        TERRAIN = dict(xmin=545786.0, ymin=4805164.0, xmax=547834.0, ymax=4807212.0)
+    p = "\n".join(K.course_report(Big))
+    assert "[frame]" in p and "2560" in p and "2048" in p
+    assert not [x for x in K.course_report(C) if "[frame]" in x]
