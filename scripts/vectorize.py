@@ -36,6 +36,14 @@ MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 15
 SAND = tuned("sand", dict(L_min=66.0, a_min=-12.0, b_min=8.5, b_max=26.0, ndvi_max=0.12))
 SHADOW_SAND = tuned("shadow_sand", dict(ndvi_max=0.02, L_min=25.0, a_min=-8.0, b_min=2.0))
 TURF = tuned("turf", dict(a_max=-14.0, ndvi_min=0.25))
+# An unmapped bunker's LiDAR hollow must be closed or faced ([tuning.bunker_hollow], closed_hollow; pond_frac = 0 turns
+# the test off) ...
+BUNKER_HOLLOW_DEFAULT = dict(pond=0.05, pond_frac=0.2, face=0.35)
+BUNKER_HOLLOW = tuned("bunker_hollow", BUNKER_HOLLOW_DEFAULT)
+# ... and with a photo of photo_res m or coarser the bunkers are cut to their LiDAR pans ([tuning.bunker_trim],
+# bunker_bowls; photo_res = 0 always, a large value never)
+BUNKER_TRIM_DEFAULT = dict(photo_res=0.3, radius=5.0, depth=0.08, lip=0.5, seed=0.02, seed_area=1.0)
+BUNKER_TRIM = tuned("bunker_trim", BUNKER_TRIM_DEFAULT)
 
 
 def under_canopy_labels(lab, canopy, leaf_off_photo):
@@ -92,6 +100,51 @@ def bunker_ok(p, osm_bunk, course, is_hollow, paved=None, buildings=None, kerb=1
     if buildings is not None and not buildings.is_empty and p.distance(buildings) < wall:
         return False
     return (course.is_empty or course.intersection(p).area >= 0.5 * p.area) and is_hollow(p)
+
+
+def held_water(z, basin):
+    """Depth (m) of the water each cell of the DEM window z holds before it spills over the lowest way out of `basin`
+    (bool; the cells outside it are outlets, and the window border is one)."""
+    from skimage.morphology import reconstruction
+    ok = np.isfinite(z)
+    z = np.where(ok, z, z[ok].min() if ok.any() else 0.0)   # no ground: an outlet
+    basin = basin.copy(); basin[[0, -1], :] = False; basin[:, [0, -1]] = False
+    return reconstruction(np.where(basin, z.max(), z), z, method="erosion") - z
+
+
+def closed_hollow(z, inside, basin, sunk, H=None):
+    """Is an unmapped bunker's hollow closed or faced? At least H pond_frac of the polygon (`inside`, on the DEM window
+    z) holds `pond` m of water before it spills out of `basin` (a bowl), or the polygon lies `face` m or more below the
+    ring around it (`sunk`, m: a bunker cut into a slope is open on its low side but has a real face). An open channel
+    (barranca floor, drainage ditch, path cut) drains along its length and is only 0.03-0.3 m below its banks (Brambles
+    QA round 1). H: BUNKER_HOLLOW ([tuning.bunker_hollow]); pond_frac 0 turns the test off."""
+    H = BUNKER_HOLLOW if H is None else H
+    if H["pond_frac"] <= 0 or sunk >= H["face"]:
+        return True
+    return bool(inside.any()) and float(np.mean(held_water(z, basin)[inside] >= H["pond"])) >= H["pond_frac"]
+
+
+def bunker_bowls(z, inside, basin, res, T=None):
+    """The pans of a bunker polygon (bool mask of `inside` on the DEM window z), or None to leave it as it is: the
+    cells below the rim around them (a grey closing with a `radius` m disc, minus the DEM, at least `depth` m) in the
+    bowls that hold water (`seed` m before it spills out of `basin`, on seed_area m2 or more), widened by `lip` m up
+    the faces. A bunker that holds no water (cut into a slope, open on its low side) has no pan to trim it to.
+    T: BUNKER_TRIM ([tuning.bunker_trim]). For photos too coarse to separate the sand from the grass faces (Brambles'
+    0.6 m NAIP: the 18th greenside polygon held two pans and the steep face above them)."""
+    T = BUNKER_TRIM if T is None else T
+    seeds = inside & (held_water(z, basin) >= T["seed"])
+    lab, n = ndimage.label(seeds)
+    if n:
+        big = ndimage.sum(seeds, lab, range(1, n + 1)) * res * res >= T["seed_area"]
+        seeds = np.r_[False, big][lab]
+    if not seeds.any():
+        return None
+    rpx = max(1, int(round(T["radius"] / res)))
+    yy, xx = np.mgrid[-rpx:rpx + 1, -rpx:rpx + 1]
+    below = ndimage.grey_closing(z, footprint=xx * xx + yy * yy <= rpx * rpx) - z >= T["depth"]
+    lab, n = ndimage.label(inside & (below | seeds))
+    floor = ndimage.binary_fill_holes(np.isin(lab, np.unique(lab[seeds])))
+    return ndimage.binary_dilation(floor, iterations=max(1, int(round(T["lip"] / res)))) & inside
 
 
 def sand_mask(L, a, b, ndvi=None, green=None, parts=False):
@@ -397,6 +450,46 @@ def main():
         gs = [shape(s) for s, v in shapes(m.astype(np.uint8), mask=m, transform=T, connectivity=8) if v == 1]
         return unary_union(gs)
 
+    from rasterio.features import geometry_mask
+    from rasterio.windows import Window as RWindow, transform as window_transform
+    with rasterio.open(C.BUILD / "dem.tif") as ds:
+        demv = ds.read(1); Tv = ds.transform
+    def dem_points(geom):
+        x0, y0, x1, y1 = geom.bounds
+        c0 = max(0, int((x0 - Tv.c) / Tv.a) - 1); c1 = min(demv.shape[1], int((x1 - Tv.c) / Tv.a) + 2)
+        r0 = max(0, int((Tv.f - y1) / -Tv.e) - 1); r1 = min(demv.shape[0], int((Tv.f - y0) / -Tv.e) + 2)
+        if c1 <= c0 or r1 <= r0:
+            return np.zeros((0, 3))
+        sub = RWindow(c0, r0, c1 - c0, r1 - r0)
+        tw = window_transform(sub, Tv)
+        m = ~geometry_mask([geom], out_shape=(r1 - r0, c1 - c0), transform=tw)
+        rr, cc = np.nonzero(m)
+        return np.c_[tw.c + (cc + 0.5) * tw.a, tw.f + (rr + 0.5) * tw.e, demv[r0:r1, c0:c1][m]]
+    def dem_window(p, pad):
+        """The DEM `pad` m round polygon p, its transform, p's cells and the basin water poured into p spills out of (p
+        and the ground within 2.5 m of it: the ring is_hollow compares p with)."""
+        x0, y0, x1, y1 = p.bounds
+        c0 = max(0, int((x0 - pad - Tv.c) / Tv.a) - 1); c1 = min(demv.shape[1], int((x1 + pad - Tv.c) / Tv.a) + 2)
+        r0 = max(0, int((Tv.f - y1 - pad) / -Tv.e) - 1); r1 = min(demv.shape[0], int((Tv.f - y0 + pad) / -Tv.e) + 2)
+        tw = window_transform(RWindow(c0, r0, c1 - c0, r1 - r0), Tv)
+        z = demv[r0:r1, c0:c1].astype(np.float64)
+        inside = ~geometry_mask([p], out_shape=z.shape, transform=tw)
+        return z, tw, inside, ~geometry_mask([p.buffer(2.5)], out_shape=z.shape, transform=tw)
+    # a photo too coarse to separate the sand from the grass faces (Brambles' 0.6 m NAIP): bunkers are cut to their
+    # LiDAR pans (bunker_bowls); the faces go to the surfaces below in PRIORITY, else rough
+    trim_bunkers = C.IMAGERY_RES >= BUNKER_TRIM["photo_res"]
+    def trim_faces(g):
+        out = []
+        for p in polys_of(g):
+            z, tw, inside, basin = dem_window(p, max(2.5, BUNKER_TRIM["radius"]) + 1.0)
+            m = bunker_bowls(z, inside, basin, abs(Tv.a))
+            parts = []
+            if m is not None and m.any():
+                q = unary_union([shape(s_) for s_, v in shapes(m.astype(np.uint8), mask=m, transform=tw, connectivity=8) if v == 1])
+                parts = [r for r in polys_of(make_valid(smooth_poly(q, close=0.2)).intersection(p)) if r.area >= MIN_AREA["bunker"]]
+            out.extend(parts or [p])
+        return unary_union(out) if out else Polygon()
+
     aoi = box(C.CORE["xmin"], C.CORE["ymin"], C.CORE["xmax"], C.CORE["ymax"])
     final = {}
     taken = Polygon()
@@ -411,6 +504,11 @@ def main():
         else:
             g = smooth_poly(g, close=0.35 if n != "bunker" else 0.2)
         g = make_valid(g).intersection(aoi).difference(taken)
+        if n == "bunker" and trim_bunkers:
+            n0 = len(polys_of(g)); a0 = g.area
+            g = trim_faces(g)
+            print(f"bunker trim (photo {C.IMAGERY_RES} m): {n0} bunkers, {a0:.0f} m2 -> {len(polys_of(g))} pans, "
+                  f"{g.area:.0f} m2", flush=True)
         g = unary_union([p for p in polys_of(g) if p.area >= max(1.0, 0.25 * MIN_AREA.get(n, 1))])
         final[n] = g
         taken = unary_union([taken, g])
@@ -436,21 +534,6 @@ def main():
         return best if bd < lim else 99
     # LiDAR / OSM validation of the small features the photo classifier over-predicts (QA round 1 found many):
     # a tee must overlap a mapped tee or be a built, flat deck; a bunker must overlap a mapped bunker or be a hollow.
-    from rasterio.features import geometry_mask
-    from rasterio.windows import Window as RWindow, transform as window_transform
-    with rasterio.open(C.BUILD / "dem.tif") as ds:
-        demv = ds.read(1); Tv = ds.transform
-    def dem_points(geom):
-        x0, y0, x1, y1 = geom.bounds
-        c0 = max(0, int((x0 - Tv.c) / Tv.a) - 1); c1 = min(demv.shape[1], int((x1 - Tv.c) / Tv.a) + 2)
-        r0 = max(0, int((Tv.f - y1) / -Tv.e) - 1); r1 = min(demv.shape[0], int((Tv.f - y0) / -Tv.e) + 2)
-        if c1 <= c0 or r1 <= r0:
-            return np.zeros((0, 3))
-        sub = RWindow(c0, r0, c1 - c0, r1 - r0)
-        tw = window_transform(sub, Tv)
-        m = ~geometry_mask([geom], out_shape=(r1 - r0, c1 - c0), transform=tw)
-        rr, cc = np.nonzero(m)
-        return np.c_[tw.c + (cc + 0.5) * tw.a, tw.f + (rr + 0.5) * tw.e, demv[r0:r1, c0:c1][m]]
     osm_tees = unary_union(osm(lambda t: t.get("golf") == "tee")).buffer(2.0)
     osm_bunk = unary_union(osm(lambda t: t.get("golf") == "bunker")).buffer(1.5)
     def tee_ok(p):
@@ -469,6 +552,15 @@ def main():
         P = dem_points(inner if not inner.is_empty else p)
         R = dem_points(p.buffer(2.5).difference(p.buffer(0.5)))
         return len(P) >= 8 and len(R) >= 8 and P[:, 2].mean() < R[:, 2].mean() - depth
+    def unmapped_hollow(p):
+        """is_hollow, and closed or faced (closed_hollow): an open channel is lower than its banks too"""
+        if not is_hollow(p):
+            return False
+        inner = p.buffer(-0.3)
+        P = dem_points(inner if not inner.is_empty else p)
+        R = dem_points(p.buffer(2.5).difference(p.buffer(0.5)))
+        z, _, inside, basin = dem_window(p, 3.5)
+        return closed_hollow(z, inside, basin, float(R[:, 2].mean() - P[:, 2].mean()))
     def trim_grass(g):
         """Remove clearly green turf (outside canopy) from a mapped bunker outline (OSM outlines include the faces)."""
         if g.is_empty:
@@ -495,7 +587,7 @@ def main():
     paved = unary_union([make_valid(x) for x in vector["road"]]) if vector["road"] else Polygon()
     bldgs = unary_union([make_valid(x) for x in vector["building"]]) if vector["building"] else Polygon()
     for p in polys_of(final["bunker"]):
-        if bunker_ok(p, osm_bunk, course_buf, is_hollow, paved, bldgs, *BUNKER_CLEARANCE):
+        if bunker_ok(p, osm_bunk, course_buf, unmapped_hollow, paved, bldgs, *BUNKER_CLEARANCE):
             keep_b.append(p); continue
         (to_path if p.intersection(path_corr).area > 0.5 * p.area else []).append(p); dropped += 1
     print(f"validation: tees kept {len(keep_t)}, bunkers kept {len(keep_b)}, rejected {dropped} "
@@ -511,6 +603,8 @@ def main():
         if g.intersection(kb).area >= 0.3 * g.area or not is_hollow(g, 0.05):
             continue
         add = trim_grass(g.difference(blockers).difference(kb))
+        if trim_bunkers and not add.is_empty:
+            add = trim_faces(add)
         if add.area > 4:
             keep_b.extend(polys_of(add)); added += 1
             for n in ("fairway", "native", "deeprough"):

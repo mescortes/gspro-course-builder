@@ -276,3 +276,71 @@ def test_white_bunker_sand_is_found_with_tuned_colour_rules(monkeypatch):
     assert V.sand_mask(L, a, b).tolist() == [True, True, False]
     assert V.SAND["L_min"] == 66.0 and V.TURF == {"a_max": -10.0, "ndvi_min": 0.25}
     assert V.turf_mask(a).tolist() == [False, False, True]
+
+
+def _dem(f, n=200, res=0.25):
+    """A synthetic DEM window: f(x, y) on cell centres (m), the window 50 m across."""
+    x = (np.arange(n) + 0.5) * res
+    X, Y = np.meshgrid(x, x)
+    return f(X, Y), X, Y
+
+
+def _hollow_args(z, X, Y, inside, reach=2.5):
+    from scipy import ndimage
+    basin = ndimage.binary_dilation(inside, iterations=int(reach / 0.25))
+    ring = basin & ~ndimage.binary_dilation(inside, iterations=2)
+    return z, inside, basin, float(z[ring].mean() - z[inside].mean())
+
+
+def test_an_open_channel_is_not_an_unmapped_bunker():
+    """Brambles QA round 1: bare soil on barranca floors, in drainage ditches and path cuts passed the hollow test (the
+    polygon 0.08 m below the ring around it) - an open channel is lower than its banks too. 6 of 9 bunker polygons on
+    holes 7-9 were false. A channel drains along its length: it holds no water and has no face."""
+    z, X, Y = _dem(lambda x, y: 0.02 * x + np.where(np.abs(y - 25) < 1.5, -0.25, 0.0))   # 3 m wide ditch, 0.25 m deep
+    inside = (np.abs(Y - 25) < 1.4) & (np.abs(X - 25) < 6)                              # 12 m of its floor
+    args = _hollow_args(z, X, Y, inside)
+    assert args[3] > 0.08, "the old test passes it"
+    assert not V.closed_hollow(*args, H=V.BUNKER_HOLLOW_DEFAULT)
+    assert V.closed_hollow(*args, H=dict(V.BUNKER_HOLLOW_DEFAULT, pond_frac=0.0)), "pond_frac 0: the closed test is off"
+
+
+def test_a_bowl_and_a_bunker_cut_into_a_slope_are_closed_hollows():
+    """A bowl holds water; a greenside bunker cut into a slope is open on its low side (Westmount: a quarter of the
+    mapped bunkers hold no water in the LiDAR) but has a real face, 0.35 m or more over the ring."""
+    r2 = lambda x, y: (x - 25) ** 2 + (y - 25) ** 2
+    z, X, Y = _dem(lambda x, y: 0.03 * x + np.where(r2(x, y) < 16, 0.4 * (r2(x, y) / 16 - 1), 0.0))   # 0.4 m deep bowl
+    inside = r2(X, Y) < 12
+    assert V.closed_hollow(*_hollow_args(z, X, Y, inside), H=V.BUNKER_HOLLOW_DEFAULT)
+    # cut into a 12 % slope rising to +y: a 0.8 m face on the high side, the floor running out at grade downhill
+    z, X, Y = _dem(lambda x, y: np.where((np.abs(x - 25) < 4) & (y > 20) & (y < 27), 0.12 * 20, 0.12 * y))
+    inside = (np.abs(X - 25) < 3.8) & (Y > 20.2) & (Y < 26.8)
+    args = _hollow_args(z, X, Y, inside)
+    assert V.held_water(z, args[2])[inside].max() < 0.01, "it holds no water"
+    assert V.closed_hollow(*args, H=V.BUNKER_HOLLOW_DEFAULT)
+
+
+def test_lidar_trim_keeps_the_pans_and_drops_the_grass_faces():
+    """Brambles' 0.6 m photo blurs sand into the grass faces: the 18th greenside bunker polygon (372 m2) held two LiDAR
+    pans plus the steep face above them. With a coarse photo the bunker is cut to its pans (the cells below the rim
+    around them, in the bowls that hold water) and a lip up the faces."""
+    from scipy import ndimage
+    def pan(x, y, cx):
+        r = np.hypot((x - cx) / 5.0, (y - 25) / 3.5)
+        return np.where(r < 1, 0.5 * (r ** 4 - 1), 0.0)
+    z, X, Y = _dem(lambda x, y: 0.05 * y + pan(x, y, 16) + pan(x, y, 34) + np.where(y > 30, 0.4 * (y - 30), 0.0))
+    poly = (np.abs(X - 25) < 17) & (Y > 19) & (Y < 33)                                 # pans, the ridge between, the face
+    basin = ndimage.binary_dilation(poly, iterations=10)
+    m = V.bunker_bowls(z, poly, basin, 0.25, V.BUNKER_TRIM_DEFAULT)
+    lab, n = ndimage.label(m)
+    assert n == 2, "two pans, split at the ridge"
+    assert m[(np.hypot((X - 16) / 5, (Y - 25) / 3.5) < 0.8)].all() and m[(np.hypot((X - 34) / 5, (Y - 25) / 3.5) < 0.8)].all()
+    assert not m[Y > 31.5].any(), "the face above the pans is trimmed"
+    assert m.sum() < 0.7 * poly.sum()
+
+
+def test_lidar_trim_leaves_a_bunker_without_a_pan_alone():
+    """A bunker cut into a slope holds no water: there is no pan to trim it to, and it is left as it is."""
+    from scipy import ndimage
+    z, X, Y = _dem(lambda x, y: np.where((np.abs(x - 25) < 4) & (y > 20) & (y < 27), 0.12 * 20, 0.12 * y))
+    poly = (np.abs(X - 25) < 4.5) & (Y > 19.5) & (Y < 27.5)
+    assert V.bunker_bowls(z, poly, ndimage.binary_dilation(poly, iterations=10), 0.25, V.BUNKER_TRIM_DEFAULT) is None
