@@ -11,7 +11,8 @@ can be run by hand.
 
 * Python 3.12 and [uv](https://github.com/astral-sh/uv); headless Blender 4.2 LTS for the FBX step (`BLENDER=` its
   binary). About 15 GB of RAM at peak and 5-10 GB of disk per course.
-* `uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements.txt`
+* `uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements-lock.txt` (the exact
+  packages of the golden Westmount build; `requirements.txt` lists the direct dependencies unpinned)
 * `COURSE= .venv/bin/python -m pytest -q tests --ignore=tests/test_course.py` must pass (no data needed).
 
 ## 1. Is the course buildable?

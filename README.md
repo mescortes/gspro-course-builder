@@ -81,7 +81,7 @@ crashes at startup, and the `fbx` step has to run outside the sandbox.
 
 ```bash
 uv venv --python 3.12 .venv
-uv pip install --python .venv/bin/python -r requirements.txt
+uv pip install --python .venv/bin/python -r requirements-lock.txt   # the golden build's exact packages (or requirements.txt)
 export COURSE=westmount                                       # the course folder to build
 .venv/bin/python scripts/check_course.py                      # what the course still lacks
 .venv/bin/python scripts/fetch_data.py lidar osm imagery
