@@ -71,12 +71,28 @@ ROAD_HALF_WIDTH_DEFAULT = {
     "motorway_link": 4.0, "trunk_link": 4.0, "primary_link": 4.0, "secondary_link": 4.0, "tertiary_link": 3.5}
 
 
+# The OSM highway values a way can carry (wiki.openstreetmap.org/wiki/Key:highway: roads, link roads, special road
+# types, paths, lifecycle). [tuning.road_half_width] may add any of them; a key outside them is a typo.
+OSM_HIGHWAY_WAYS = frozenset(ROAD_HALF_WIDTH_DEFAULT) | {
+    "pedestrian", "bus_guideway", "escape", "raceway", "road", "busway", "footway", "bridleway", "steps", "corridor",
+    "path", "via_ferrata", "cycleway", "construction", "proposed", "disused", "abandoned", "platform"}
+
+
 def road_half_widths():
     """ROAD_HALF_WIDTH_DEFAULT with course.toml [tuning.road_half_width] over it: a class can be added or widened, and
-    0 leaves a class out (tracks that are woodland footpaths)."""
+    0 leaves a class out (tracks that are woodland footpaths). A key that is not an OSM highway value (OSM_HIGHWAY_WAYS)
+    stops with the closest one: residental = 5 was taken as a new class, and the residential roads kept 4 m."""
+    import difflib
     v = C.tuning("road_half_width", {})
     if not isinstance(v, dict):
         sys.exit(f"[tuning.road_half_width] in {_tuning_files()} must be a table of highway class = metres, not {v!r}")
+    for k in v:
+        if k not in OSM_HIGHWAY_WAYS:
+            m = difflib.get_close_matches(k, sorted(OSM_HIGHWAY_WAYS), 1)
+            sys.exit(f"[tuning.road_half_width] in {_tuning_files()}: {k} is not an OSM highway value"
+                     + (f": did you mean {m[0]}?" if m else "") + " (a key is the highway=* value of the ways it sizes: "
+                     f"{', '.join(ROAD_HALF_WIDTH_DEFAULT)}, or to add a class "
+                     f"{', '.join(sorted(OSM_HIGHWAY_WAYS - set(ROAD_HALF_WIDTH_DEFAULT)))})")
     for k, x in v.items():
         if not _number(x):
             sys.exit(f"[tuning.road_half_width] in {_tuning_files()}: {k} = {x!r} is not a number (half the road's "
