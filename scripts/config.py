@@ -89,7 +89,7 @@ def as_tuples(v):
     return {k: as_tuples(x) for k, x in v.items()} if isinstance(v, dict) else v
 
 
-TUNING, REGION_TUNING = _T.get("tuning", {}), _region.get("tuning", {})  # check_course names keys the engine never reads
+TUNING, REGION_TUNING = _T.get("tuning", {}), _region.get("tuning", {})  # check_course names keys nothing reads
 
 
 def tuning(key, default):
@@ -157,9 +157,10 @@ def grid_problems(ext, res, table="frame"):
     for a, b in (("xmin", "xmax"), ("ymin", "ymax")):
         side = ext[b] - ext[a]
         if abs(side / 0.5 - round(side / 0.5)) > 1e-6:
-            out.append(f"[{table}] core {a}..{b} is {side:g} m: each side of the build extent must be a whole number of "
-                       "0.5 m (new_course.py writes whole tiles)")
+            out.append(f"[{table}] core {a}..{b} is {side:g} m: each side of the build extent must be a whole number "
+                       "of 0.5 m (new_course.py writes whole tiles)")
     return out
+
 
 LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))  # the build reads them through lidar_tiles(), which checks tiles.json
 _lidar = _T.get("lidar", {})

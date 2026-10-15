@@ -68,9 +68,9 @@ def blender_note(exe):
         return f"Blender: {exe} (version not known without starting it; the FBX step is made with {BLENDER_LTS} LTS)"
     if v == BLENDER_LTS or v.startswith(BLENDER_LTS + "."):
         return f"Blender {v}: {exe}"
-    return (f"!! Blender {v}: {exe}. The FBX step is made and checked with Blender {BLENDER_LTS} LTS; another version's "
-            f"FBX exporter can write different files: set BLENDER to a {BLENDER_LTS} LTS executable (blender.org "
-            f"download archive; tools/setup_linux.sh installs one on Linux)")
+    return (f"!! Blender {v}: {exe}. The FBX step is made and checked with Blender {BLENDER_LTS} LTS; another "
+            f"version's FBX exporter can write different files: set BLENDER to a {BLENDER_LTS} LTS executable "
+            "(blender.org download archive; tools/setup_linux.sh installs one on Linux)")
 
 
 def step_range(args):

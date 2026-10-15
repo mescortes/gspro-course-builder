@@ -141,8 +141,8 @@ def tuning_problems(c=C, keys=None):
                 for s in v:
                     if s not in keys[k]:
                         m = near(s, keys[k])
-                        out.append(f"[tuning.{k}] {s} ({where}): not a key of the table"
-                                   + (f": did you mean {m[0]}?" if m else "") + f" (its keys: {', '.join(sorted(keys[k]))})")
+                        out.append(f"[tuning.{k}] {s} ({where}): not a key of the table" + (
+                            f": did you mean {m[0]}?" if m else "") + f" (its keys: {', '.join(sorted(keys[k]))})")
     return out
 
 
@@ -203,7 +203,7 @@ def course_report(c=C):
     if cls is not None and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", cls + "Setup"):
         p.append(f"[course] unity_script {c.UNITY_SCRIPT!r}: class {cls}Setup is not a C# name (letters, digits and _, "
                  "not starting with a digit)")
-    if getattr(c, "FETCH_CORE", None) and getattr(c, "DEM_RES", None):  # build_rasters stops on these, after the downloads
+    if getattr(c, "FETCH_CORE", None) and getattr(c, "DEM_RES", None) is not None:  # build_rasters stops on these late
         p += C.grid_problems(c.FETCH_CORE, c.DEM_RES)
         p += C.grid_problems(c.TEST_CORE, None, "test_profile") if getattr(c, "TEST_CORE", None) else []
     core, ter = getattr(c, "CORE", None), getattr(c, "TERRAIN", None)
@@ -336,10 +336,12 @@ def feature_files_report(c=C):
             out.append(f"{name}: not a JSON file ({e}): fix it, or export it again (QGIS: Export > Save Features As, "
                        "GeoJSON)")
             continue
-        if not (isinstance(fc, dict) and fc.get("type") == "FeatureCollection" and isinstance(fc.get("features"), list)):
+        if not (isinstance(fc, dict) and fc.get("type") == "FeatureCollection"
+                and isinstance(fc.get("features"), list)):
             kind = fc.get("type") if isinstance(fc, dict) else type(fc).__name__
             out.append(f"{name}: a {kind or 'JSON object'}, not a FeatureCollection: the build reads a "
-                       "FeatureCollection's features, so wrap it: {\"type\": \"FeatureCollection\", \"features\": [...]}")
+                       "FeatureCollection's features, so wrap it: "
+                       "{\"type\": \"FeatureCollection\", \"features\": [...]}")
             continue
         b, bad = [], None
         for i, x in enumerate(fc["features"]):
@@ -347,8 +349,9 @@ def feature_files_report(c=C):
                 if x.get("geometry"):
                     b.append(shape(x["geometry"]).bounds)
             except (ValueError, KeyError, TypeError, AttributeError, ShapelyError) as e:
-                bad = (f"{name}: feature {i + 1}: {e.__class__.__name__}: {str(e).strip()}: fix or redraw it (a GeoJSON "
-                       "geometry type, a line of two or more points, a polygon ring of four or more closing on itself)")
+                bad = (f"{name}: feature {i + 1}: {e.__class__.__name__}: {str(e).strip()}: fix or redraw it (a "
+                       "GeoJSON geometry type, a line of two or more points, a polygon ring of four or more closing on "
+                       "itself)")
                 break
         if bad:
             out.append(bad)
