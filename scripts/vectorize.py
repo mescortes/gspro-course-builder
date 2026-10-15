@@ -100,12 +100,17 @@ def bunker_ok(p, osm_bunk, course, is_hollow, paved=None, buildings=None, kerb=1
 
 def held_water(z, basin):
     """Depth (m) of the water each cell of the DEM window z holds before it spills over the lowest way out of `basin`
-    (bool; the cells outside it are outlets, and the window border is one)."""
-    from skimage.morphology import reconstruction
+    (bool; the cells outside it are outlets, and the window border is one). A morphological fill (reconstruction by
+    erosion, 8-connected), with scipy: skimage's reconstruction sets an array's shape, deprecated in NumPy 2.5."""
     ok = np.isfinite(z)
     z = np.where(ok, z, z[ok].min() if ok.any() else 0.0)   # no ground: an outlet
     basin = basin.copy(); basin[[0, -1], :] = False; basin[:, [0, -1]] = False
-    return reconstruction(np.where(basin, z.max(), z), z, method="erosion") - z
+    level, square = np.where(basin, z.max(), z), np.ones((3, 3), bool)
+    while True:   # water drains to the lowest neighbour's level, never below the ground
+        nxt = np.maximum(ndimage.grey_erosion(level, footprint=square), z)
+        if np.array_equal(nxt, level):
+            return level - z
+        level = nxt
 
 
 def closed_hollow(z, inside, basin, sunk, H=None, res=None):

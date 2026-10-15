@@ -479,3 +479,26 @@ def test_bunkers_are_trimmed_only_with_a_coarse_photo():
     T = V.BUNKER_TRIM_DEFAULT
     assert not V.trims_bunkers(0.16, T) and V.trims_bunkers(0.6, T) and V.trims_bunkers(0.3, T)
     assert V.trims_bunkers(0.16, dict(T, photo_res=0.0)) and not V.trims_bunkers(0.6, dict(T, photo_res=100.0))
+
+
+def test_held_water_fills_a_bowl_to_its_spill_point_without_deprecated_calls():
+    """held_water is a morphological fill (water poured into the basin rises to the lowest way out). It used
+    skimage.morphology.reconstruction, which sets an array's shape - deprecated in NumPy 2.5, an error in a later
+    NumPy a fresh install may get. The fill is scipy's now, with the same result."""
+    import warnings
+    from scipy import ndimage
+    z, X, Y = _dem(lambda x, y: 0.01 * x + np.clip(((x - 25) ** 2 + (y - 25) ** 2) / 16 - 1, None, 0) * 0.5)
+    z[100, 120:] = z[100, 120:] - 0.3                                    # a notch: the bowl spills through it
+    inside = (X - 25) ** 2 + (Y - 25) ** 2 < 16
+    basin = ndimage.binary_dilation(inside, iterations=10)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        w = V.held_water(z, basin)
+    assert w.min() >= 0 and (w[~basin] == 0).all()
+    assert w[100, 100] > 0.2, "the bowl holds water"
+    from skimage.morphology import reconstruction
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        b = basin.copy(); b[[0, -1], :] = False; b[:, [0, -1]] = False
+        ref = reconstruction(np.where(b, z.max(), z), z, method="erosion") - z
+    assert np.array_equal(w, ref), "the same fill as before"
