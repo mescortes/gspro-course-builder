@@ -99,6 +99,53 @@ def _leaf_problems(c):
     return p
 
 
+def tuning_keys(scripts=Path(__file__).parent):
+    """{name: None for a value, else the keys of its table} of every [tuning] name the engine reads: the literal first
+    arguments of the config.tuning() and surface_classify.tuned() calls in the scripts. A table's keys come from its
+    default (dict(...) or {...}); an empty default, such as road_half_width's, takes any key (an empty set)."""
+    import ast
+    out = {}
+    for p in sorted(Path(scripts).rglob("*.py")):
+        for n in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
+            if not (isinstance(n, ast.Call) and ast.unparse(n.func).split(".")[-1] in ("tuning", "tuned") and n.args
+                    and isinstance(n.args[0], ast.Constant) and isinstance(n.args[0].value, str)):
+                continue
+            d = n.args[1] if len(n.args) > 1 else None
+            if isinstance(d, ast.Dict):
+                keys = frozenset(k.value for k in d.keys if isinstance(k, ast.Constant))
+            elif isinstance(d, ast.Call) and ast.unparse(d.func) == "dict":
+                keys = frozenset(k.arg for k in d.keywords if k.arg)
+            else:
+                keys = None
+            if out.get(n.args[0].value) is None:
+                out[n.args[0].value] = keys
+    return out
+
+
+def tuning_problems(c=C, keys=None):
+    """course.toml and region [tuning] names the engine does not read (tuning_keys), with the closest one it reads:
+    config.tuning() takes the engine default for a name nothing asks for, so a misspelt key changed nothing."""
+    import difflib
+    keys = tuning_keys() if keys is None else keys
+    near = lambda k, among: difflib.get_close_matches(k, among, 1)
+    out = []
+    for where, t in ((f"courses/{getattr(c, 'SLUG', '<slug>')}/course.toml", getattr(c, "TUNING", {})),
+                     (f"regions/{c.REGION_NAME}.toml", getattr(c, "REGION_TUNING", {}))):
+        for k, v in t.items():
+            if k not in keys:
+                what = f"[tuning.{k}] ({where}): the engine reads no such table" if isinstance(v, dict) else \
+                    f"[tuning] {k} ({where}): the engine reads no such key"
+                m = near(k, keys)
+                out.append(what + (f": did you mean {m[0]}?" if m else f" (it reads {', '.join(sorted(keys))})"))
+            elif keys[k] and isinstance(v, dict):
+                for s in v:
+                    if s not in keys[k]:
+                        m = near(s, keys[k])
+                        out.append(f"[tuning.{k}] {s} ({where}): not a key of the table"
+                                   + (f": did you mean {m[0]}?" if m else "") + f" (its keys: {', '.join(sorted(keys[k]))})")
+    return out
+
+
 def course_report(c=C):
     """Gaps in course.toml."""
     p = []
@@ -142,6 +189,7 @@ def course_report(c=C):
         p += [f"regions/{c.REGION_NAME}.toml (or the course.toml table): {x}"
               for x in region_spec.problems(c.REGION, scaffold=False)]
     p += _leaf_problems(c)
+    p += tuning_problems(c)
     for kind in ("lidar", "imagery", "backdrop"):
         if not c.DATA_SOURCES.get(kind):
             p.append(f"[sources.{kind}]: missing")

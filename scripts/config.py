@@ -89,10 +89,13 @@ def as_tuples(v):
     return {k: as_tuples(x) for k, x in v.items()} if isinstance(v, dict) else v
 
 
+TUNING, REGION_TUNING = _T.get("tuning", {}), _region.get("tuning", {})  # check_course names keys the engine never reads
+
+
 def tuning(key, default):
     """A tuned limit: course.toml [tuning], else the region's [tuning], else the engine default. A TOML list for a tuple
     default comes back as a tuple, a TOML integer for a float default as a float."""
-    v = _T.get("tuning", {}).get(key, _region.get("tuning", {}).get(key, default))
+    v = TUNING.get(key, REGION_TUNING.get(key, default))
     if isinstance(default, tuple) and isinstance(v, list):
         return tuple(v)
     if isinstance(default, float) and isinstance(v, int) and not isinstance(v, bool):

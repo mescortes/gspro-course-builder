@@ -327,6 +327,32 @@ def test_a_dem_grid_the_engine_cannot_build_is_reported_before_the_downloads(tmp
     assert not [x for x in K.course_report(C) if "dem_res" in x or "core" in x]
 
 
+def test_a_tuning_key_or_table_the_engine_does_not_read_is_named(tmp_path):
+    """config.tuning() returns the engine default for a name the engine does not ask for, so [tuning] trace_path =
+    false (for trace_paths), a [tuning.snad] table or a region's misspelt key left the default in force without a word.
+    The names the engine reads are its config.tuning / tuned calls, read from the scripts themselves."""
+    keys = K.tuning_keys()
+    for k in ("trace_paths", "osm_outline_margin", "pin_slope_limits", "level_tees", "road_half_width", "sand", "native"):
+        assert k in keys, k
+    assert keys["trace_paths"] is None and keys["road_half_width"] == frozenset() and {"L_min", "b_max"} <= keys["sand"]
+    (tmp_path / "x.py").write_text('import config as C\nA = C.tuning("alpha", 1.0)\nB = tuned("beta", dict(x=1.0, y=2.0))\n'
+                                   'D = C.tuning("gamma", {"k": 1})\ndef f(name):\n    return C.tuning(name, {})\n')
+    assert K.tuning_keys(tmp_path) == {"alpha": None, "beta": frozenset({"x", "y"}), "gamma": frozenset({"k"})}
+    class Course(Card):
+        SLUG = "test-club"
+        TUNING = {"trace_path": False, "snad": {"L_min": 60.0}, "sand": {"Lmin": 60.0, "b_max": 20.0},
+                  "road_half_width": {"footway": 1.0}, "zzz_unknown": 1, "osm_outline_margin": 20.0}
+        REGION_TUNING = {"forward_tee_fracs": 0.4}
+    p = [x for x in K.course_report(Course) if "tuning" in x]
+    assert len(p) == 5, p
+    assert "[tuning] trace_path" in p[0] and "courses/test-club/course.toml" in p[0] and "did you mean trace_paths" in p[0]
+    assert "[tuning.snad]" in p[1] and "table" in p[1] and "did you mean sand" in p[1]
+    assert "[tuning.sand] Lmin" in p[2] and "did you mean L_min" in p[2] and "b_max" in p[2]
+    assert "[tuning] zzz_unknown" in p[3] and "trace_paths" in p[3]                        # no close name: the list
+    assert "regions/southern_ontario.toml" in p[4] and "did you mean forward_tee_frac" in p[4]
+    assert C.TUNING == {} and C.REGION_TUNING == {} and not [x for x in K.course_report(C) if "tuning" in x]
+
+
 def test_nines_must_cover_the_playable_holes():
     """nines = { Front = "1-9" } on an 18-hole course passed, then hole_data raised KeyError 10."""
     class Front(Card):

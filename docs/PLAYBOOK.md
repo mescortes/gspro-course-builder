@@ -108,7 +108,8 @@ COURSE=<slug> .venv/bin/python scripts/check_course.py
 ```
 
 **Checkpoint:** check_course reports nothing missing in course.toml; every hole has a line, a green and a tee (or the
-course goes the no-OSM route, §4).
+course goes the no-OSM route, §4). check_course also names any `[tuning]` key, table or table key (in course.toml or
+the region) that the engine does not read, with the closest name it does read: the build would ignore a misspelt one.
 
 ## 3. Download
 
