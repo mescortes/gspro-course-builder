@@ -306,6 +306,27 @@ def test_osm_par_that_differs_from_the_card_is_reported():
     assert K.par_problems(K.osm_report(osm_geoms())[0], C.SCORECARD) == []          # Westmount
 
 
+def test_a_dem_grid_the_engine_cannot_build_is_reported_before_the_downloads(tmp_path):
+    """build_rasters stops on a [frame] dem_res other than 0.25 or a core side that is not a whole number of 0.5 m,
+    but only at the rasters step, after the downloads and register: check_course said nothing. Both read
+    config.grid_problems."""
+    class Grid(Card):
+        DEM_RES = 0.5; FETCH_CORE = dict(xmin=0.0, ymin=0.0, xmax=512.0, ymax=512.25)
+        TEST_CORE = dict(xmin=0.0, ymin=0.0, xmax=100.1, ymax=100.0)
+    p = K.course_report(Grid)
+    assert any("[frame] dem_res = 0.5" in x and "0.25" in x for x in p), p
+    assert any("[frame] core ymin..ymax is 512.25 m" in x and "0.5 m" in x for x in p), p
+    assert any("[test_profile] core xmin..xmax is 100.1 m" in x for x in p), p
+    class Fine(Grid):
+        DEM_RES = 0.25; FETCH_CORE = dict(xmin=0.0, ymin=0.0, xmax=512.0, ymax=511.5); TEST_CORE = None
+    assert K.course_report(Fine) == []
+    r = load(tmp_path, '[test_profile]\ncore = { xmin = 0.0, ymin = 0.0, xmax = 10.0, ymax = 10.0 }\n',
+             code="print(C.TEST_CORE, C.FETCH_CORE == C.CORE)")
+    assert r.stdout.split()[-1] == "True" and "'xmax': 10.0" in r.stdout, r.stderr
+    assert C.TEST_CORE == dict(xmin=537340.0, ymin=4810720.0, xmax=537980.0, ymax=4811360.0)   # Westmount
+    assert not [x for x in K.course_report(C) if "dem_res" in x or "core" in x]
+
+
 def test_nines_must_cover_the_playable_holes():
     """nines = { Front = "1-9" } on an 18-hole course passed, then hole_data raised KeyError 10."""
     class Front(Card):

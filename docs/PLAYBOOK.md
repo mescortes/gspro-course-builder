@@ -249,5 +249,7 @@ can take an hour on a slow server); first build 0.5-1 h; two QA rounds with rebu
 * **An image server is slow or times out**: the downloads are chunked and retried; rerun the step.
 * **The course is wider than about 1.85 km**: the build extent no longer fits the 2048 m terrain square;
   check_course says so.
+* **`[frame] dem_res`**: the engine builds the DEM at 0.25 m only, so leave it out. check_course flags it, and a
+  `[frame]` or `[test_profile]` core side that is not a whole number of 0.5 m, before anything is fetched.
 * **Changing `[osm]`, `[frame]` or a source** takes effect on the next run of the steps that read it; rebuild from the
   first step that reads the changed input (`build_all.py <step> ...`).

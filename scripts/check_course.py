@@ -155,6 +155,9 @@ def course_report(c=C):
     if cls is not None and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", cls + "Setup"):
         p.append(f"[course] unity_script {c.UNITY_SCRIPT!r}: class {cls}Setup is not a C# name (letters, digits and _, "
                  "not starting with a digit)")
+    if getattr(c, "FETCH_CORE", None) and getattr(c, "DEM_RES", None):  # build_rasters stops on these, after the downloads
+        p += C.grid_problems(c.FETCH_CORE, c.DEM_RES)
+        p += C.grid_problems(c.TEST_CORE, None, "test_profile") if getattr(c, "TEST_CORE", None) else []
     core, ter = getattr(c, "CORE", None), getattr(c, "TERRAIN", None)
     if core and ter and not (ter["xmin"] <= core["xmin"] and core["xmax"] <= ter["xmax"]
                              and ter["ymin"] <= core["ymin"] and core["ymax"] <= ter["ymax"]):
