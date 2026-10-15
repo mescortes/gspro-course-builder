@@ -58,6 +58,47 @@ try:
 except (tomllib.TOMLDecodeError, KeyError) as _e:
     sys.exit(f"courses/{SLUG}/course.toml: {'missing ' + str(_e) if isinstance(_e, KeyError) else _e}")
 
+
+def _merge(a, b):
+    """b over a, key by key for nested tables."""
+    out = dict(a)
+    for k, v in b.items():
+        out[k] = _merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out
+
+
+# Region preset: regions/<region>.toml (species, foliage, turf, buildings, backdrop grade ...). A course.toml table of
+# the same name overrides it key by key.
+REGION_NAME = _course.get("region")
+REGION_TABLES = ("turf_tint", "trees", "foliage", "grass", "buildings", "backdrop", "materials", "viewer")
+_region = {}
+if REGION_NAME:
+    try:
+        with open(ROOT / "regions" / f"{REGION_NAME}.toml", "rb") as _f:
+            _region = tomllib.load(_f)
+    except FileNotFoundError:
+        _known = sorted(p.stem for p in (ROOT / "regions").glob("*.toml"))
+        sys.exit(f"courses/{SLUG}/course.toml: unknown region {REGION_NAME!r} (regions/ has {', '.join(_known) or 'none'})")
+REGION = _merge({k: v for k, v in _region.items() if k in REGION_TABLES}, {k: v for k, v in _T.items() if k in REGION_TABLES})
+
+
+def as_tuples(v):
+    """TOML arrays back to the tuples the engine uses (recursively, through tables)."""
+    if isinstance(v, list):
+        return tuple(as_tuples(x) for x in v)
+    return {k: as_tuples(x) for k, x in v.items()} if isinstance(v, dict) else v
+
+
+def tuning(key, default):
+    """A tuned limit: course.toml [tuning], else the region's [tuning], else the engine default. A TOML list for a tuple
+    default comes back as a tuple, a TOML integer for a float default as a float."""
+    v = _T.get("tuning", {}).get(key, _region.get("tuning", {}).get(key, default))
+    if isinstance(default, tuple) and isinstance(v, list):
+        return tuple(v)
+    if isinstance(default, float) and isinstance(v, int) and not isinstance(v, bool):
+        return float(v)
+    return v
+
 SOURCES = COURSE_DIR / "features"   # hand-made course features (tracked)
 RESEARCH = COURSE_DIR / "research"  # OSM snapshot, notes, QA verdicts (tracked)
 DATA = ROOT / "data" / SLUG
@@ -69,6 +110,7 @@ COURSE_NAME = _course["name"]
 COURSE_SHORT = _course.get("short", COURSE_NAME)
 MODEL_NAME = _course.get("model_name", SLUG)    # output/<slug>/<MODEL_NAME>.glb, <MODEL_NAME>_noveg.glb
 UNITY_SCRIPT = _course.get("unity_script", "".join(w.title() for w in SLUG.split("-")) + "Setup.cs")
+UNITY_NAME = UNITY_SCRIPT.removesuffix(".cs").removesuffix("Setup")  # class <UNITY_NAME>Setup, menu and Assets/<UNITY_NAME>
 
 CRS = _frame["crs"]
 CRS_LABEL = _frame.get("crs_label", CRS)
@@ -109,7 +151,7 @@ IMAGERY_CREDIT = _img.get("credit", "")
 
 # Turf colour of the glTF / viewer textures: the median colour of each turf surface is moved to this summer target
 # (sRGB) and the photo only contributes the local variation. None = use the photo's own colours.
-TURF_TINT = {k: tuple(v) for k, v in _T["turf_tint"].items()} if "turf_tint" in _T else None
+TURF_TINT = {k: tuple(v) for k, v in REGION["turf_tint"].items()} if "turf_tint" in REGION else None
 
 YARDS_PER_M = 1.0 / 0.9144
 
@@ -143,6 +185,7 @@ NINE = {h: n for n, spec in _holes_t.get("nines", {}).items() for h in _holes(sp
 
 # Tee sets, back to front: (key, display name, marker colour). SCORECARD yardages follow this order.
 TEES = tuple((t["key"], t["name"], t["colour"]) for t in _T.get("tees", ()))
+TEE_GKD = {t["key"]: t["gkd_slot"] for t in _T.get("tees", ()) if "gkd_slot" in t}  # GreenKeeper TeeType per card tee
 TEE_KEYS = tuple(k for k, _, _ in TEES)
 TEE_NAMES = {k: n for k, n, _ in TEES}
 TEE_COLOURS = {k: c for k, _, c in TEES}
@@ -154,7 +197,8 @@ RATINGS = {t: (*r.get("men", (None, None)), *r.get("women", (None, None)), r.get
            for t, r in _T.get("ratings", {}).items()}                                      # women rating, slope, yards)
 
 # LiDAR tree archetypes (detect_trees.assign_archetypes)
-TREE_ARCHETYPES = tuple(_T.get("trees", {}).get("archetypes", ("maple", "oak", "pine", "spruce", "shrub")))
+TREE_ARCHETYPES = tuple(REGION.get("trees", {}).get("archetypes", ("maple", "oak", "pine", "spruce", "shrub")))
+PARKING = tuple(_T.get("structures", {}).get("parking", ()))  # OSM amenity=parking ids that get parked cars
 
 
 def to_model(e, n, h):

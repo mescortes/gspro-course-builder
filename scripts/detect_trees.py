@@ -231,43 +231,59 @@ def crown_colour(lab, T, n, W, H):
 
 
 def assign_archetypes(feats):
-    """Species group (config.TREE_ARCHETYPES) from crown structure (LiDAR) and the photo.
-
-    The March 2018 LiDAR is leaf-off: evergreen crowns stop most pulses (low ground-return 'penetration'), bare
-    hardwoods do not. In the leaf-off spring photo only evergreen crowns are green (crown NDVI), but the photo is not a
-    true ortho - tall crowns lean several metres - so NDVI only supports the LiDAR, it does not decide alone.
-      conifer  low penetration, or moderately low penetration with a green crown
-      pine     (eastern white pine) a conifer carrying its crown high (crown base > 40 % of height) or tall and flat-topped
-      spruce   the other conifers: dense cones with branches near the ground
-      oak / maple  hardwoods: the broadest third of crowns for their height -> oak, the rest -> maple (leaf-off data
-               cannot tell the species apart; maples dominate Westmount's tree lines)
-      shrub    under 4.5 m"""
+    """Species group (config.TREE_ARCHETYPES) per tree, by the region's classifier (regions/<region>.toml [trees])."""
     if not feats:
         return
     K = ("height", "crown_r", "crown_base", "sharpness", "penetration")
     P = {k: np.array([f["properties"][k] for f in feats], float) for k in K}
     nd = np.array([f["properties"].get("ndvi", np.nan) for f in feats], float)
     nd = np.where(np.isfinite(nd), nd, -1.0)
+    tr = C.REGION["trees"]
+    for f, a in zip(feats, CLASSIFIERS[tr["classifier"]](P, nd, tr[tr["classifier"]])):
+        f["properties"]["archetype"] = a
+
+
+def leaf_off_parkland(P, nd, prm):
+    """Leaf-off parkland (Southern Ontario): archetype names per tree.
+
+    Leaf-off LiDAR: evergreen crowns stop most pulses (low ground-return 'penetration'), bare hardwoods do not. In a
+    leaf-off spring photo only evergreen crowns are green (crown NDVI), but the photo is not a true ortho - tall crowns
+    lean several metres - so NDVI only supports the LiDAR, it does not decide alone.
+      conifer  low penetration, or moderately low penetration with a green crown
+      pine     a conifer carrying its crown high (crown base > pine_base of its height) or tall and flat-topped
+      conifer  (name 'conifer') the other conifers: dense cones with branches near the ground
+      broad / other  hardwoods: the broadest crowns for their height (above the oak_pct percentile) -> 'broad', the
+               rest -> 'other' (leaf-off data cannot tell the species apart)
+      shrub    under shrub_h m"""
+    sh, names = prm["shrub_h"], prm["names"]
     h, pen = P["height"], P["penetration"]
     ratio = P["crown_r"] / np.maximum(h, 1)
     base_f = P["crown_base"] / np.maximum(h, 1)
-    conifer = (h >= 4.5) & ((pen < 0.24) | ((nd > 0.28) & (pen < 0.32)) | ((nd > 0.22) & (pen < 0.27)))
-    pine = conifer & ((base_f > 0.4) | ((h > 20) & (P["sharpness"] < 2.0)))
-    hard = (h >= 4.5) & ~conifer
-    # broadest third of the hardwood crowns -> oak (reviews name maples as the dominant hardwood)
-    cut = np.percentile(ratio[hard & (h > 6)], 65) if (hard & (h > 6)).any() else 0.35
-    for i, f in enumerate(feats):
-        if h[i] < 4.5:
-            a = "shrub"
+    green = pen < prm["conifer_pen"]
+    for a, b in prm["conifer_green"]:
+        green = green | ((nd > a) & (pen < b))
+    conifer = (h >= sh) & green
+    tall_h, tall_sharp = prm["pine_tall"]
+    pine = conifer & ((base_f > prm["pine_base"]) | ((h > tall_h) & (P["sharpness"] < tall_sharp)))
+    hard = (h >= sh) & ~conifer
+    big = hard & (h > prm["oak_min_h"])
+    cut = np.percentile(ratio[big], prm["oak_pct"]) if big.any() else prm["oak_default"]
+    out = []
+    for i in range(len(h)):
+        if h[i] < sh:
+            out.append(names["shrub"])
         elif pine[i]:
-            a = "pine"
+            out.append(names["pine"])
         elif conifer[i]:
-            a = "spruce"
+            out.append(names["conifer"])
         elif ratio[i] > cut:
-            a = "oak"
+            out.append(names["broad"])
         else:
-            a = "maple"
-        f["properties"]["archetype"] = a
+            out.append(names["other"])
+    return out
+
+
+CLASSIFIERS = {"leaf_off_parkland": leaf_off_parkland}
 
 
 if __name__ == "__main__":

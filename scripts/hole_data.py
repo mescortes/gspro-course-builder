@@ -164,7 +164,16 @@ def green_analysis(green, terr, res=0.25):
     return X, Y, Z, slope, inside, edge, ok, limit
 
 
-def pin_candidates(inside, edge, slope, limits=(3.0, 3.5, 4.0, 4.5, 5.0), min_frac=0.12):
+def nine_hole(h, nine):
+    """Hole number within its nine (1-9), from config.NINE."""
+    return [x for x in sorted(nine) if nine[x] == nine[h]].index(h) + 1
+
+
+PIN_LIMITS = C.tuning("pin_slope_limits", (3.0, 3.5, 4.0, 4.5, 5.0))   # % slope, tried in turn
+PIN_MIN_FRAC = C.tuning("pin_min_frac", 0.12)
+
+
+def pin_candidates(inside, edge, slope, limits=PIN_LIMITS, min_frac=PIN_MIN_FRAC):
     """Cells >= 3 m from the edge with slope <= the first limit (in %) that leaves at least `min_frac` of the green
     pinnable. Steep Thompson greens (Westmount 14: 3.7 % at <= 3 %) would otherwise put all five pins in one spot."""
     for limit in limits:
@@ -207,7 +216,7 @@ def hole_record(h, line, feats, terr, all_feats):
             near = [pd for pd in pads if pd.distance(Point(fixed)) < 3]
             if near:
                 t["pad"] = near[0]
-    rec = {"hole": h, "nine": C.NINE[h], "nine_hole": (h - 1) % 9 + 1, "par": par, "handicap": C.HANDICAP.get(h),
+    rec = {"hole": h, "nine": C.NINE[h], "nine_hole": nine_hole(h, C.NINE), "par": par, "handicap": C.HANDICAP.get(h),
            "qa_notes": meta.get("notes", ""),
            "scorecard_yards": dict(zip(TEE_KEYS, card)), "tees": [], "pins": [], "aim_points": [], "hazards": [], "tee_pads": []}
     for pad in pads:
@@ -317,9 +326,10 @@ def main():
            "holes": holes}
     C.OUTPUT.mkdir(exist_ok=True)
     json.dump(out, open(C.OUTPUT / "holes.json", "w"), indent=1)
-    h1 = next((x for x in holes if x["hole"] == 1 and "tees" in x), None)
+    h1 = next((x for x in holes if "tees" in x), None)   # the first playable hole
     if h1:
-        json.dump(dict(h1, course=out["course"], crs=C.CRS, model_frame=out["model_frame"]), open(C.OUTPUT / "hole01.json", "w"), indent=1)
+        json.dump(dict(h1, course=out["course"], crs=C.CRS, model_frame=out["model_frame"]),
+                  open(C.OUTPUT / f"hole{h1['hole']:02d}.json", "w"), indent=1)
     return out
 
 

@@ -51,18 +51,9 @@ def recolor(sp, hsv_target, rng, var=0.08):
     return Image.fromarray((np.dstack([out, al]) * 255).astype(np.uint8), "RGBA")
 
 
-SPEC = {
-    # archetype: source sprites (None = procedural needles), target HSV, leaves per card, leaf scale (fraction of card),
-    # twig colour, extra hues (Southern Ontario summer foliage)
-    "maple":  dict(src="island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv=(0.23, 0.62, 0.40), n=120, scale=(0.085, 0.13), twig=(95, 82, 66),
-                   alt=[((0.21, 0.55, 0.47), 0.18), ((0.25, 0.65, 0.33), 0.15)]),
-    "oak":    dict(src="island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv=(0.22, 0.58, 0.29), n=300, scale=(0.050, 0.075), twig=(72, 60, 48),
-                   alt=[((0.20, 0.5, 0.36), 0.2)]),
-    "shrub":  dict(src="island_tree_02__island_tree_02_leaves_diff_1k.jpg", hsv=(0.22, 0.48, 0.32), n=380, scale=(0.035, 0.055), twig=(80, 70, 55),
-                   alt=[((0.17, 0.40, 0.40), 0.15)]),
-    "pine":   dict(src=None, hsv=(0.30, 0.38, 0.33), n=0, scale=(0, 0), twig=(92, 74, 58), alt=[]),    # eastern white pine
-    "spruce": dict(src=None, hsv=(0.37, 0.42, 0.24), n=0, scale=(0, 0), twig=(80, 62, 48), alt=[]),    # Norway / white / blue spruce
-}
+# archetype: source sprites (None = procedural needles), target HSV, leaves per card, leaf scale (fraction of card),
+# twig colour, extra hues: regions/<region>.toml [foliage.<archetype>]
+SPEC = {k: dict(C.as_tuples(v), src=v["src"] or None) for k, v in C.REGION["foliage"].items()}
 
 
 def make_card(spec, sps, rng, size=512, pine=False):

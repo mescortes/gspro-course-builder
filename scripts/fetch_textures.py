@@ -4,8 +4,9 @@ import json, sys, os, urllib.request
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent)); import config as C
 IDS = ["sand_01", "withered_grass", "wood_chips", "dry_ground_01", "concrete_floor_worn_001", "asphalt_02",
-       "leafy_grass", "trident_maple_bark", "pine_bark", "knotted_pine_bark", "jolcham_oak_bark_01", "bark_brown_01",
-       "white_stucco", "clay_roof_tiles", "grey_roof_tiles", "forest_leaves_02", "brown_mud_leaves_01"]
+       "leafy_grass", "bark_brown_01", "white_stucco", "clay_roof_tiles", "grey_roof_tiles", "forest_leaves_02",
+       "brown_mud_leaves_01"]
+IDS += [t for t in [*C.REGION["trees"]["bark"].values(), *C.REGION["materials"].values()] if t not in IDS]  # the region's
 LEAF_REFS = [("island_tree_02", "leaves_diff")]   # broadleaf sprites (recoloured per species in make_foliage.py)
 UA = {"User-Agent": "westmount-course-builder"}
 def get(url):

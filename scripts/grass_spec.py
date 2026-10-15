@@ -11,43 +11,23 @@ the FBX as the 'Col' colour layer):
   B  reserved (0)
 Non-grass surfaces get (0, 0, 0). The same masks drive the viewer's preview grass (viewer/grass.js).
 
-SPEC also lists blade settings per surface. Heights and densities are our estimates for Westmount's cool-season
-(Kentucky bluegrass / ryegrass / fine fescue) rough (no public source gives per-surface 3DG values); the 3DG property
-names are from the Stix docs.
+SPEC (the region's [grass] table) also lists blade settings per surface: estimates per turf type (no public source
+gives per-surface 3DG values); the 3DG property names are from the Stix docs.
 """
-import json
+import json, sys
+from pathlib import Path
 import numpy as np
 from scipy import ndimage
 from scipy.spatial import cKDTree
+
+sys.path.insert(0, str(Path(__file__).parent)); import config as C
 
 GRASS3DG = ("semirough", "rough", "deeprough")          # "if the lawn mower goes there, 3DG" (OPCD doc)
 NO_GRASS = ("bunker", "bunkerlip", "cartpath", "road", "building", "court", "water", "wateredge", "green", "tee")
 CLEAR_M = (0.15, 0.6)     # no blades within 0.15 m of a no-grass surface, full density from 0.6 m
 CANOPY = (3.0, 0.55)      # under canopy taller than 3 m keep 55 % of the blades
 
-SPEC = {
-    "about": "3D grass settings per OPCD surface. 3dg = Stix Games DirectX 11 Grass Shader material settings to start "
-             "from (estimates, tune in Unity); viewer = our three.js preview. Masks: FBX colour layer 'Col' "
-             "(R = grass type 1 density, G = grass type 2 / dry, B = 0) for 3DG 'Vertex density' mode.",
-    "3dg": {
-        "common": {"Density Mode": "Vertex density", "Grass Types": "2 textures (type 1 = green blades, type 2 = dry blades)",
-                   "layer": "600m cull", "Density Falloff Start": 12.0, "Grass Fade End": 90.0,
-                   "Lighting Mode": "Default PBR", "notes": "Target Density: smaller number = denser grass (Stix docs)"},
-        "SemiRough": {"blade_height_m": [0.025, 0.045], "blade_width_m": 0.006, "relative_density": 1.0},
-        "Rough":     {"blade_height_m": [0.045, 0.085], "blade_width_m": 0.007, "relative_density": 0.9},
-        "DeepRough": {"blade_height_m": [0.12, 0.32], "blade_width_m": 0.008, "relative_density": 0.55},
-    },
-    "viewer": {
-        "radius_m": 55, "full_density_m": 22, "far_density": 0.18, "tile_m": 6, "max_instances": 400000,
-        "wind": {"strength": 0.35, "speed": 1.0},
-        "surfaces": {
-            "SemiRough": {"height": [0.03, 0.05], "width": 0.008, "density": 45, "blades": 8, "colour_tip": [1.06, 1.10, 1.02], "dry": 0.0},
-            "Rough":     {"height": [0.05, 0.09], "width": 0.009, "density": 40, "blades": 9, "colour_tip": [1.07, 1.12, 1.02], "dry": 0.05},
-            "DeepRough": {"height": [0.14, 0.32], "width": 0.010, "density": 14, "blades": 9, "colour_tip": [1.14, 1.10, 0.88], "dry": 0.25},
-            "Pinestraw": {"height": [0.22, 0.45], "width": 0.008, "density": 7, "blades": 10, "colour_tip": [1.22, 1.12, 0.82], "dry": 0.6},
-        },
-    },
-}
+SPEC = C.REGION["grass"]  # regions/<region>.toml [grass]: written as gspro/grass_3dg.json
 
 
 def dryness_grid(img_lin, block=8):

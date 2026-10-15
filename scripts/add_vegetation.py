@@ -14,8 +14,7 @@ from make_trees import N_VARIANTS
 
 TREES = C.DATA / "trees"
 PH = C.DATA / "textures"; GEN = C.DATA / "textures_gen"
-BARK = {"maple": "trident_maple_bark", "oak": "jolcham_oak_bark_01", "pine": "pine_bark", "spruce": "knotted_pine_bark",
-        "shrub": "bark_brown_01"}
+BARK = dict(C.REGION["trees"]["bark"])  # archetype -> Poly Haven bark set (regions/<region>.toml [trees] bark)
 CELL = 256.0
 
 

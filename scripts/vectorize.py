@@ -24,6 +24,8 @@ PRIORITY = ["water", "green", "bunker", "tee", "cartpath", "road", "building", "
 STROKE = {"green": "#BCE5A4", "fringe": "#A4C88F", "fairway": "#43E561", "semirough": "#36B74D", "rough": "#278438",
           "deeprough": "#164B20", "tee": "#A0E5B8", "bunker": "#E5E5AA", "cartpath": "#BEBEBB", "native": "#BE751D",
           "road": "#555555", "building": "#C83C3C", "court": "#3355AA", "water": "#0000C0"}
+FORWARD_TEE_FRAC = C.tuning("forward_tee_frac", 0.45)   # tee pads past this fraction of a hole are not its tees (Westmount <= 0.35)
+BUNKER_CLEARANCE = C.tuning("bunker_clearance", (1.0, 10.0))  # unmapped bunkers: m clear of roads / of buildings
 MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 150, "cartpath": 6, "native": 25, "road": 25,
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
 ROAD_HALF_WIDTH = {"motorway": 7.0, "secondary": 6.0, "secondary_link": 4.0, "tertiary": 5.0, "residential": 4.0,
@@ -337,7 +339,7 @@ def main():
                 ext = LineString([a - 35 * u] + list(line.coords))
                 d = c.distance(ext)
                 frac = ext.project(c) / ext.length
-                d += max(0.0, frac - 0.45) * 400  # a pad past ~45 % of the hole is not its tee (Westmount forward tees: <= 35 %)
+                d += max(0.0, frac - FORWARD_TEE_FRAC) * 400  # a pad past this fraction of the hole is not its tee
             else:
                 d = c.distance(line)
             if d < bd:
@@ -404,7 +406,7 @@ def main():
     paved = unary_union([make_valid(x) for x in vector["road"]]) if vector["road"] else Polygon()
     bldgs = unary_union([make_valid(x) for x in vector["building"]]) if vector["building"] else Polygon()
     for p in polys_of(final["bunker"]):
-        if bunker_ok(p, osm_bunk, course_buf, is_hollow, paved, bldgs):
+        if bunker_ok(p, osm_bunk, course_buf, is_hollow, paved, bldgs, *BUNKER_CLEARANCE):
             keep_b.append(p); continue
         (to_path if p.intersection(path_corr).area > 0.5 * p.area else []).append(p); dropped += 1
     print(f"validation: tees kept {len(keep_t)}, bunkers kept {len(keep_b)}, rejected {dropped} "
