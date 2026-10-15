@@ -1,6 +1,6 @@
 """build_all.py and measure_registration.py: a newcomer's wrong step name, missing Blender or white-sand course used to
 be a bare traceback, the Blender one after an hour of steps (no data, nothing is built: subprocess is stubbed)."""
-import sys
+import os, sys
 from pathlib import Path
 
 import numpy as np
@@ -35,13 +35,36 @@ def test_a_missing_blender_stops_the_build_before_the_first_step(monkeypatch, tm
     with pytest.raises(SystemExit, match="BLENDER"):
         find(env={"BLENDER": str(tmp_path / "none")}, which=lambda n: None, defaults=())
     runs = []
-    monkeypatch.setattr(B.subprocess, "run", lambda cmd, **k: runs.append(cmd))
+    monkeypatch.setattr(B, "run", lambda cmd, **k: runs.append(cmd))
     monkeypatch.setattr(B, "find_blender", lambda: None)
     with pytest.raises(SystemExit) as e:
         B.main([])
     assert runs == [] and "BLENDER" in str(e.value) and "register prefabs" in str(e.value)
     B.main(["maps", "views"])                                        # no Blender needed after the fbx step
     assert [Path(c[1]).name for c in runs] == ["make_maps.py", "make_views.py"]
+
+
+def test_each_step_reports_its_peak_memory(monkeypatch, capsys):
+    """docs/PLAYBOOK.md promised each step's peak memory (16 GB, a Claude cloud session, is at the edge for an 18-hole
+    build), but build_all printed only the time. Each step runs as a child whose own rusage (os.wait4) gives its peak:
+    getrusage(RUSAGE_CHILDREN) grows only when a step sets a new maximum."""
+    import subprocess
+    import build_all as B
+    if not hasattr(os, "wait4"):
+        pytest.skip("no os.wait4 (Windows): the build prints the times only")
+    peak = B.run([sys.executable, "-c", "b = b'x' * (400 * 2 ** 20)"])
+    assert 0.35 < peak < 2.0, peak
+    with pytest.raises(subprocess.CalledProcessError):
+        B.run([sys.executable, "-c", "raise SystemExit(3)"])
+    peaks = iter([1.52, 6.31])
+    monkeypatch.setattr(B, "run", lambda cmd, **k: next(peaks))
+    B.main(["maps", "views"])
+    out = capsys.readouterr().out
+    assert "maps done in" in out and "peak memory 1.5 GB" in out and "peak memory 6.3 GB" in out
+    assert out.strip().splitlines()[-1] == "peak memory 6.3 GB (views)"
+    monkeypatch.setattr(B, "run", lambda cmd, **k: None)                 # no wait4: times only
+    B.main(["maps", "views"])
+    assert "peak" not in capsys.readouterr().out
 
 
 def _fake_blender_app(tmp_path, version):
@@ -68,13 +91,11 @@ def test_the_build_says_which_blender_it_uses_and_warns_on_another_version(monke
     assert note.startswith("!!") and exe in note and "4.5.3" in note and "4.2 LTS" in note and "BLENDER" in note
     assert not B.blender_note("/opt/blender-4.2.23-linux-x64/blender").startswith("!!")
     assert "version" in B.blender_note("/usr/bin/blender") and not B.blender_note("/usr/bin/blender").startswith("!!")
-    real_run = B.subprocess.run
-    monkeypatch.setattr(B.subprocess, "run", lambda cmd, **k: None)
+    monkeypatch.setattr(B, "run", lambda cmd, **k: None)
     monkeypatch.setattr(B, "find_blender", lambda: exe)
     B.main(["fbx", "fbx"])
     out = capsys.readouterr().out
     assert out.index("4.5.3") < out.index("== fbx")                       # said before the first step
-    monkeypatch.setattr(B.subprocess, "run", real_run)
     assert FP._blender() == "4.5.3"                                        # the program the build uses
     monkeypatch.setattr(B, "find_blender", lambda: sys.exit("BLENDER=/x is not a program"))
     assert FP._blender() is None

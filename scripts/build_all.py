@@ -103,6 +103,25 @@ def find_blender(env=os.environ, which=shutil.which, defaults=None):
                                      if Path(d).is_file()), None)
 
 
+def run(cmd, **kw):
+    """Run one step's program as subprocess.run(cmd, check=True, **kw) does; its peak memory (GB, the child's own
+    maximum resident set from os.wait4), or None where the OS has no wait4 (Windows)."""
+    p = subprocess.Popen(cmd, **kw)
+    if not hasattr(os, "wait4"):
+        if p.wait():
+            raise subprocess.CalledProcessError(p.returncode, cmd)
+        return None
+    try:
+        _, status, ru = os.wait4(p.pid, 0)
+    except BaseException:  # Ctrl-C: stop the step as subprocess.run does
+        p.kill(); p.wait()
+        raise
+    p.returncode = os.waitstatus_to_exitcode(status)
+    if p.returncode:
+        raise subprocess.CalledProcessError(p.returncode, cmd)
+    return ru.ru_maxrss / (2 ** 30 if sys.platform == "darwin" else 2 ** 20)  # bytes on macOS, KiB on Linux
+
+
 def main(argv=None):
     a, b = step_range(sys.argv[1:] if argv is None else argv)
     blender = None
@@ -115,23 +134,32 @@ def main(argv=None):
     print(f"course {C.SLUG} ({C.COURSE_NAME}), profile {C.PROFILE}", flush=True)
     if blender is not None:
         print(blender_note(blender), flush=True)
+    peaks = []  # (GB, step) of each step whose peak memory is known
+
+    def done(n, t, peak):
+        print(f"   {n} done in {time.time() - t:.0f}s" + (f", peak memory {peak:.1f} GB" if peak is not None else ""),
+              flush=True)
+        if peak is not None:
+            peaks.append((peak, n))
     for n, script in STEPS[a:b + 1]:
         if script is None:
             t = time.time(); print(f"== {n}", flush=True)
-            subprocess.run([blender, "-b", "--python-exit-code", "1", "--python", str(S / "export_fbx_blender.py"), "--", str(C.OUTPUT / f"{C.MODEL_NAME}_noveg.glb"),
-                            str(C.OUTPUT / "gspro"), str(C.OUTPUT / "gspro/terrain.json")], check=True, stdout=subprocess.DEVNULL)
+            peak = run([blender, "-b", "--python-exit-code", "1", "--python", str(S / "export_fbx_blender.py"), "--", str(C.OUTPUT / f"{C.MODEL_NAME}_noveg.glb"),
+                        str(C.OUTPUT / "gspro"), str(C.OUTPUT / "gspro/terrain.json")], stdout=subprocess.DEVNULL)
             if (C.OUTPUT / "gspro/tree_prefabs.glb").exists():
-                subprocess.run([blender, "-b", "--python-exit-code", "1", "--python", str(S / "glb_to_fbx_blender.py"), "--", str(C.OUTPUT / "gspro/tree_prefabs.glb"),
-                                str(C.OUTPUT / "gspro/tree_prefabs.fbx")], check=True, stdout=subprocess.DEVNULL)
-            print(f"   {n} done in {time.time() - t:.0f}s", flush=True)
+                p2 = run([blender, "-b", "--python-exit-code", "1", "--python", str(S / "glb_to_fbx_blender.py"), "--", str(C.OUTPUT / "gspro/tree_prefabs.glb"),
+                          str(C.OUTPUT / "gspro/tree_prefabs.fbx")], stdout=subprocess.DEVNULL)
+                peak = None if None in (peak, p2) else max(peak, p2)
+            done(n, t, peak)
             continue
         if not (S / script).exists():
             print(f"-- skip {n} (missing {script})"); continue
         if n == "paths" and not C.tuning("trace_paths", True):   # a course whose OSM maps its cart paths
             print("-- skip paths (course.toml [tuning] trace_paths = false)"); continue
         t = time.time(); print(f"== {n}", flush=True)
-        subprocess.run([sys.executable, str(S / script)], check=True)
-        print(f"   {n} done in {time.time() - t:.0f}s", flush=True)
+        done(n, t, run([sys.executable, str(S / script)]))
+    if peaks:
+        print("peak memory {:.1f} GB ({})".format(*max(peaks)), flush=True)
 
 
 if __name__ == "__main__":
