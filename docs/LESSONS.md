@@ -34,15 +34,23 @@ course values said to be in `scripts/config.py` are in `courses/<slug>/course.to
   * Sand colour gates them: L* > 66, low chroma.
   * A confident classifier inside a mapped OSM bunker covers shaded sand.
   * Then **trim clearly green pixels** (a* < −14) outside canopy, because the classifier bleeds onto grass faces.
-  * Keep a bunker only if it overlaps OSM or is a LiDAR hollow.
+  * Keep a bunker only if it overlaps OSM or is a LiDAR hollow, and a closed one (`vectorize.closed_hollow`): an
+    open channel (barranca floor, ditch, path cut) is lower than its banks too. Closed means it holds water, or it has
+    a real face (a quarter of Westmount's bunkers, cut into slopes and open on the low side, hold none).
+  * A 0.6 m photo blurs sand into the grass faces, and dry turf is not "clearly green": cut the bunkers to their LiDAR
+    pans instead (`vectorize.bunker_bowls`, photos of 0.3 m or coarser).
 * **Tees.**
   * Keep one if it overlaps an OSM tee, or is a flat **built** deck (`vectorize.is_deck`: part of the ring around it
     falls away *below* it) in the first ~45 % of some hole's line of play. Otherwise it is a lawn, terrace, court
     apron, swale bottom or fairway edge.
   * Markers slide along any line of play across the pad (`hole_data.pad_axes`; L-shaped complexes have their
     centroid outside the pad), nearest the centre line. If no pad can deliver the card yardage, pin the marker in
-    `holeNN_meta.json` and document the gap.
+    `holeNN_meta.json` and document the gap. Two sets never share a marker spot while another pad is free: a card
+    longer than the ground clamped both to the back of one deck (`hole_data.place_tees`).
   * Tees built after the LiDAR survey get a synthetic deck (`build_terrain_mesh.level_tees`); see §11b.
+* **Hole numbers.** A connected zoysia area holds several holes' fairways (Brambles 13 / 14 / 5): split a fairway
+  that several lines of play run through between their Voronoi cells (`vectorize.split_shared_fairways`), as greens
+  that hold several holes' ends are split.
 * **Greens.** Trim banks steeper than 12 % within 2.5 m of the edge. 8 % split tiered greens. Hillside greens can
   average 6 % on the bare LiDAR; test against the raw LiDAR, not a fixed number.
 
@@ -133,7 +141,9 @@ course values said to be in `scripts/config.py` are in `courses/<slug>/course.to
     ground slope;
   * real decks (plane std < 6 cm, fall <= 3.5 %; drainage falls are 1.5-3 %) are left alone, and so are polygons over
     500 m² (a bad outline would terrace the hillside);
-  * list the levelled tees for QA: large fill means the outline runs down a bank.
+  * list the levelled tees for QA: large fill means the outline runs down a bank;
+  * a LiDAR flown after every tee was built (Brambles) needs none: `[tuning.level_tees] enabled = false`, or drafted
+    pads that take in banks are cut and filled (a 1 m step by a green).
 * **Steep Thompson greens.** Relax the pin slope limit (3 → 5 %) until 12 % of the green is pinnable, or all pins land
   in one spot (`hole_data.pin_candidates`).
 * **Structures OSM lacks** go in `features/structures.geojson` (`building`, `height`, `roof:shape=hipped` for a
