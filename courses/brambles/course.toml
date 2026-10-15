@@ -53,6 +53,13 @@ dtm = ["https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/CA
        "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/CA_NorthCoastRanges_B23/TIFF/USGS_1M_10_x53y430_CA_NorthCoastRanges_B23.tif"]
 src_crs = "EPSG:6339"
 
+[tuning]
+trace_paths = false  # the NDVI-ridge tracer follows the turf and barranca edges here; draft_features drafts the gravel paths
+
+# draft_features.py (features/golf.geojson): the meadow between the holes is course (outline closed over 160 m gaps)
+[draft]
+outline = { corridor = 45.0, close = 80.0 }
+
 [lidar]
 leaf_off = false  # late September: the oaks are in leaf
 

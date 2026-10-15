@@ -78,8 +78,9 @@ def _trace(skel):
     return paths
 
 
-def centrelines(mask, T, min_len=MIN_LEN):
-    """Clean candidate mask -> list of simplified centre LineStrings (map coordinates) of path-wide, long strips."""
+def centrelines(mask, T, min_len=MIN_LEN, width=WIDTH):
+    """Clean candidate mask -> list of simplified centre LineStrings (map coordinates) of long strips whose full
+    width at the skeleton lies in `width` (m)."""
     from skimage.morphology import skeletonize
     res = abs(T.a)
     m = ndimage.binary_closing(mask, iterations=2)
@@ -87,9 +88,9 @@ def centrelines(mask, T, min_len=MIN_LEN):
     half = ndimage.distance_transform_edt(m) * res
     skel = skeletonize(m)
     w = 2 * half
-    skel &= (w >= WIDTH[0]) & (w <= WIDTH[1])
+    skel &= (w >= width[0]) & (w <= width[1])
     # drop skeleton spurs inside blobs: a pixel whose strip is wider than a path anywhere nearby
-    wide = ndimage.maximum_filter(np.where(m, w, 0), size=int(round(3.0 / res)) | 1) > WIDTH[1] + 1.0
+    wide = ndimage.maximum_filter(np.where(m, w, 0), size=int(round(3.0 / res)) | 1) > width[1] + 1.0
     skel &= ~wide
     lines = []
     for path in _trace(skel):

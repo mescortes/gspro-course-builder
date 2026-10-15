@@ -10,11 +10,12 @@ the lines of play (courses/<slug>/features/golf.geojson, golf=hole) and the GPS 
   bunkers   bare (NDVI ~0), bright sand near the turf, compact (paths of the same gravel are long and thin), and a
             LiDAR hollow when the DEM exists
   water     dark, low-NIR ground
+  paths     centre lines of the long thin strips of the same bare gravel (golf=cartpath, surface=gravel)
   outline   leisure=golf_course: the hole corridors and the turf, closed
 
 The draft replaces the previous one in features/golf.geojson (features tagged draft=yes); features drawn by hand (no
 draft tag) are kept. Review sheets per hole: build/<slug>/draft/hole_NN.jpg. Thresholds: course.toml [draft]
-(sections turf, green, tee, sand, water, outline), defaults below.
+(sections turf, green, tee, sand, water, outline, path), defaults below.
 
   COURSE=brambles python scripts/draft_features.py
 """
@@ -41,6 +42,7 @@ DEFAULTS = {
                  max_elong=6.0, hollow=0.15),
     "water": dict(L_max=40.0, nir_max=90.0, min_area=50.0),
     "outline": dict(corridor=45.0, close=30.0),
+    "path": dict(min_len=25.0, width=[1.5, 7.0], gap=15.0),
 }
 
 
@@ -129,6 +131,18 @@ def compact_blobs(mask, res, min_area, max_elong):
     return keep[lab]
 
 
+def path_lines(mask, T, min_len, width, max_elong, gap=0.0):
+    """Centre lines of the bare strips that are not compact blobs (gravel tracks and paths): trace_paths.centrelines
+    over the components compact_blobs rejects, aligned pieces up to `gap` m apart joined, then at least min_len m."""
+    from trace_paths import centrelines, bridge
+    res = abs(T.a)
+    strips = mask & ~compact_blobs(mask, res, 0.0, max_elong)
+    lines = centrelines(strips, T, min_len=6.0, width=tuple(width))
+    if gap:
+        lines = bridge(lines, max_gap=gap, max_angle=35.0)
+    return sorted([g for g in lines if g.length >= min_len], key=lambda g: (-round(g.length, 2), g.bounds))
+
+
 def is_hollow(dem, mask, res, ring_m=2.0, depth=0.15):
     """The mean ground inside `mask` lies at least `depth` m below the median of a ring_m wide ring around it."""
     ring = ndimage.binary_dilation(mask, iterations=_px(ring_m, res)) & ~mask
@@ -209,12 +223,12 @@ def _on_photo(path, T, shape_, resampling):
 
 def sheets(img, T, lines, layers, out_dir):
     """One review image per hole: the photo with the draft (green red, tee white, bunker magenta, water blue, fairway
-    cyan, outline yellow), the line of play and a 20 m grid."""
+    cyan, outline yellow, path grey), the line of play and a 20 m grid."""
     from PIL import Image, ImageDraw
     out_dir.mkdir(parents=True, exist_ok=True)
     rgb = np.clip(np.moveaxis(img[:3], 0, -1), 0, 255).astype(np.uint8)
     col = {"fairway": (0, 230, 255), "green": (255, 40, 40), "tee": (255, 255, 255), "bunker": (255, 0, 255),
-           "water": (40, 90, 255), "outline": (255, 230, 0)}
+           "water": (40, 90, 255), "outline": (255, 230, 0), "path": (210, 210, 210)}
     inv = ~T
     for ref, line in sorted(lines.items()):
         x0, y0, x1, y1 = line.buffer(60).bounds
@@ -235,6 +249,8 @@ def sheets(img, T, lines, layers, out_dir):
                 for p in getattr(g, "geoms", [g]):
                     if p.geom_type == "Polygon":
                         dr.line([px(*xy) for xy in p.exterior.coords], fill=col[kind], width=2)
+                    elif p.geom_type == "LineString":
+                        dr.line([px(*xy) for xy in p.coords], fill=col[kind], width=3)
         dr.line([px(*xy) for xy in line.coords], fill=(255, 140, 0), width=1)
         dr.text((6, 6), f"hole {ref}  grid 20 m  E{x0:.0f} N{y1:.0f}", fill=(255, 255, 0))
         im.save(out_dir / f"hole_{int(ref):02d}.jpg", quality=88)
@@ -333,9 +349,9 @@ def main():
     Bs = ndimage.gaussian_filter(B, 0.8); As = ndimage.gaussian_filter(A, 0.8); Ls8 = ndimage.gaussian_filter(L, 0.8)
     nd = ndimage.gaussian_filter((nir - red) / (nir + red + 1e-3), 0.8)
     near = ndimage.binary_dilation(turf | green_m, iterations=_px(sp["near_turf"], res))
-    sand = (nd < sp["ndvi_max"]) & (Ls8 > sp["L_min"]) & (As > sp["a_min"]) & (Bs > sp["b_min"]) & (Bs < sp["b_max"])
-    sand &= near & ~green_m & ~tee_m & ~water_m
-    sand = compact_blobs(ndimage.binary_opening(sand, iterations=1), res, sp["min_area"], sp["max_elong"])
+    bare = (nd < sp["ndvi_max"]) & (Ls8 > sp["L_min"]) & (As > sp["a_min"]) & (Bs > sp["b_min"]) & (Bs < sp["b_max"])
+    bare = ndimage.binary_opening(bare & ~green_m & ~tee_m & ~water_m, iterations=1)
+    sand = compact_blobs(bare & near, res, sp["min_area"], sp["max_elong"])
     bunkers = []
     for p in mask_polys(sand, T, 0.15):
         if dem is not None and not is_hollow(dem, burn([p]), res, 2.0, sp["hollow"]):
@@ -350,6 +366,9 @@ def main():
     op = prm["outline"]
     course = outline(list(lines.values()), fairways + [g for g, _ in greens.values()], op["corridor"], op["close"])
     waters = [p for p in mask_polys(water_m, T, 0.3) if course.intersection(p).area >= 0.5 * p.area]
+    # gravel tracks and paths: the long thin bare strips on the course (the bunker colour, not compact)
+    pp = prm["path"]
+    paths = path_lines(bare & burn([course]), T, pp["min_len"], pp["width"], sp["max_elong"], pp["gap"])
 
     def hole_of(g):
         return max(lines, key=lambda k: lines[k].buffer(op["corridor"]).intersection(g).area)
@@ -360,6 +379,7 @@ def main():
     out += [_feature(g, golf="fairway", hole=hole_of(g)) for g in fairways if course.intersection(g).area >= 0.5 * g.area]
     out += [_feature(g, golf="bunker", hole=hole_of(g)) for g in bunkers if course.contains(g.centroid)]
     out += [_feature(g, natural="water", water="pond") for g in waters]
+    out += [_feature(g, golf="cartpath", surface="gravel") for g in paths]
     merged = merge(fc, out)
     fc_path.write_text(json.dumps(merged, indent=1) + "\n")
     kinds = {}
@@ -368,7 +388,7 @@ def main():
         kinds[k] = kinds.get(k, 0) + 1
     print(f"wrote {fc_path.relative_to(C.ROOT)}: draft {kinds}")
     layers = {"outline": [course], "fairway": fairways, "green": [g for g, _ in greens.values()],
-              "tee": [g for _, _, g in tees], "bunker": bunkers, "water": waters}
+              "tee": [g for _, _, g in tees], "bunker": bunkers, "water": waters, "path": paths}
     sheets(img, T, lines, layers, C.BUILD / "draft")
     print(f"review sheets in {(C.BUILD / 'draft').relative_to(C.ROOT)}")
 
