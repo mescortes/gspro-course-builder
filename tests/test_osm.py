@@ -93,16 +93,19 @@ def test_fetch_osm_downloads_when_the_snapshot_is_missing(tmp_path, monkeypatch)
 def test_downloads_use_the_course_extent_in_the_test_profile(tmp_path, monkeypatch):
     """The two profiles share data/<slug>/ and the OSM snapshot: fetching in the test profile (a small CORE) must
     still cover the whole course, or the course build silently reuses a test-extent photo and snapshot."""
-    import fetch_imageserver
+    import sources
+    from sources import arcgis_imageserver, nrcan_copc
     full = dict(fetch_data.C.FETCH_CORE)
     monkeypatch.setattr(fetch_data.C, "CORE", dict(xmin=full["xmin"] + 300, ymin=full["ymin"] + 300,
                                                     xmax=full["xmin"] + 600, ymax=full["ymin"] + 600))
     monkeypatch.setattr(fetch_data.C, "IMAGERY_RAW", tmp_path / "photo.tif")
     got = {}
-    monkeypatch.setattr(fetch_imageserver, "fetch", lambda *a, **k: got.update(bbox=a[:4]))
+    monkeypatch.setattr(arcgis_imageserver, "fetch", lambda spec, *a, **k: got.update(bbox=a[:4]))
     fetch_data.fetch_imagery()
     assert got["bbox"] == (full["xmin"] - 20, full["ymin"] - 20, full["xmax"] + 20, full["ymax"] + 20)
-    assert fetch_data.lidar_tiles(fetch_data.C.FETCH_CORE) == fetch_data.lidar_tiles(full)
+    monkeypatch.setattr(nrcan_copc, "fetch", lambda spec, ext, out, **k: got.update(lidar=dict(ext)) or 0)
+    fetch_data.fetch_lidar()
+    assert got["lidar"] == full
     calls = []
     _fake_root(tmp_path, monkeypatch, calls)
     queries = []

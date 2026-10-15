@@ -1,11 +1,10 @@
-"""Fetch every input for the configured extent (idempotent; skips files that already exist).
+"""Fetch every input for the course extent (idempotent; skips files that already exist).
 
-  LiDAR    Ontario classified point cloud, OMAFRA Lidar 2016-18 "Lake Erie" package (leaf-off, March 2018, 8 pts/m2
-           nominal / 14-20 measured, EPSG:2958 + CGVD2013), 1 km COPC tiles from the NRCan CanElevation S3 bucket
-           covering config.CORE + margin. Licence: Open Government Licence - Ontario / - Canada (attribution).
+  LiDAR    classified point-cloud tiles covering config.FETCH_CORE + 15 m, from the course's [sources.lidar] provider
+           (scripts/sources), into data/<slug>/lidar
   OSM      golf / building / road features via Overpass, or the OSM API when Overpass is down
            (courses/<slug>/research/osm_all.json, osm_golf.json, both in Overpass 'out geom' JSON)
-  Imagery  Ontario SWOOP 2025 orthoimagery (RGB + NIR, 0.16 m, OGL-Ontario) over CORE + 20 m (config.IMAGERY_RAW)
+  Imagery  the [sources.imagery] orthophoto (R, G, B, NIR) over FETCH_CORE + 20 m (config.IMAGERY_RAW)
   Backdrop handled by fetch_backdrop.py / build_backdrop.py
 """
 import sys, json, time
@@ -16,8 +15,7 @@ from pyproj import Transformer
 sys.path.insert(0, str(Path(__file__).parent))
 import config as C
 
-UA = {"User-Agent": "westmount-course-builder/0.1 (personal research)"}
-MARGIN = 15.0
+from sources.http import UA
 OVERPASS = ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
             "https://overpass.private.coffee/api/interpreter")
 OSM_API = "https://api.openstreetmap.org/api/0.6/map"
@@ -30,46 +28,11 @@ def lonlat_bbox(e, margin=0.0):
     return min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts)
 
 
-def download(url, dst, size=None):
-    if dst.exists() and (size is None or dst.stat().st_size == size):
-        return
-    print("downloading", dst.name, round((size or 0) / 1e6), "MB", flush=True)
-    tmp = dst.with_suffix(dst.suffix + ".part")
-    for attempt in range(5):
-        try:
-            with requests.get(url, headers=UA, stream=True, timeout=(60, 600)) as r:
-                r.raise_for_status()
-                with open(tmp, "wb") as f:
-                    for chunk in r.iter_content(1 << 20):
-                        f.write(chunk)
-            tmp.rename(dst)
-            return
-        except requests.RequestException as ex:
-            print("  retry", attempt + 1, ex.__class__.__name__, flush=True); time.sleep(20 * (attempt + 1))
-    raise RuntimeError(f"download failed: {url}")
-
-
-LIDAR_PROJECT = "Lake_Erie_2018"   # NRCan project of OMAFRA Lidar 2016-18 (Lake Erie package); the only one covering the course
-LIDAR_URL = ("https://canelevation-lidar-point-clouds.s3.ca-central-1.amazonaws.com/pointclouds_nuagespoints/ON/"
-             "{project}/1km17{e:04d}{n:05d}2018LLAKEERIE.copc.laz")
-
-
-def lidar_tiles(ext, margin=MARGIN):
-    """Federal 1 km tile names (SW corner / 100 m) intersecting the extent + margin."""
-    import math
-    e0 = int(math.floor((ext["xmin"] - margin) / 1000)); e1 = int(math.floor((ext["xmax"] + margin) / 1000))
-    n0 = int(math.floor((ext["ymin"] - margin) / 1000)); n1 = int(math.floor((ext["ymax"] + margin) / 1000))
-    return [(e * 10, n * 10) for e in range(e0, e1 + 1) for n in range(n0, n1 + 1)]
-
-
 def fetch_lidar():
-    out = C.DATA / "lidar"; out.mkdir(parents=True, exist_ok=True)
-    tiles = lidar_tiles(C.FETCH_CORE)
-    for e, n in tiles:
-        url = LIDAR_URL.format(project=LIDAR_PROJECT, e=e, n=n)
-        size = int(requests.head(url, headers=UA, timeout=60).headers.get("Content-Length", 0)) or None
-        download(url, out / url.split("/")[-1], size)
-    print("lidar tiles:", len(tiles))
+    import sources
+    mod, spec = sources.provider("lidar")
+    kw = dict(crs=C.CRS) if spec["provider"] == "usgs_3dep" else {}
+    print("lidar tiles:", mod.fetch(spec, C.FETCH_CORE, C.DATA / "lidar", **kw))
 
 
 def overpass(query, path):
@@ -183,8 +146,9 @@ def fetch_imagery():
     dst = C.IMAGERY_RAW
     if dst.exists():
         return
-    import fetch_imageserver
-    fetch_imageserver.fetch(e["xmin"] - m, e["ymin"] - m, e["xmax"] + m, e["ymax"] + m, C.IMAGERY_RES, dst, bands=(0, 1, 2, 3))
+    import sources
+    mod, spec = sources.provider("imagery")
+    mod.fetch(spec, e["xmin"] - m, e["ymin"] - m, e["xmax"] + m, e["ymax"] + m, C.IMAGERY_RES, dst, bands=tuple(spec["bands"]))
 
 
 if __name__ == "__main__":

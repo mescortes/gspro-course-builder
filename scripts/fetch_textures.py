@@ -8,7 +8,7 @@ IDS = ["sand_01", "withered_grass", "wood_chips", "dry_ground_01", "concrete_flo
        "brown_mud_leaves_01"]
 IDS += [t for t in [*C.REGION["trees"]["bark"].values(), *C.REGION["materials"].values()] if t not in IDS]  # the region's
 LEAF_REFS = [("island_tree_02", "leaves_diff")]   # broadleaf sprites (recoloured per species in make_foliage.py)
-UA = {"User-Agent": "westmount-course-builder"}
+UA = {"User-Agent": "gspro-course-builder"}
 def get(url):
     return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120).read()
 ref = C.DATA / "textures" / "leaf_refs"; ref.mkdir(parents=True, exist_ok=True)

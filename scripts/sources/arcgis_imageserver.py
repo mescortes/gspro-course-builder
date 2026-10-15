@@ -1,22 +1,25 @@
-"""Fetch orthoimagery from an ArcGIS ImageServer (exportImage), chunked to stay under the service's size / time limits,
-into a GeoTIFF in config.CRS.
+"""Orthophotos from an ArcGIS ImageServer (exportImage), chunked to stay under the service's size / time limits, into a
+GeoTIFF in config.CRS.
 
-Default service: Ontario SWOOP 2025 (South Western Ontario Orthophotography Project; Geospatial Ontario, 16 cm, RGB + NIR,
-captured March-May 2025, leaf-off, native EPSG:2958). Licence: Open Government Licence - Ontario ("Contains information
-licensed under the Open Government Licence - Ontario"), so derived textures and overlays may be redistributed.
+  [sources.imagery]
+  provider = "arcgis_imageserver"
+  url = "https://.../ImageServer"
+  mosaic_rule = { mosaicMethod = "...", where = "..." }   # pins the project / year
+  bands = [0, 1, 2, 3]       # band ids of R, G, B, NIR
+  max_chunk_m = 800.0        # ground size of one request (the server resamples every source tile in it)
 
-Usage: fetch_imageserver.py xmin ymin xmax ymax res out.tif [bands, e.g. 0,1,2,3]
+Ontario SWOOP (Geospatial Ontario, 16 cm RGB + NIR, Open Government Licence - Ontario) and USDA NAIP (60 cm or 30 cm
+RGB + NIR, public domain) are both served this way.
 """
-import io, json, sys, time
+import json, sys, time
 from pathlib import Path
 import numpy as np, requests, rasterio
 from rasterio.transform import from_origin
 
-sys.path.insert(0, str(Path(__file__).parent)); import config as C
+sys.path.insert(0, str(Path(__file__).resolve().parents[1])); import config as C
+from sources.http import UA
 
-SWOOP = "https://ws.geoservices.lrc.gov.on.ca/arcgis5/rest/services/AerialImagery/GEO_Imagery_Data_Service_2023to2027/ImageServer"
-SWOOP_RULE = {"mosaicMethod": "esriMosaicNorthwest", "where": "Project='SWOOP2025'"}
-UA = {"User-Agent": "westmount-course-builder/0.1 (personal research)"}
+MAX_CHUNK_M = 800.0
 
 
 def chunks(xmin, ymin, xmax, ymax, res, chunk_px):
@@ -31,23 +34,22 @@ def chunks(xmin, ymin, xmax, ymax, res, chunk_px):
     return W, H, out
 
 
-MAX_CHUNK_M = 800.0   # ground size of one request: the server resamples every source tile in it (coarse requests 504)
-
-
 def chunk_size(res, chunk_px=2500, max_m=MAX_CHUNK_M):
     return max(64, min(chunk_px, int(max_m / res)))
 
 
-def fetch(xmin, ymin, xmax, ymax, res, out, bands=(0, 1, 2), service=SWOOP, rule=SWOOP_RULE, chunk_px=2500):
-    W, H, wins = chunks(xmin, ymin, xmax, ymax, res, chunk_size(res, chunk_px))
+def fetch(spec, xmin, ymin, xmax, ymax, res, out, bands):
+    """Write the `bands` (service band ids) of the extent at `res` m to the GeoTIFF `out`."""
+    service = spec["url"]
+    W, H, wins = chunks(xmin, ymin, xmax, ymax, res, chunk_size(res, spec.get("chunk_px", 2500), spec.get("max_chunk_m", MAX_CHUNK_M)))
     epsg = int(C.CRS.split(":")[1])
     img = np.zeros((len(bands), H, W), np.uint8)
     for k, (c0, r0, w, h, bb) in enumerate(wins):
         params = dict(bbox=",".join(f"{v:.3f}" for v in bb), bboxSR=epsg, imageSR=epsg, size=f"{w},{h}", format="tiff",
-                      pixelType="U8", bandIds=",".join(map(str, bands)), interpolation="RSP_BilinearInterpolation",
-                      noData=0, f="image")
-        if rule:
-            params["mosaicRule"] = json.dumps(rule)
+                      pixelType="U8", bandIds=",".join(map(str, bands)),
+                      interpolation=spec.get("interpolation", "RSP_BilinearInterpolation"), noData=0, f="image")
+        if spec.get("mosaic_rule"):
+            params["mosaicRule"] = json.dumps(spec["mosaic_rule"])
         for attempt in range(6):
             try:
                 r = requests.get(service + "/exportImage", params=params, timeout=300, headers=UA)
@@ -58,7 +60,7 @@ def fetch(xmin, ymin, xmax, ymax, res, out, bands=(0, 1, 2), service=SWOOP, rule
                         raise RuntimeError(f"chunk shape {a.shape} != {(h, w)}")
                     img[:, r0:r0 + h, c0:c0 + w] = a[:len(bands)]
                     break
-                print("  bad", r.status_code, r.text[:200], flush=True)
+                print("  bad", r.status_code, getattr(r, "text", "")[:200], flush=True)
             except (requests.RequestException, RuntimeError, rasterio.errors.RasterioIOError) as ex:
                 print("  retry", attempt + 1, ex.__class__.__name__, str(ex)[:120], flush=True)
             time.sleep(5 * (attempt + 1))
@@ -70,9 +72,3 @@ def fetch(xmin, ymin, xmax, ymax, res, out, bands=(0, 1, 2), service=SWOOP, rule
                        transform=from_origin(xmin, ymax, res, res), compress="deflate", tiled=True, BIGTIFF="IF_SAFER") as d:
         d.write(img)
     print("wrote", out, img.shape)
-
-
-if __name__ == "__main__":
-    xmin, ymin, xmax, ymax, res = map(float, sys.argv[1:6]); dst = sys.argv[6]
-    bands = tuple(int(b) for b in sys.argv[7].split(",")) if len(sys.argv) > 7 else (0, 1, 2)
-    fetch(xmin, ymin, xmax, ymax, res, dst, bands)

@@ -198,7 +198,8 @@ RATINGS = {t: (*r.get("men", (None, None)), *r.get("women", (None, None)), r.get
 
 # LiDAR tree archetypes (detect_trees.assign_archetypes)
 TREE_ARCHETYPES = tuple(REGION.get("trees", {}).get("archetypes", ("maple", "oak", "pine", "spruce", "shrub")))
-PARKING = tuple(_T.get("structures", {}).get("parking", ()))  # OSM amenity=parking ids that get parked cars
+PARKING = tuple(_T.get("structures", {}).get("parking", ()))
+DATA_SOURCES = _T.get("sources", {})  # [sources.lidar], [sources.imagery], [sources.backdrop]: scripts/sources  # OSM amenity=parking ids that get parked cars
 
 
 def to_model(e, n, h):

@@ -23,6 +23,29 @@ terrain = { xmin = 536504.0, ymin = 4809836.0, xmax = 538552.0, ymax = 4811884.0
 [lidar]
 leaf_off = true  # March 2018 flights: deciduous crowns are sparse in the CHM (detect_trees.py closes them)
 
+# Data providers (scripts/sources).
+[sources.lidar]
+# OMAFRA Lidar 2016-18, Lake Erie package (leaf-off, the course tiles flown 2018-03-21), 1 km COPC tiles from NRCan
+# CanElevation. Licence: Open Government Licence - Ontario / - Canada.
+provider = "nrcan_copc"
+zone = 17
+projects = [{ folder = "ON/Lake_Erie_2018", suffix = "2018LLAKEERIE" }]
+
+[sources.imagery]
+# Ontario SWOOP 2025 (Geospatial Ontario), 16 cm, R G B NIR, flown 2025-04-07 over the course.
+provider = "arcgis_imageserver"
+url = "https://ws.geoservices.lrc.gov.on.ca/arcgis5/rest/services/AerialImagery/GEO_Imagery_Data_Service_2023to2027/ImageServer"
+mosaic_rule = { mosaicMethod = "esriMosaicNorthwest", where = "Project='SWOOP2025'" }
+bands = [0, 1, 2, 3]  # R, G, B, NIR
+
+[sources.backdrop]
+# NRCan HRDEM 1 m DTM / DSM from the same 2018 survey; the City of Waterloo 2014 DTM fills any gap.
+provider = "cog_dem"
+dtm = ["https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/ON-Lake_Erie_2018-1m-dtm.tif",
+       "https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/VILLE_WATERLOO-VILLE_WATERLOO-1m-dtm.tif"]
+dsm = ["https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/ON-Lake_Erie_2018-1m-dsm.tif",
+       "https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/VILLE_WATERLOO-VILLE_WATERLOO-1m-dsm.tif"]
+
 [imagery]
 # Ontario SWOOP 2025, 0.16 m, 4 bands (R, G, B, NIR), native EPSG:2958, Open Government Licence - Ontario
 # (scripts/fetch_imageserver.py), over CORE + 20 m. The pipeline reads the registered copy written by
