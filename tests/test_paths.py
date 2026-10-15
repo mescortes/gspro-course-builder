@@ -79,6 +79,27 @@ def test_long_bridges_need_facing_ends_and_a_clear_corridor():
     assert sorted(round(g.length) for g in out) == [60, 65, 65]
 
 
+def test_a_photo_without_nir_traces_no_paths_and_says_so(tmp_path, monkeypatch, capsys):
+    """The paths are traced from NDVI. With a 3-band photo (most RGB-only orthophoto services) the step stopped the
+    build ('needs a 4-band photo') although the classifier copes without NIR: it now traces nothing, says so once
+    (naming the [tuning] key that skips the step), and leaves an empty file so a stale trace is not reused."""
+    import json
+    import surface_classify as S
+    monkeypatch.setattr(S, "has_nir", lambda: False)
+    monkeypatch.setattr(S, "grid", lambda: (400, 400, T))
+    monkeypatch.setattr(S, "osm_geoms", lambda: [])
+    monkeypatch.setattr(S, "read_imagery_window", lambda T, r0, r1, c0, c1: np.full((3, r1 - r0, c1 - c0), 0.4, np.float32))
+    monkeypatch.setattr(S, "read_nir_window", lambda *a: None)
+    out = tmp_path / "paths_detected.geojson"
+    out.write_text(json.dumps({"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {},
+                                                                           "geometry": None}]}))   # an older trace
+    monkeypatch.setattr(P, "OUT", out)
+    P.main()
+    assert json.load(open(out))["features"] == []
+    said = capsys.readouterr().out
+    assert said.count("NIR") == 1 and "trace_paths = false" in said
+
+
 def test_centrelines_take_a_width_range():
     """Brambles' gravel tracks are 3-6 m wide (NAIP 0.6 m): a 5 m strip is no path at the default 0.6-4.5 m range,
     but is one with width=(1.5, 7.0)."""
@@ -87,3 +108,27 @@ def test_centrelines_take_a_width_range():
     assert P.centrelines(m, T) == []
     lines = P.centrelines(m, T, width=(1.5, 7.0))
     assert 80 < sum(g.length for g in lines) < 95
+
+
+def test_the_bank_of_a_lateral_water_hazard_is_not_traced_as_a_path(tmp_path, monkeypatch):
+    """The rims of water features are NDVI ridges, so the tracer leaves out the ground within 2 m of mapped water. It
+    tested golf=water_hazard and natural=water only: the bare bank of a pond mapped golf=lateral_water_hazard alone was
+    traced as a cart path (a concrete stripe along the shore), although the build treats that pond as water."""
+    import json
+    from shapely.geometry import box
+    import surface_classify as S
+    nir = np.full((400, 400), 0.4 * 1.45 / 0.55, np.float32)       # turf: NDVI 0.45 on a grey (0.4) photo
+    nir[192:200, 80:320] = 0.4 * 1.02 / 0.98                        # a 2 m bare bank (NDVI 0.02) along the pond's north edge
+    monkeypatch.setattr(S, "has_nir", lambda: True)
+    monkeypatch.setattr(S, "grid", lambda: (400, 400, T))
+    monkeypatch.setattr(S, "read_imagery_window", lambda T, r0, r1, c0, c1: np.full((3, r1 - r0, c1 - c0), 0.4, np.float32))
+    monkeypatch.setattr(S, "read_nir_window", lambda T, r0, r1, c0, c1: nir[r0:r1, c0:c1])
+    monkeypatch.setattr(P, "OUT", tmp_path / "paths_detected.geojson")
+    traced = {}
+    for name, tags in (("unmapped", {}), ("natural=water", {"natural": "water"}),
+                       ("lateral_water_hazard", {"golf": "lateral_water_hazard"})):
+        G = [(1, {"leisure": "golf_course"}, box(1000, 1900, 1100, 2000)), (2, tags, box(1020, 1930, 1080, 1950))]
+        monkeypatch.setattr(S, "osm_geoms", lambda G=G: G)
+        P.main()
+        traced[name] = sum(f["properties"]["length_m"] for f in json.load(open(P.OUT))["features"])
+    assert traced["unmapped"] > 50 and traced["natural=water"] == 0 and traced["lateral_water_hazard"] == 0, traced

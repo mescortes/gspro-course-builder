@@ -14,24 +14,53 @@ REGIONS = sorted((ROOT / "regions").glob("*.toml"))
 
 @pytest.mark.parametrize("path", REGIONS, ids=[p.stem for p in REGIONS])
 def test_every_region_has_what_the_scripts_read(path):
-    """A missing table or key failed as a bare KeyError deep in a build (the classifier only after every LiDAR tile)."""
-    import detect_trees
-    r = tomllib.load(open(path, "rb"))
-    tr = r["trees"]
-    for k in ("archetypes", "bark", "backdrop", "shapes", "classifier"):
-        assert k in tr, k
-    assert tr["classifier"] in detect_trees.CLASSIFIERS and tr["classifier"] in tr
-    arch = set(tr["archetypes"])
-    assert arch <= set(tr["shapes"]) and arch <= set(r["foliage"]) and arch <= set(tr["bark"])
-    assert set(tr[tr["classifier"]]["names"].values()) <= arch
-    assert set(tr["backdrop"]["kinds"]) <= arch and len(tr["backdrop"]["kinds"]) == len(tr["backdrop"]["share"])
-    for a in arch:
-        assert r["foliage"][a]["src"] or tr.get("needles", {}).get(a) in ("pine", "spruce"), f"{a}: no sprite and no needle style"
-    for k in ("wall_palette", "roof_palette", "parking_stall", "suv_share"):
-        assert k in r["buildings"], k
-    for k in ("summer_grade", "summer_green", "ndvi"):
-        assert k in r["backdrop"], k
-    assert {"deeprough", "native"} <= set(r["materials"]) and "3dg" in r["grass"] and "viewer" in r["grass"]
+    """A missing table or key failed as a bare KeyError deep in a build (the classifier only after every LiDAR tile).
+    The check is scripts/region_spec.py, the one check_course.py runs: a second list here could pass a region that
+    check_course rejects, or fail one it passes with a bare AssertionError."""
+    import region_spec
+    with open(path, "rb") as f:
+        p = region_spec.problems(tomllib.load(f))
+    assert not p, f"regions/{path.name}: " + "; ".join(p)
+
+
+def _classifier_reads(fn, prm, P, nd):
+    """(parameter keys, archetype roles) the classifier `fn` reads from its [trees.<classifier>] table `prm`."""
+    keys, roles = set(), set()
+    class Reads(dict):
+        def __init__(self, d, log):
+            super().__init__(d); self.log = log
+        def __getitem__(self, k):
+            self.log.add(k); return super().__getitem__(k)
+        def get(self, k, default=None):
+            self.log.add(k); return super().get(k, default)
+    fn(P, nd, Reads(dict(prm, names=Reads(prm["names"], roles)), keys))
+    return keys - {"names"}, roles
+
+
+def test_the_region_check_lists_every_parameter_each_classifier_reads():
+    """region_spec.CLASSIFIERS lists each classifier's parameters by hand: a parameter detect_trees started reading
+    passed check_course and then failed as a KeyError after the LiDAR pass. Each classifier is run on a table of
+    synthetic trees (and on none) with a region's parameters, and every key it reads must be listed."""
+    import detect_trees, region_spec
+    rng = np.random.default_rng(0)
+    n = 400
+    h = rng.uniform(1.0, 35.0, n)
+    P = {"height": h, "crown_r": rng.uniform(0.5, 10.0, n), "crown_base": h * rng.uniform(0.0, 0.8, n),
+         "sharpness": rng.uniform(0.0, 5.0, n), "penetration": rng.uniform(0.0, 1.0, n),
+         "L": rng.uniform(20.0, 70.0, n), "A": rng.uniform(-20.0, 5.0, n), "B": rng.uniform(0.0, 30.0, n)}  # crown colour
+    nd = rng.uniform(-1.0, 1.0, n)
+    tables = [(P, nd), ({k: v[:0] for k, v in P.items()}, nd[:0])]
+    regions = [tomllib.load(open(p, "rb")) for p in REGIONS + [ROOT / "regions/TEMPLATE.toml.example"]]
+    for name, fn in detect_trees.CLASSIFIERS.items():
+        prm = next((r["trees"][name] for r in regions if r["trees"]["classifier"] == name), None)
+        assert prm is not None, f"no regions/*.toml uses classifier {name}: its parameters cannot be checked"
+        params, roles = region_spec.CLASSIFIERS[name]
+        keys, names = set(), set()
+        for t in tables:
+            k, r = _classifier_reads(fn, prm, *t)
+            keys |= k; names |= r
+        assert keys <= set(params), f"{name} reads {sorted(keys - set(params))}: add them to region_spec.CLASSIFIERS"
+        assert names <= set(roles), f"{name} names {sorted(names - set(roles))}: add them to region_spec.CLASSIFIERS"
 
 
 def test_needle_cards_follow_the_regions_needle_style(monkeypatch):
@@ -109,6 +138,7 @@ def test_3dep_boxes_are_shrunk_by_their_real_excess_only(monkeypatch, tmp_path):
     box = dict(minX=min(p[0] for p in ll), maxX=max(p[0] for p in ll), minY=min(p[1] for p in ll), maxY=max(p[1] for p in ll))
     page = {"total": 1, "items": [{"title": "B23 538291", "downloadURL": "https://x/USGS_LPC_B23_538291.laz", "boundingBox": box}]}
     class R:
+        status_code = 200
         def json(self): return page
     monkeypatch.setattr(usgs_3dep.http.requests, "get", lambda *a, **k: R())
     ext = dict(xmin=537000.0, ymin=4291200.0, xmax=538495.0, ymax=4291800.0)   # 5 m short of the tile, inside the margin
@@ -173,3 +203,18 @@ def test_tee_labels_tell_black_from_blue():
     assert C.tee_labels(("black", "gold", "blue", "white", "red")) == {
         "black": "Bla", "gold": "G", "blue": "Blu", "white": "W", "red": "R"}
     assert C.tee_labels(("blue", "white", "red", "gold")) == {"blue": "B", "white": "W", "red": "R", "gold": "G"}
+
+
+def test_the_out_of_bounds_ring_stays_on_the_terrain():
+    """GreenKeeper's pOOB ring is the course outline on the ground. An outline wider than the GSPro terrain (the test
+    profile's small square, or a course wider than 2 km) put ring points off the terrain. It is clipped to the
+    terrain square; an outline inside it is used as it is."""
+    import export_gspro as X
+    from shapely.geometry import box, Polygon
+    te = dict(xmin=0.0, ymin=0.0, xmax=1000.0, ymax=1000.0)
+    wide = box(-200, 100, 1300, 900)
+    o = X.oob_outline(wide, te)
+    assert box(0, 0, 1000, 1000).buffer(1e-6).contains(o) and abs(o.area - 1000 * 800) < 1
+    inside = Polygon([(100, 100), (900, 120), (500, 800)])
+    assert X.oob_outline(inside, te) is inside
+    assert X.oob_outline(None, te) is None

@@ -15,9 +15,11 @@ from skimage.color import rgb2lab
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
 from surface_classify import grid, read_imagery_window, osm_geoms
+from vectorize import sand_mask
 
 RES = C.DEM_RES
 S = 24  # max shift in px (6 m)
+MIN_BUNKERS = 3  # fewer give no robust median
 
 
 def best_shift(a, b, mask_win):
@@ -32,6 +34,47 @@ def best_shift(a, b, mask_win):
                 best = (dy, dx, sc)
     s0 = (A * B)[mask_win].sum()
     return best[0], best[1], best[2], s0
+
+
+def applied_shift(raw=None, registered=None, fallback=None):
+    """The shift (m, +E/+N) the registered photo on disk carries: its origin minus the raw photo's, as
+    register_imagery.py writes it. That photo is the one measured, so the new shift adds the measurement to this one:
+    course.toml's [imagery] shift differs from it when the shift was changed after build_all.py register ran, and adding
+    to it counted the measurement twice. `fallback` (course.toml's shift) when either photo is missing."""
+    from pathlib import Path
+    raw, registered = Path(raw or C.IMAGERY_RAW), Path(registered or C.IMAGERY)
+    if not (raw.exists() and registered.exists()):
+        return tuple(C.IMAGERY_SHIFT if fallback is None else fallback)
+    with rasterio.open(registered) as d, rasterio.open(raw) as s:
+        return (round(d.transform.c - s.transform.c, 3), round(d.transform.f - s.transform.f, 3))
+
+
+def bunker_shift(A, core, shift):
+    """(report lines, the new [imagery] shift or None) from the per-bunker offsets A (x, y, dx, dy, score rows). The
+    photo measured is the registered one, so the new shift is the one it carries (applied_shift) plus the median
+    offset. Fewer than MIN_BUNKERS bunkers used to crash (IndexError) instead of saying so."""
+    if len(A) < MIN_BUNKERS:
+        return [f"!! {len(A)} bunker(s) pass the sand and hollow tests, {MIN_BUNKERS} are needed for a photo shift: if "
+                "the sand is not the usual tan (white, grey), set course.toml [tuning.sand] (the bunker sand colour rule, "
+                "vectorize.py SAND: L_min, a_min, b_min, b_max); otherwise measure a few photo features against the LiDAR by hand (the OSM "
+                "building line below is OSM's offset, not the photo's)"], None
+    lines = []
+    def stats(sel, name):
+        if sel.sum() < MIN_BUNKERS:
+            return
+        dx, dy = np.median(A[sel, 2]), np.median(A[sel, 3])
+        mx = np.median(np.abs(A[sel, 2] - dx)); my = np.median(np.abs(A[sel, 3] - dy))
+        lines.append(f"{name:12s} n={sel.sum():3d}  photo->lidar shift: dx {dx:+.2f} m (MAD {mx:.2f})  dy {dy:+.2f} m (MAD {my:.2f})")
+    stats(np.ones(len(A), bool), "all")
+    cy = 0.5 * (core["ymin"] + core["ymax"]); cx = 0.5 * (core["xmin"] + core["xmax"])
+    stats(A[:, 1] > cy, "north half")
+    stats(A[:, 1] <= cy, "south half")
+    stats(A[:, 0] < cx, "west")
+    stats(A[:, 0] >= cx, "east")
+    new = (round(shift[0] + float(np.median(A[:, 2])), 2), round(shift[1] + float(np.median(A[:, 3])), 2))
+    lines.append(f"shift = [{new[0]:.2f}, {new[1]:.2f}]  # course.toml [imagery]: the registered photo's shift "
+                 f"[{shift[0]:.2f}, {shift[1]:.2f}] plus this measurement; then rebuild (build_all.py register)")
+    return lines, new
 
 
 def main():
@@ -50,7 +93,7 @@ def main():
             continue
         rgb = read_imagery_window(T, r0 - S, r1 + S, c0 - S, c1 + S)
         Lab = rgb2lab(np.moveaxis(rgb, 0, -1))
-        sand = (Lab[..., 0] > 66) & (Lab[..., 1] > -12) & (Lab[..., 2] > 8.5) & (Lab[..., 2] < 26)
+        sand, _ = sand_mask(Lab[..., 0], Lab[..., 1], Lab[..., 2], parts=True)  # sunlit sand ([tuning.sand])
         hol = hollow[r0 - S:r1 + S, c0 - S:c1 + S]
         win = np.zeros_like(sand); win[S:-S, S:-S] = True
         if sand[win].sum() < 200 or hol[win].sum() < 200:
@@ -60,20 +103,17 @@ def main():
             pass
         c = g.centroid
         out.append((c.x, c.y, dx * RES, -dy * RES, sc / max(s0, 1)))
-    A = np.array(out)
+    A = np.array(out).reshape(-1, 5)
     print(f"bunkers used: {len(A)}")
-    def stats(sel, name):
-        if sel.sum() < 3:
-            return
-        dx, dy = np.median(A[sel, 2]), np.median(A[sel, 3])
-        mx = np.median(np.abs(A[sel, 2] - dx)); my = np.median(np.abs(A[sel, 3] - dy))
-        print(f"{name:12s} n={sel.sum():3d}  photo->lidar shift: dx {dx:+.2f} m (MAD {mx:.2f})  dy {dy:+.2f} m (MAD {my:.2f})")
-    stats(np.ones(len(A), bool), "all")
-    cy = 0.5 * (C.CORE["ymin"] + C.CORE["ymax"]); cx = 0.5 * (C.CORE["xmin"] + C.CORE["xmax"])
-    stats(A[:, 1] > cy, "north half")
-    stats(A[:, 1] <= cy, "south half")
-    stats(A[:, 0] < cx, "west")
-    stats(A[:, 0] >= cx, "east")
+    shift = applied_shift()
+    if any(abs(a - b) > 1e-3 for a, b in zip(shift, C.IMAGERY_SHIFT)):
+        print(f"!! the registered photo ({C.IMAGERY.name}) carries shift [{shift[0]:.2f}, {shift[1]:.2f}], course.toml "
+              f"[imagery] shift is [{C.IMAGERY_SHIFT[0]:.2f}, {C.IMAGERY_SHIFT[1]:.2f}]: build_all.py register has not "
+              "run since the shift changed. This measures the registered photo, so the new shift below adds to its "
+              "shift; run build_all.py register (and the steps after it) to build with course.toml's")
+    lines, _ = bunker_shift(A, C.CORE, shift)
+    for x in lines:
+        print(x)
     np.save(C.BUILD / "registration_bunkers.npy", A)
     # buildings: OSM footprints vs LiDAR elevated objects
     dsm = rasterio.open(C.BUILD / "dsm.tif").read(1); dem2 = dem.reshape(dem.shape[0] // 2, 2, dem.shape[1] // 2, 2).mean((1, 3))

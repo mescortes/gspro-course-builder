@@ -14,7 +14,7 @@ LiDAR; heights CGVD2013, m). WGS84 inputs (OSM, web imagery) are projected with 
 to the LiDAR empirically (measure_registration.py), which also absorbs the ~1 m WGS84 / NAD83(CSRS) difference.
 Model frame (glTF, Y-up, metres): x = E - ORIGIN_E, y = H - BASE_H, z = -(N - ORIGIN_N).
 """
-import os, re, sys, tomllib
+import importlib, json, os, re, sys, tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -89,10 +89,17 @@ def as_tuples(v):
     return {k: as_tuples(x) for k, x in v.items()} if isinstance(v, dict) else v
 
 
+TUNING, REGION_TUNING = _T.get("tuning", {}), _region.get("tuning", {})  # check_course names keys nothing reads
+
+
 def tuning(key, default):
-    """A tuned limit: course.toml [tuning], else the region's [tuning], else the engine default. A TOML list for a tuple
-    default comes back as a tuple, a TOML integer for a float default as a float."""
-    v = _T.get("tuning", {}).get(key, _region.get("tuning", {}).get(key, default))
+    """A tuned limit: course.toml [tuning], else the region's [tuning], else the engine default. A table both set (e.g.
+    [tuning.sand]) is merged key by key, the course's keys over the region's. A TOML list for a tuple default comes
+    back as a tuple, a TOML integer for a float default as a float."""
+    course, region = _T.get("tuning", {}), _region.get("tuning", {})
+    v = course.get(key, region.get(key, default))
+    if isinstance(v, dict) and key in course and isinstance(region.get(key), dict):
+        v = _merge(region[key], v)
     if isinstance(default, tuple) and isinstance(v, list):
         return tuple(v)
     if isinstance(default, float) and isinstance(v, int) and not isinstance(v, bool):
@@ -109,11 +116,15 @@ OUTPUT = ROOT / "output" / SLUG
 COURSE_NAME = _course["name"]
 COURSE_SHORT = _course.get("short", COURSE_NAME)
 MODEL_NAME = _course.get("model_name", SLUG)    # output/<slug>/<MODEL_NAME>.glb, <MODEL_NAME>_noveg.glb
-UNITY_SCRIPT = _course.get("unity_script", "".join(w.title() for w in SLUG.split("-")) + "Setup.cs")
+_unity = "".join(w.title() for w in SLUG.split("-"))  # a C# class name starts with a letter: 18-oaks -> Course18Oaks
+UNITY_SCRIPT = _course.get("unity_script", ("" if _unity[:1].isalpha() else "Course") + _unity + "Setup.cs")
 UNITY_NAME = UNITY_SCRIPT.removesuffix(".cs").removesuffix("Setup")  # class <UNITY_NAME>Setup, menu and Assets/<UNITY_NAME>
 
 CRS = _frame["crs"]
 CRS_LABEL = _frame.get("crs_label", CRS)
+# The course's height datum, the region's [scaffold] vertical (e.g. NAVD88): LiDAR heights on another datum are
+# reported (lidar_crs_notes), not converted.
+VERTICAL_DATUM = _region.get("scaffold", {}).get("vertical")
 ORIGIN_E, ORIGIN_N = (float(v) for v in _frame["origin"])
 BASE_H = float(_frame["base_h"])  # metres subtracted from heights in the model frame
 
@@ -124,9 +135,11 @@ TILE = float(_frame.get("tile", 256.0))  # processing tile size (m); rasters are
 # Unity/GSPro terrain square (2048 m gives a 4097^2 heightmap at 0.5 m) centred on CORE; cells outside CORE come from
 # the backdrop DEM
 TERRAIN = dict(_frame["terrain"])
+FETCH_TERRAIN = dict(TERRAIN)  # in both profiles: the backdrop DEM (data/<slug>/, shared) covers its GSPro outer plot
 PLAYABLE = _holes(_holes_t.get("playable", "1-18"))
 _tp = _T.get("test_profile", {})
 TEST_HOLES = _holes(_tp.get("holes", PLAYABLE))  # the holes the test profile covers
+TEST_CORE = dict(_tp["core"]) if "core" in _tp else None  # [test_profile] core, in either profile (check_course)
 if PROFILE == "test":  # small regression build ([test_profile] in course.toml), written to build/<slug>-test/
     CORE = dict(_tp.get("core", CORE))
     TERRAIN = dict(_tp.get("terrain", CORE))
@@ -137,9 +150,33 @@ for _d in (BUILD, FEATURES, OUTPUT):  # git-ignored: absent on a fresh clone
     _d.mkdir(parents=True, exist_ok=True)
 DEM_RES = float(_frame.get("dem_res", 0.25))  # metres
 
-LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))
-LIDAR_LEAF_OFF = bool(_T.get("lidar", {}).get("leaf_off", False))  # deciduous crowns sparse in the CHM (detect_trees closes them)
+
+def grid_problems(ext, res, table="frame"):
+    """A DEM resolution and a build extent ([frame] or [test_profile] core) the engine cannot build, as messages. The
+    DEM grid must be exactly twice as fine as the 0.5 m DSM / CHM grid: the DEM is averaged 2 x 2 onto it, and
+    surface_classify, vectorize, export_course and measure_registration expand the CHM 2 x 2 back onto the DEM grid. So
+    dem_res is 0.25 and each side of the extent a whole number of 0.5 m. build_rasters stops on them before the LiDAR
+    pass, check_course reports them before anything is fetched. res=None checks the extent only."""
+    out = []
+    if res is not None and res != 0.25:
+        out.append(f"[frame] dem_res = {res:g}, but the engine builds the DEM at 0.25 m only (half the 0.5 m canopy "
+                   "grid): remove dem_res")
+    for a, b in (("xmin", "xmax"), ("ymin", "ymax")):
+        side = ext[b] - ext[a]
+        if abs(side / 0.5 - round(side / 0.5)) > 1e-6:
+            out.append(f"[{table}] core {a}..{b} is {side:g} m: each side of the build extent must be a whole number "
+                       "of 0.5 m (new_course.py writes whole tiles)")
+    return out
+
+
+LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))  # the build reads them through lidar_tiles(), which checks tiles.json
+_lidar = _T.get("lidar", {})
+LIDAR_LEAF_OFF = bool(_lidar.get("leaf_off", False))  # deciduous crowns sparse in the CHM (detect_trees closes them)
+LIDAR_CRS = _lidar.get("crs")  # the tiles' CRS when their headers name none, a wrong one or one laspy cannot read
 IMAGERY_LEAF_OFF = bool(_img.get("leaf_off", False))  # ground visible through bare crowns (vectorize.py keeps it)
+# The flags course.toml leaves out, which check_course flags: a missing flag reads as leaf-on, and leaf-off data then
+# builds without a warning (bare crowns split into several trees, bunkers under bare branches dropped).
+LEAF_OFF_UNSET = tuple(t for t, d in (("lidar", _lidar), ("imagery", _img)) if "leaf_off" not in d)
 
 # Aerial imagery covering CORE (+20 m). The pipeline reads the registered copy written by register_imagery.py; band 4
 # (NIR), when present, feeds the classifier, everything else reads bands 1-3.
@@ -171,12 +208,351 @@ def course_hole(osm_ref):
     return r if r in PLAYABLE or r in SCENERY_HOLES else 99
 
 
+def lidar_problems():
+    """What is wrong with data/<slug>/lidar against the tiles.json its last fetch wrote (scripts/sources/store.py): []
+    when the folder holds exactly the listed tiles, fetched for the current [sources.lidar] and [frame] core, naming
+    each key that differs. The keys that only accept or refuse a fetch (the provider's ACCEPT_ONLY: max_uncovered,
+    missing_ok) are not compared: the tiles are the same, and a refetch needs the network. A folder fetched before
+    tiles.json existed has none and is taken as it is."""
+    folder = DATA / "lidar"
+    try:
+        m = json.loads((folder / "tiles.json").read_text())
+    except FileNotFoundError:
+        return []
+    except ValueError:
+        return [f"{folder / 'tiles.json'} is unreadable: rerun fetch_data.py lidar"]
+    out = []
+    rec, now = m.get("spec") or {}, json.loads(json.dumps(DATA_SOURCES.get("lidar") or {}))
+    try:
+        skip = importlib.import_module(f"sources.{now.get('provider')}").ACCEPT_ONLY
+    except (ImportError, AttributeError):
+        skip = ()
+    show = lambda v: "(not set)" if v is None else repr(v)
+    for k in sorted(set(rec) | set(now)):
+        if k not in skip and rec.get(k) != now.get(k):
+            out.append(f"the tiles in {folder} were fetched with [sources.lidar] {k} = {show(rec.get(k))}, "
+                       f"courses/{SLUG}/course.toml now has {show(now.get(k))}: rerun fetch_data.py lidar, or put the "
+                       f"old value back")
+    ext = m.get("extent") or {}
+    moved = [f"{k} {show(ext.get(k))}, now {show(FETCH_CORE.get(k))}" for k in sorted(set(ext) | set(FETCH_CORE))
+             if ext.get(k) != FETCH_CORE.get(k)]
+    if moved:
+        out.append(f"the tiles in {folder} were fetched for another [frame] core ({'; '.join(moved)}): rerun "
+                   f"fetch_data.py lidar for the new core, or put the old core back")
+    have, listed = {p.name for p in folder.glob("*.laz")}, set(m.get("tiles", ()))
+    if have - listed:
+        out.append(f"{folder}: {', '.join(sorted(have - listed))} not in tiles.json (the tiles fetch_data.py lidar "
+                   f"fetched): another project's? move them out of the folder, or rerun fetch_data.py lidar")
+    if listed - have:
+        out.append(f"{folder}: {', '.join(sorted(listed - have))} in tiles.json but missing: rerun fetch_data.py lidar")
+    return out
+
+
 def lidar_tiles():
-    """LIDAR_TILES, or exit naming the folder: an empty folder used to build all-NaN rasters without an error."""
+    """LIDAR_TILES, or exit naming the folder: an empty folder used to build all-NaN rasters without an error, and a
+    switched project's old tiles were built together with the new ones (lidar_problems)."""
     if not LIDAR_TILES:
         sys.exit(f"no lidar tiles in {DATA / 'lidar'}: run fetch_data.py lidar"
                  + (f" (or move the old data/ into data/{SLUG}/)" if (ROOT / "data" / "lidar").exists() else ""))
+    problems = lidar_problems()
+    if problems:
+        sys.exit("lidar: " + "\nlidar: ".join(problems))
     return LIDAR_TILES
+
+
+# ---- LiDAR CRS. The engine works in the course frame ([frame] crs, metres): tiles in another CRS (State Plane feet,
+# the neighbouring UTM zone, heights in feet) are reprojected as they are read; tiles in the frame are read as they are.
+def _per_tile(items):
+    """[((attention, text), tile name)] -> [(attention, '<n> tile(s) (a, b, c, ...): <text>')], in first-seen order."""
+    by = {}
+    for key, name in items:
+        by.setdefault(key, []).append(name)
+    return [(a, f"{len(n)} tile{'s' * (len(n) > 1)} ({', '.join(n[:3])}{', ...' * (len(n) > 3)}): {t}")
+            for (a, t), n in by.items()]
+
+
+def _geokeys(header):
+    """A tile's GeoTIFF keys whose value is stored in the key itself, {key id: value}."""
+    return {k.id: k.value_offset for rec in list(header.vlrs) + list(header.evlrs or ())
+            for k in getattr(rec, "geo_keys", ()) if k.tiff_tag_location == 0}
+
+
+def _tile_header(f):
+    """(crs, why it has none, GeoTIFF keys, box (xmin, ymin, xmax, ymax)) from tile f's header. The WKT record (in an
+    EVLR at the end of a LAS 1.4 file too) wins over the GeoTIFF keys; [lidar] crs stands for every tile's record. A
+    record pyproj cannot read, or GeoTIFF keys that define the projection by parameters (laspy then reads only their
+    lon/lat datum), is 'not readable'."""
+    import laspy
+    from pyproj import CRS as _CRS
+    from pyproj.exceptions import CRSError
+    with laspy.open(f) as r:
+        h = r.header
+        box = (*h.mins[:2], *h.maxs[:2])
+        if LIDAR_CRS:
+            try:
+                return _CRS(LIDAR_CRS), None, {}, box
+            except CRSError as e:
+                sys.exit(f"courses/{SLUG}/course.toml: [lidar] crs = {LIDAR_CRS!r} is not a CRS pyproj knows ({e}): "
+                         'give the tiles\' CRS as an EPSG code ("EPSG:<horizontal>+<vertical>" for a compound one)')
+        keys = _geokeys(h)
+        named = any(v.user_id == "LASF_Projection" for v in list(h.vlrs) + list(h.evlrs or ()))
+        try:
+            tc = h.parse_crs()
+        except (CRSError, laspy.errors.LaspyException) as e:
+            return None, f"not readable ({e})", keys, box
+    if tc is None:
+        return None, "not readable (a CRS record laspy cannot parse)" if named else "not given", keys, box
+    hc = tc.sub_crs_list[0] if tc.is_compound else tc
+    if hc.is_geographic and (max(abs(box[0]), abs(box[2])) > 360 or max(abs(box[1]), abs(box[3])) > 90):
+        return None, (f"not readable (it names {hc.name!r}, a lon/lat CRS, but the coordinates are not degrees: the "
+                      "projection is defined by GeoTIFF parameters)"), keys, box
+    return tc, None, keys, box
+
+
+def _datum_note(v, ellipsoidal):
+    """Why the tile's heights (vertical CRS v) are not on the course's datum (VERTICAL_DATUM), or None when they are or
+    it cannot be told (no vertical CRS, an 'unknown' one, a region without [scaffold] vertical)."""
+    from pyproj import CRS as _CRS
+    from pyproj.exceptions import CRSError
+    where = f"regions/{REGION_NAME}.toml [scaffold] vertical" if REGION_NAME else "the region's [scaffold] vertical"
+    then = ("read as they are (the engine converts height units, not datums): the course is built on the tiles' "
+            "heights and build_backdrop's datum check measures the step to the backdrop DEM "
+            "([sources.backdrop] z_offset)")
+    if ellipsoidal:
+        return f"heights above the ellipsoid, the course's on {VERTICAL_DATUM or 'a geoid'} ({where}): {then}"
+    norm = lambda s: re.sub(r"[^a-z0-9]", "", (s or "").lower())
+    have = {norm(v.name), norm(getattr(v.datum, "name", ""))} - {"", "unknown"} if v is not None else set()
+    want = {norm(VERTICAL_DATUM)} if VERTICAL_DATUM else set()
+    if VERTICAL_DATUM:
+        try:   # an EPSG code names its datum
+            w = _CRS(VERTICAL_DATUM)
+            want |= {norm(w.name), norm(getattr(w.datum, "name", ""))}
+        except CRSError:
+            pass
+    want -= {"", "unknown"}
+    if not have or not want or any(a in b or b in a for a in want for b in have):
+        return None
+    return f"heights on {v.name!r}, the course's on {VERTICAL_DATUM} ({where}): {then}"
+
+
+def lidar_tile_frame(f):
+    """How tile f's points reach the course frame, a dict:
+      how        "frame": its CRS is the frame's, heights in metres: read as it is
+                 "assumed": it names no CRS, or one that cannot be read: read as the frame
+                 "reproject": coordinates and / or the height unit converted as they are read
+      transform  None (read as it is), else (x, y, z) -> (x, y, z) in the frame, heights in metres
+      bounds     its header box in the frame (xmin, ymin, xmax, ymax); the header's own box when read as it is
+      crs, why   its CRS (pyproj), or None and why it has none
+      notes      [(attention, text)] for lidar_crs_notes
+      problem    why it cannot be brought into the frame, or None"""
+    import math
+    from pyproj import CRS as _CRS, Transformer
+    from pyproj.database import get_units_map
+    from pyproj.exceptions import CRSError, ProjError
+    tc, why, keys, box = _tile_header(f)
+    out = dict(tile=Path(f), crs=tc, why=why, how="assumed", transform=None, bounds=box, notes=[], problem=None)
+    toml = f"courses/{SLUG}/course.toml"
+    if tc is None:
+        fix = (f"if they are in another CRS, set [lidar] crs in {toml}" if why == "not given" else
+               f"set [lidar] crs in {toml} to the tiles' CRS (the project's metadata names it)")
+        out["notes"].append((why != "not given", f"CRS {why}: read as {CRS} ({toml} [frame] crs), not checked; {fix}"))
+        return out
+    frame = _CRS(CRS)
+    # A WKT1 TOWGS84 clause binds a CRS to WGS 84 (a BoundCRS: no EPSG code, not equal to the frame): the CRS it binds
+    # is compared with the frame; a transformation keeps the clause (the shift the tile's writer gives)
+    unbind = lambda c: c.source_crs if c is not None and c.is_bound else c
+    bound = tc.sub_crs_list[0] if tc.is_compound else tc
+    hc = unbind(bound)
+    v = unbind(tc.sub_crs_list[1]) if tc.is_compound and len(tc.sub_crs_list) > 1 else None
+    vkey = None   # the vertical GeoTIFF key (4096), which laspy leaves out; only a vertical CRS counts
+    if v is None and 1024 <= keys.get(4096, 0) <= 32766:
+        try:
+            vkey = _CRS.from_epsg(keys[4096])
+        except CRSError:
+            pass
+        vkey = vkey if vkey is not None and vkey.is_vertical and vkey.axis_info else None
+    code = hc.to_epsg()
+    in_frame = hc.equals(frame, ignore_axis_order=True) or (code is not None and code == frame.to_epsg())
+    ellipsoidal = len(hc.axis_info) > 2     # a 3D CRS: heights above the ellipsoid
+    # the height unit: a compound CRS record's vertical CRS, a 3D CRS's third axis, the GeoTIFF height-unit key (4099),
+    # which gives the unit over the vertical key's CRS (GeoTIFF / GDAL: older USGS tiles name NAVD88 height, a metre
+    # CRS, with heights in US survey feet), the vertical key's CRS; with none of them, a projected CRS's horizontal
+    # unit (US tiles in feet have their heights in feet)
+    units = {u.code: u for u in get_units_map(auth_name="EPSG", category="linear").values()}
+    unit_key = units.get(str(keys.get(4099)))
+    zf, zu, guessed, over = 1.0, "metre", False, ""
+    if v is not None and v.axis_info:
+        zf, zu = v.axis_info[0].unit_conversion_factor, v.axis_info[0].unit_name
+    elif ellipsoidal:
+        zf, zu = hc.axis_info[2].unit_conversion_factor, hc.axis_info[2].unit_name
+    elif unit_key is not None:
+        zf, zu = unit_key.conv_factor, unit_key.name
+        if vkey is not None and not math.isclose(vkey.axis_info[0].unit_conversion_factor, zf):
+            over = (f"its GeoTIFF height-unit key (4099) gives {zu}, over the {vkey.axis_info[0].unit_name} of "
+                    f"{vkey.name!r}")
+    elif vkey is not None:
+        zf, zu = vkey.axis_info[0].unit_conversion_factor, vkey.axis_info[0].unit_name
+    elif hc.is_projected and hc.axis_info[0].unit_conversion_factor != 1.0:
+        zf, zu, guessed = hc.axis_info[0].unit_conversion_factor, hc.axis_info[0].unit_name, True
+    v = v if v is not None else vkey
+    label = tc.name if v is None or tc.is_compound else f"{tc.name} + {v.name}"
+    vcode = v.to_epsg() if v is not None else None
+    codes = f" (EPSG:{code}{f'+{vcode}' if vcode else ''})" if code else ""
+    note = _datum_note(v, ellipsoidal)
+    if in_frame and zf == 1.0:
+        out["how"] = "frame"
+        out["notes"] += ([(False, f"in the course frame, heights read in {zu}: {over}")] if over else []) + \
+            ([(True, note)] if note else [])
+        return out
+    tr, shift = None, None
+    if not in_frame:
+        fix = f"if the record is wrong, set [lidar] crs in {toml} to the tiles' CRS (the project's metadata names it)"
+        src = bound.to_2d() if ellipsoidal else bound
+        try:
+            tr = Transformer.from_crs(src, frame, always_xy=True)
+            b = tr.transform_bounds(*box, densify_pts=21)
+        except (CRSError, ProjError) as e:
+            out["problem"] = f"in {label!r}{codes}: pyproj cannot transform it to the course frame {CRS} ({e}); {fix}"
+            return out
+        if not all(math.isfinite(c) for c in b):
+            out["problem"] = (f"box E {box[0]:.0f}-{box[2]:.0f} N {box[1]:.0f}-{box[3]:.0f} is outside what its CRS "
+                              f"{label!r}{codes} projects to the course frame {CRS}; {fix}")
+            return out
+        out["bounds"] = tuple(b)
+        shift = _datum_shift_note(src, frame, tr, box)
+    heights = f"heights {zu} -> metres" if zf != 1.0 else f"heights in {zu}" if over else ""
+    heights += f"; {over}" if over else ""
+    if guessed:
+        vert = _metre_vertical(VERTICAL_DATUM)
+        heights += (f"; it names no vertical CRS, so its heights are taken in {zu} like its horizontal axes: if they "
+                    f"are metres, set [lidar] crs = \"EPSG:{code or '<horizontal>'}+{vert or '<vertical>'}\" in {toml}"
+                    + ("" if vert else " (<vertical>: the EPSG code of the vertical CRS of its metre heights, which "
+                       "the project's metadata names; 5703 for NAVD88 height)"))
+    what = (f"in {label!r}{codes}, reprojected to {CRS} when read" + (f" ({heights})" if heights else "")
+            if tr is not None else f"in the course frame, converted when read ({heights})")
+    out.update(how="reproject", transform=_to_frame(tr, zf),
+               notes=[(guessed, what)] + ([shift] if shift else []) + ([(True, note)] if note else []))
+    return out
+
+
+def _metre_vertical(name):
+    """EPSG code of the metre heights on the vertical datum `name` (the region's [scaffold] vertical: NAVD88 -> 5703,
+    CGVD2013 -> 6647; an EPSG code as it is), or None."""
+    from pyproj import CRS as _CRS
+    from pyproj.exceptions import CRSError
+    for s in (name, f"{name} height") if name else ():
+        try:
+            c = _CRS(s)
+        except CRSError:
+            continue
+        if c.is_vertical and c.axis_info and c.axis_info[0].unit_conversion_factor == 1.0 and c.to_epsg():
+            return c.to_epsg()
+    return None
+
+
+_SHIFTS = {}   # (tile CRS, frame, limit) -> _datum_shift_note: the tiles of a project share it
+
+
+def _datum_shift_note(src, frame, tr, box):
+    """(attention, text) on the horizontal datum change from the tile's CRS src to the frame, None when src is on the
+    frame's datum (a conversion: exact). PROJ runs offline, with the grids it has: without them it may pick a shift good
+    to metres (NAD83 (1986) to NAD83(2011): a null shift good to 6 m, the real one about 1 m in California). The note
+    names the operation and its accuracy, flagged when that is unknown or worse than [tuning] lidar_datum_shift_warn_m,
+    with the grids a better one needs."""
+    import warnings
+    from pyproj import Transformer
+    from pyproj.aoi import AreaOfInterest
+    from pyproj.exceptions import ProjError
+    from pyproj.transformer import TransformerGroup
+    a, b = src.geodetic_crs, frame.geodetic_crs
+    if a is None or b is None or a.datum == b.datum:
+        return None
+    limit = tuning("lidar_datum_shift_warn_m", 0.1)
+    key = (src.srs, frame.srs, limit)
+    if key in _SHIFTS:
+        return _SHIFTS[key]
+    cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+    try:   # with several candidates, PROJ picks one per point: the one it used at the tile's centre
+        tr.transform(cx, cy)
+        op = tr.get_last_used_operation()
+    except ProjError:
+        op = tr
+    acc = op.accuracy
+    flag = acc < 0 or acc > limit
+    how = repr(op.description) if op is not tr or "unavailable" not in tr.description else "one of several operations"
+    text = (f"horizontal datum {a.datum.name}, the frame's {b.datum.name}: PROJ shifts it with {how} "
+            f"({f'accurate to {acc:g} m' if acc >= 0 else 'accuracy unknown'})")
+    if flag:
+        grids = []
+        try:
+            lon, lat = Transformer.from_crs(src, a, always_xy=True).transform(cx, cy)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")   # "Best transformation is not available": the note says it
+                g = TransformerGroup(src, frame, always_xy=True, area_of_interest=AreaOfInterest(lon, lat, lon, lat))
+            if not g.best_available and g.unavailable_operations:
+                grids = [x.short_name for x in g.unavailable_operations[0].grids if not x.available]
+        except (ProjError, ValueError):
+            pass
+        text += (f", so the LiDAR may sit {f'up to {acc:g} m' if acc >= 0 else 'an unknown distance'} from where the "
+                 "frame's other sources (OSM, the backdrop DEM) put the same ground; the photo is registered onto the "
+                 "LiDAR either way. " + (
+                     f"PROJ lacks the grid{'s' * (len(grids) > 1)} of a better shift ({', '.join(grids)}): fetch "
+                     f"{'each' if len(grids) > 1 else 'it'} once with .venv/bin/pyproj sync --file <name> and rebuild "
+                     "(or build with PROJ_NETWORK=ON: PROJ then fetches what it needs from cdn.proj.org)"
+                     if grids else "PROJ knows no better shift between these datums") +
+                 f" (flagged above [tuning] lidar_datum_shift_warn_m = {limit:g} m)")
+    _SHIFTS[key] = (flag, text)
+    return _SHIFTS[key]
+
+
+def _to_frame(tr, zf):
+    """(x, y, z) -> the frame: tr the horizontal transformer (None: in the frame already), zf the height unit in m."""
+    def to_frame(x, y, z):
+        if tr is not None:
+            x, y = tr.transform(x, y)
+        return x, y, (z if zf == 1.0 else z * zf)
+    return to_frame
+
+
+def lidar_tile_frames(tiles):
+    """lidar_tile_frame of each tile, in order."""
+    return [lidar_tile_frame(f) for f in tiles]
+
+
+def lidar_crs_problems(tiles, frames=None):
+    """The tiles that cannot be brought into the course frame, as messages ([] normally): a CRS pyproj cannot transform,
+    or a box its CRS cannot project (a wrong CRS record)."""
+    frames = lidar_tile_frames(tiles) if frames is None else frames
+    return [t for _, t in _per_tile(((True, fr["problem"]), fr["tile"].name) for fr in frames if fr["problem"])]
+
+
+def lidar_crs_notes(frames):
+    """[(attention, text)]: the tiles reprojected and from what, the tiles read as the frame without a CRS to check, and
+    heights on another datum; [] when every tile is in the frame."""
+    return _per_tile((n, fr["tile"].name) for fr in frames for n in fr["notes"])
+
+
+def lidar_readers(say=True):
+    """[(tile, lidar_tile_frame)] of lidar_tiles(), or exit naming the tiles that cannot be brought into the frame.
+    say: print what lidar_crs_notes says (once per build: the rasters step)."""
+    tiles = lidar_tiles()
+    frames = lidar_tile_frames(tiles)
+    bad = lidar_crs_problems(tiles, frames)
+    if bad:
+        sys.exit("LiDAR tiles that cannot be read in the course frame:\n  " + "\n  ".join(bad))
+    for a, x in lidar_crs_notes(frames) if say else ():
+        print(("!! " if a else "") + "lidar: " + x, flush=True)
+    return list(zip(tiles, frames))
+
+
+def lidar_xyz(header, chunk, to_frame=None):
+    """A chunk's x, y, z in the course frame (heights in metres): its scaled coordinates, through to_frame (a
+    lidar_tile_frame transform) unless that is None."""
+    h = header
+    x = chunk.x.array * h.scales[0] + h.offsets[0]
+    y = chunk.y.array * h.scales[1] + h.offsets[1]
+    z = chunk.z.array * h.scales[2] + h.offsets[2]
+    return (x, y, z) if to_frame is None else to_frame(x, y, z)
 
 
 LAYOUT = _course.get("layout", f"{len(PLAYABLE)} holes")
@@ -203,10 +579,20 @@ def tee_labels(keys):
 
 
 TEE_LABEL = tee_labels(TEE_KEYS)  # hole summaries and QA images
-SCORECARD = {int(h): tuple(v) for h, v in _T.get("scorecard", {}).items()}  # hole: (par, yards per tee...)
+# [scorecard] units: the unit of the card's distances, "yards" (the default) or "metres". The engine works in yards, so a
+# metric card is converted to whole yards here (read as yards, a 400 m hole had its markers 34 m forward).
+_card = dict(_T.get("scorecard", {}))
+SCORECARD_UNITS = _card.pop("units", "yards")
+SCORECARD_UNITS = "metres" if SCORECARD_UNITS == "meters" else SCORECARD_UNITS
+if SCORECARD_UNITS not in ("yards", "metres"):
+    sys.exit(f'courses/{SLUG}/course.toml: [scorecard] units = {SCORECARD_UNITS!r}: "yards" or "metres"')
+SCORECARD = {int(h): tuple(v) if SCORECARD_UNITS == "yards" else (*v[:1], *(round(d * YARDS_PER_M) for d in v[1:]))
+             for h, v in _card.items()}  # hole: (par, yards per tee...)
 _si = _T.get("stroke_index", {})
 HANDICAP = dict(zip(PLAYABLE, _si.get("men", ())))
-HANDICAP_WOMEN = dict(zip(PLAYABLE, _si.get("women", ())))
+if isinstance(_si.get("women"), str) and _si["women"] != "same":  # "same": one stroke index for everyone
+    sys.exit(f'courses/{SLUG}/course.toml: [stroke_index] women = {_si["women"]!r}: a list, or "same" (the men\'s)')
+HANDICAP_WOMEN = dict(HANDICAP) if _si.get("women") == "same" else dict(zip(PLAYABLE, _si.get("women", ())))
 RATINGS = {t: (*r.get("men", (None, None)), *r.get("women", (None, None)), r.get("yards"))  # (men rating, slope,
            for t, r in _T.get("ratings", {}).items()}                                      # women rating, slope, yards)
 
