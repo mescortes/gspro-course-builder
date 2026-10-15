@@ -1,4 +1,5 @@
-"""Camera presets for the viewer (model frame), derived from hole 1 in output/holes.json + the DEM -> output/<slug>/views.json.
+"""Camera presets for the viewer (model frame), derived from the first hole with tees, a green and pins (hole 1 on a
+complete course) in output/holes.json + the DEM -> output/<slug>/views.json.
 
 The viewer also builds per-hole cameras from holes.json at runtime; these are the named presets (#tee, #green, ...)."""
 import sys, json
@@ -28,9 +29,22 @@ def unit(v):
     v = np.asarray(v, float); return v / max(np.linalg.norm(v), 1e-9)
 
 
+def view_hole(holes):
+    """The lowest-numbered hole with tees, a green and a middle pin, or None. hole_data writes {'hole', 'error'} for a hole
+    without a line of play or a green, and no tees when no pad is found: the presets come from the next hole."""
+    usable = [h for h in holes if h.get("tees") and "green" in h and any(p["name"] == "middle" for p in h.get("pins", ()))]
+    return min(usable, key=lambda h: h["hole"]) if usable else None
+
+
 def main():
-    holes = {h["hole"]: h for h in json.load(open(C.OUTPUT / "holes.json"))["holes"]}
-    h = holes[min(holes)]
+    holes = json.load(open(C.OUTPUT / "holes.json"))["holes"]
+    h = view_hole(holes)
+    if h is None:
+        print(f"views: no hole in {C.OUTPUT / 'holes.json'} has tees, a green and pins (see hole_data's messages): "
+              "no camera presets written; the viewer still has its per-hole cameras")
+        return
+    if h["hole"] != min(x["hole"] for x in holes):
+        print(f"views: camera presets from hole {h['hole']}, the first hole with tees, a green and pins")
     tee = np.asarray(h["tees"][0]["utm"][:2])
     cl = np.asarray(h["centerline_utm"], float)
     green = np.asarray(h["green"]["centre_utm"][:2])

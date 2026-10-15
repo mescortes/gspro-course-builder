@@ -1,16 +1,18 @@
-"""What a course still needs, before and after fetching: OSM coverage per hole, data coverage, gaps in course.toml.
+"""What a course still needs, before and after fetching: OSM coverage per hole (and its pars against the card), data
+coverage and CRS, feature files outside the course CRS, gaps in course.toml and its region preset (scripts/region_spec.py).
 
   COURSE=<slug> check_course.py
 
 Lines starting with '!!' need attention. OSM is read through surface_classify.osm_geoms(), so the course's own
 golf.geojson, [osm] exclude and [osm] outline are applied as the build will apply them.
 """
-import sys
+import json, re, sys
 from pathlib import Path
 import numpy as np
 from shapely.geometry import Point
 
 sys.path.insert(0, str(Path(__file__).parent)); import config as C
+import region_spec  # noqa: E402
 
 
 def osm_report(G, playable=None):
@@ -29,7 +31,8 @@ def osm_report(G, playable=None):
         problems.append(f"{len(courses)} leisure=golf_course outlines in the OSM box ({', '.join(map(str, courses))}): "
                         "set [osm] outline to this course's so the others' golf features are left out")
     kinds = {k: [g for _, t, g in G if t.get("golf") == k] for k in ("green", "tee", "fairway", "bunker")}
-    water = [g for _, t, g in G if t.get("golf") in ("water_hazard", "lateral_water_hazard") or t.get("natural") == "water"]
+    from surface_classify import is_water   # the water the build sees
+    water = [g for _, t, g in G if is_water(t)]
     rows = []
     for h in playable:
         r = {"hole": h, "line": h in lines, "par": None, "green": False, "tee": False, "fairway": False, "bunkers": 0,
@@ -49,6 +52,149 @@ def osm_report(G, playable=None):
     return rows, problems
 
 
+def par_problems(rows, scorecard):
+    """Holes whose OSM golf=hole par differs from [scorecard]: OSM may number them differently (swapped nines, a
+    renumbered course), and hole_data then puts each hole's card yardages on another hole's tees."""
+    out = []
+    for r in rows:
+        par, card = r.get("par"), scorecard.get(r["hole"])
+        if card and str(par or "").strip().isdigit() and int(par) != card[0]:
+            out.append(f"hole {r['hole']}: OSM par {par}, [scorecard] par {card[0]}: if OSM numbers the holes differently, "
+                       "map them in course.toml [holes] osm_ref = { <OSM ref> = <hole> }")
+    return out
+
+
+def _ranges(hs):
+    """[1, 2, 3, 7] -> '1-3, 7'"""
+    runs = []
+    for h in sorted(hs):
+        if runs and h == runs[-1][-1] + 1:
+            runs[-1].append(h)
+        else:
+            runs.append([h])
+    return ", ".join(f"{r[0]}-{r[-1]}" if len(r) > 1 else str(r[0]) for r in runs)
+
+
+def _leaf_problems(c):
+    """[lidar] / [imagery] leaf_off: missing, or not the leaf state the region's tree classifier was tuned on."""
+    p = []
+    what = {"lidar": ("LiDAR", "flight dates"), "imagery": ("photo", "photo date")}
+    unset = getattr(c, "LEAF_OFF_UNSET", ())
+    tr = (getattr(c, "REGION", None) or {}).get("trees", {})
+    name = tr.get("classifier")
+    prm = tr.get(name) if isinstance(tr.get(name), dict) else {}
+    state = lambda off: "leaf-off" if off else "leaf-on"
+    for t, have in (("lidar", getattr(c, "LIDAR_LEAF_OFF", None)), ("imagery", getattr(c, "IMAGERY_LEAF_OFF", None))):
+        want = prm.get(f"{t}_leaf_off")
+        tuned = (f"the tree classifier {name!r} (regions/{c.REGION_NAME}.toml [trees]) is tuned on {state(want)} "
+                 f"{what[t][0]}") if isinstance(want, bool) else None
+        if t in unset:
+            p.append(f"[{t}] leaf_off: not set, so the {what[t][0]} is taken as leaf-on"
+                     + (f" ({tuned})" if tuned and want else "") + f": set it from the {what[t][1]} (true = the "
+                     "deciduous trees were bare)")
+        elif tuned and have is not None and want != have:
+            others = [k for k in region_spec.CLASSIFIERS if k != name]
+            p.append(f"[{t}] leaf_off = {str(have).lower()}, but {tuned}: check the {what[t][1]}; if they are right, set "
+                     f"course.toml [trees] classifier to one for {state(have)} data ({', '.join(others)}) with its "
+                     "[trees.<classifier>] table")
+    return p
+
+
+def _passed_keys(call, defs):
+    """The keys a table passed as **table to `call` can hold: the keyword parameters of the function it calls (found
+    by name among `defs`) that the call does not fill itself; None when that function is not in the scripts, an
+    empty set when it takes **kwargs (any key)."""
+    import ast
+    fn = defs.get(ast.unparse(call.func).split(".")[-1])
+    if fn is None:
+        return None
+    a = fn.args
+    if a.kwarg is not None:
+        return frozenset()
+    params = [x.arg for x in a.posonlyargs + a.args]
+    named = [x.arg for x in a.args + a.kwonlyargs]
+    filled = set(params[:len(call.args)]) | {k.arg for k in call.keywords if k.arg}
+    return frozenset(k for k in named if k not in filled)
+
+
+def tuning_keys(scripts=Path(__file__).parent):
+    """{name: None for a value, else the keys of its table} of every [tuning] name the engine reads: the literal first
+    arguments of the config.tuning() and surface_classify.tuned() calls in the scripts. A table's keys come from its
+    default (dict(...) or {...}); a table passed as keyword arguments, f(..., **C.tuning("level_tees", {})), takes
+    the keyword parameters of f that the call does not fill itself (any other key stops the build with a TypeError);
+    any other empty default, such as road_half_width's, takes any key (an empty set)."""
+    import ast
+    trees = [ast.parse(p.read_text(encoding="utf-8")) for p in sorted(Path(scripts).rglob("*.py"))]
+    defs = {n.name: n for t in trees for n in ast.walk(t) if isinstance(n, ast.FunctionDef)}
+    out = {}
+    for t in trees:
+        passed = {id(k.value): n for n in ast.walk(t) if isinstance(n, ast.Call) for k in n.keywords if k.arg is None}
+        local = dict(defs, **{n.name: n for n in ast.walk(t) if isinstance(n, ast.FunctionDef)})  # this file's first
+        for n in ast.walk(t):
+            if not (isinstance(n, ast.Call) and ast.unparse(n.func).split(".")[-1] in ("tuning", "tuned") and n.args
+                    and isinstance(n.args[0], ast.Constant) and isinstance(n.args[0].value, str)):
+                continue
+            d = n.args[1] if len(n.args) > 1 else None
+            if isinstance(d, ast.Dict):
+                keys = frozenset(k.value for k in d.keys if isinstance(k, ast.Constant))
+            elif isinstance(d, ast.Call) and ast.unparse(d.func) == "dict":
+                keys = frozenset(k.arg for k in d.keywords if k.arg)
+            else:
+                keys = None
+            if id(n) in passed and not keys:
+                keys = _passed_keys(passed[id(n)], local)
+                keys = frozenset() if keys is None else keys
+            if out.get(n.args[0].value) is None:
+                out[n.args[0].value] = keys
+    return out
+
+
+def tuning_problems(c=C, keys=None):
+    """course.toml and region [tuning] names the engine does not read (tuning_keys), with the closest one it reads:
+    config.tuning() takes the engine default for a name nothing asks for, so a misspelt key changed nothing."""
+    import difflib
+    keys = tuning_keys() if keys is None else keys
+    near = lambda k, among: difflib.get_close_matches(k, among, 1)
+    out = []
+    for where, t in ((f"courses/{getattr(c, 'SLUG', '<slug>')}/course.toml", getattr(c, "TUNING", {})),
+                     (f"regions/{c.REGION_NAME}.toml", getattr(c, "REGION_TUNING", {}))):
+        for k, v in t.items():
+            if k not in keys:
+                what = f"[tuning.{k}] ({where}): the engine reads no such table" if isinstance(v, dict) else \
+                    f"[tuning] {k} ({where}): the engine reads no such key"
+                m = near(k, keys)
+                out.append(what + (f": did you mean {m[0]}?" if m else f" (it reads {', '.join(sorted(keys))})"))
+            elif keys[k] and isinstance(v, dict):
+                for s in v:
+                    if s not in keys[k]:
+                        m = near(s, keys[k])
+                        out.append(f"[tuning.{k}] {s} ({where}): not a key of the table" + (
+                            f": did you mean {m[0]}?" if m else "") + f" (its keys: {', '.join(sorted(keys[k]))})")
+    return out
+
+
+def frame_crs_report(c=C):
+    """[frame] crs checked as new_course.py checks the CRS it writes (new_course.frame_crs_problems: a projected metre
+    grid with an EPSG code, not compound, not Web Mercator, ground metres at the frame's centre), and written as its
+    EPSG:<code>: the engine reads the code after 'EPSG:' (fetch_data.py imagery, the feature files' crs name), so a
+    hand-edited CRS name or URN stopped the photo download with IndexError or ValueError."""
+    import new_course
+    crs = getattr(c, "CRS", None)
+    if crs is None:
+        return []
+    toml = f"courses/{getattr(c, 'SLUG', '<slug>')}/course.toml"
+    box = getattr(c, "CORE", None) or getattr(c, "TERRAIN", None)
+    xy = ((box["xmin"] + box["xmax"]) / 2, (box["ymin"] + box["ymax"]) / 2) if box else None
+    where = f"[frame] crs = {crs!r}"
+    fix = (f"set {toml} [frame] crs to the EPSG code of the course's UTM zone (new_course.py writes it) or of the "
+           "national metre grid the LiDAR is delivered in, with the [frame] coordinates in that CRS")
+    p, code = new_course.frame_crs_problems(crs, xy=xy, where=where, fix=fix, set_as=toml + ' [frame] crs = "{}"')
+    if not p and code != crs:
+        p = [f'{where}: write it as "{code}" in {toml}: the engine reads the EPSG code after "EPSG:" (the photo '
+             "request, the feature files' crs name)"]
+    return p
+
+
 def course_report(c=C):
     """Gaps in course.toml."""
     p = []
@@ -66,10 +212,19 @@ def course_report(c=C):
     for name, si in (("men", c.HANDICAP), ("women", c.HANDICAP_WOMEN)):
         if sorted(si.get(h) or 0 for h in holes) != list(range(1, len(holes) + 1)):
             p.append(f"[stroke_index] {name}: the stroke index is not a permutation of 1-{len(holes)}")
+    nine = getattr(c, "NINE", None)
+    if nine is not None:  # hole_data reads every playable hole's nine
+        loose = [h for h in holes if h not in nine]
+        if loose:
+            p.append(f"[holes] nines: hole {_ranges(loose)} in no nine "
+                     "(list every playable hole, e.g. nines = { Front = \"1-9\", Back = \"10-18\" })")
+        extra = [h for h in nine if h not in holes and h not in getattr(c, "SCENERY_HOLES", ())]
+        if extra:
+            p.append(f"[holes] nines: hole {_ranges(extra)} is not playable ([holes] playable)")
     slots = ("Black", "White", "Green", "Blue", "Yellow", "Red")
     for k in keys:
         if k not in c.RATINGS:
-            p.append(f"[ratings]: no rating for tee {k}")
+            p.append(f"[ratings]: no rating for tee {k} (an unrated tee: {k} = {{}})")
         if k not in c.TEE_GKD:
             p.append(f"[[tees]] {k}: no gkd_slot (GreenKeeper tee slot)")
         elif c.TEE_GKD[k] not in slots:
@@ -78,47 +233,227 @@ def course_report(c=C):
     for s in sorted({s for s in used if used.count(s) > 1}):
         p.append(f"[[tees]]: two tees have gkd_slot {s!r}")
     if not c.REGION_NAME:
-        p.append("[course]: no region")
+        p.append("[course]: no region (region = the name of a regions/*.toml: trees, foliage, grass, buildings ...)")
+    elif getattr(c, "REGION", None) is not None:  # the region as the course builds with it (course.toml tables merged)
+        p += [f"regions/{c.REGION_NAME}.toml (or the course.toml table): {x}"
+              for x in region_spec.problems(c.REGION, scaffold=False)]
+    p += _leaf_problems(c)
+    p += tuning_problems(c)
     for kind in ("lidar", "imagery", "backdrop"):
         if not c.DATA_SOURCES.get(kind):
             p.append(f"[sources.{kind}]: missing")
+            continue
+        spec = c.DATA_SOURCES[kind]
+        for k, v in (spec.items() if isinstance(spec, dict) else ()):  # what new_course.py could not find
+            if v == "?" or (v == [] and k in ("projects", "dtm")):
+                p.append(f"[sources.{kind}] {k}: {'empty' if v == [] else 'not found (?)'}: fill it in "
+                         "(scripts/sources/<provider>.py says what it takes)")
+    cls = getattr(c, "UNITY_NAME", None)
+    if cls is not None and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", cls + "Setup"):
+        p.append(f"[course] unity_script {c.UNITY_SCRIPT!r}: class {cls}Setup is not a C# name (letters, digits and _, "
+                 "not starting with a digit)")
+    p += frame_crs_report(c)
+    if getattr(c, "FETCH_CORE", None) and getattr(c, "DEM_RES", None) is not None:  # build_rasters stops on these late
+        p += C.grid_problems(c.FETCH_CORE, c.DEM_RES)
+        p += C.grid_problems(c.TEST_CORE, None, "test_profile") if getattr(c, "TEST_CORE", None) else []
+    core, ter = getattr(c, "CORE", None), getattr(c, "TERRAIN", None)
+    if core and ter and not (ter["xmin"] <= core["xmin"] and core["xmax"] <= ter["xmax"]
+                             and ter["ymin"] <= core["ymin"] and core["ymax"] <= ter["ymax"]):
+        p.append(f"[frame]: core {core['xmax'] - core['xmin']:.0f} x {core['ymax'] - core['ymin']:.0f} m does not fit in "
+                 f"the {ter['xmax'] - ter['xmin']:.0f} x {ter['ymax'] - ter['ymin']:.0f} m terrain: the GSPro heightmap "
+                 f"would cut off part of the course")
     return p
 
 
+OVERLAP_SHARE = 0.1  # two LiDAR tiles whose boxes share more than this of the smaller one cover the same ground
+
+
+def lidar_overlaps(names, mins, maxs):
+    """'a and b' for each pair of tiles whose boxes overlap by more than OVERLAP_SHARE of the smaller box: two projects
+    (or flights) over the same ground, which the rasters would merge (the DSM keeps the higher return of both years)."""
+    out = []
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            w = min(maxs[i][0], maxs[j][0]) - max(mins[i][0], mins[j][0])
+            h = min(maxs[i][1], maxs[j][1]) - max(mins[i][1], mins[j][1])
+            small = min(np.prod(np.subtract(maxs[i], mins[i])), np.prod(np.subtract(maxs[j], mins[j])))
+            if w > 0 and h > 0 and w * h > OVERLAP_SHARE * small:
+                out.append(f"{names[i]} and {names[j]}")
+    return out
+
+
+def _rel(p):
+    try:
+        return p.relative_to(C.ROOT)
+    except ValueError:
+        return p
+
+
 def data_report():
-    """Downloads present and covering the extent."""
+    """Downloads present, covering the extent, and made from what course.toml asks for."""
+    import fetch_backdrop, fetch_data
     out = []
     tiles = C.LIDAR_TILES
     if not tiles:
         out.append(f"!! no LiDAR tiles in {C.DATA / 'lidar'} (fetch_data.py lidar)")
     else:
-        import laspy
-        mins, maxs = [], []
-        for f in tiles:
-            with laspy.open(f) as r:
-                mins.append(r.header.mins[:2]); maxs.append(r.header.maxs[:2])
+        boxes = [fr["bounds"] for fr in C.lidar_tile_frames(tiles)]   # header boxes in the frame (reprojected)
+        mins, maxs = [b[:2] for b in boxes], [b[2:] for b in boxes]
         lo, hi = np.min(mins, 0), np.max(maxs, 0)
         e = C.FETCH_CORE
         ok = lo[0] <= e["xmin"] and lo[1] <= e["ymin"] and hi[0] >= e["xmax"] and hi[1] >= e["ymax"]
         out.append(f"{'' if ok else '!! '}LiDAR: {len(tiles)} tiles, E {lo[0]:.0f}-{hi[0]:.0f} N {lo[1]:.0f}-{hi[1]:.0f}"
                    + ("" if ok else " (does not cover CORE)"))
+        pairs = lidar_overlaps([f.name for f in tiles], mins, maxs)
+        if pairs:
+            out.append(f"!! LiDAR: {'; '.join(pairs[:5])}{' ...' if len(pairs) > 5 else ''} cover the same ground (two "
+                       f"projects or flights?): keep one project's tiles in {C.DATA / 'lidar'}")
+        out += ["!! LiDAR: " + x for x in C.lidar_problems()]
     import rasterio
-    for what, p, bands in (("photo", C.IMAGERY_RAW, 4), ("backdrop DTM", C.DATA / "dem/backdrop_dem.tif", 1),
-                           ("backdrop DSM", C.DATA / "dem/backdrop_dsm.tif", 1)):
+    sq = fetch_backdrop.B
+    # more than this share empty: a black strip for the photo (as fetch_data.py's limit), a hole in the backdrop for the
+    # DTM (fetch_backdrop.py fills small gaps); the DSM is optional
+    limit = {"photo": C.DATA_SOURCES.get("imagery", {}).get("max_empty", 0.01), "backdrop DTM": 0.0, "backdrop DSM": 1.0}
+    for what, p, bands, box in (("photo", C.IMAGERY_RAW, 4, None), ("backdrop DTM", C.DATA / "dem/backdrop_dem.tif", 1, sq),
+                                ("backdrop DSM", C.DATA / "dem/backdrop_dsm.tif", 1, sq)):
         if not p.exists():
-            out.append(f"{'' if what == 'backdrop DSM' else '!! '}{what}: missing ({p.relative_to(C.ROOT)})")
+            out.append(f"{'' if what == 'backdrop DSM' else '!! '}{what}: missing ({_rel(p)})")
             continue
         with rasterio.open(p) as ds:
-            nan = float(np.isnan(ds.read(1, out_shape=(1, 256, 256)).astype(float)).mean()) if ds.dtypes[0].startswith("float") else 0.0
-            out.append(f"{'!! ' if ds.count < bands else ''}{what}: {ds.count} bands, {ds.res[0]:.2f} m, {nan:.1%} empty")
+            a = ds.read(out_shape=(ds.count, 256, 256))
+            empty = float(np.isnan(a[0]).mean()) if ds.dtypes[0].startswith("float") else float((a == 0).all(0).mean())
+            count, res, b = ds.count, ds.res[0], ds.bounds
+        short = box is not None and (b.left > box["xmin"] + res or b.bottom > box["ymin"] + res
+                                     or b.right < box["xmax"] - res or b.top < box["ymax"] - res)
+        bad = count < bands or empty > limit[what] or short
+        out.append(f"{'!! ' if bad else ''}{what}: {count} bands, {res:.2f} m, {empty:.1%} empty"
+                   + (f" (covers E {b.left:.0f}-{b.right:.0f} N {b.bottom:.0f}-{b.top:.0f}, not the backdrop square E "
+                      f"{box['xmin']:.0f}-{box['xmax']:.0f} N {box['ymin']:.0f}-{box['ymax']:.0f}: rerun fetch_backdrop.py)"
+                      if short else ""))
+    out += ["!! photo: " + x for x in fetch_data.imagery_problems()]
+    out += ["!! OSM: " + x for x in fetch_data.osm_problems()]
+    return out
+
+
+def lidar_crs_report(c=C):
+    """The LiDAR tiles' CRS against the course frame: how many are in it, which the build reprojects and from what,
+    which it reads as the frame without a CRS to check, heights on another datum, and tiles it cannot read at all."""
+    if not c.LIDAR_TILES:
+        return []
+    frames = c.lidar_tile_frames(c.LIDAR_TILES)
+    n = sum(fr["how"] == "frame" for fr in frames)
+    return ([f"LiDAR CRS: {n} of {len(frames)} tiles in the course frame ({c.CRS})"] if n else []) + \
+        [f"!! LiDAR CRS: {x}" for x in c.lidar_crs_problems(c.LIDAR_TILES, frames)] + \
+        [f"{'!! ' if a else ''}LiDAR CRS: {x}" for a, x in c.lidar_crs_notes(frames)]
+
+
+def photo_crs_report(c=C):
+    """The raw photo's CRS against the course frame: the pipeline reads it through course-CRS windows, so a photo placed
+    by hand in another CRS gave black windows (fetch_data.py imagery asks the service for the course CRS)."""
+    if not Path(c.IMAGERY_RAW).exists():
+        return []
+    import rasterio
+    from pyproj import CRS
+    with rasterio.open(c.IMAGERY_RAW) as ds:
+        pc = CRS(ds.crs.to_wkt()) if ds.crs else None
+    frame = CRS(c.CRS)
+    if pc is None or pc.equals(frame, ignore_axis_order=True) or (pc.to_epsg() or -1) == frame.to_epsg():
+        return []
+    return [f"!! photo CRS: {Path(c.IMAGERY_RAW).name} is in {pc.name!r}, the course frame is {c.CRS} ({frame.name}): "
+            f"reproject it (gdalwarp -t_srs {c.CRS}) or fetch it again (fetch_data.py imagery)"]
+
+
+def feature_files_report(c=C):
+    """Hand-made feature files (courses/<slug>/features/**.geojson, research/layout.geojson) that are not in the course
+    CRS, as messages. They are read as course-CRS metres: a file drawn in lon/lat (geojson.io, a QGIS layer in EPSG:4326)
+    put every feature near the grid origin, and the build then had no golf labels on the course."""
+    from pyproj import CRS
+    from pyproj.exceptions import CRSError
+    from shapely.errors import ShapelyError
+    from shapely.geometry import shape
+    frame = CRS(c.CRS)
+    ext = [dict(c.TERRAIN)] + ([dict(c.FETCH_CORE)] if getattr(c, "FETCH_CORE", None) else [])
+    near = (min(e["xmin"] for e in ext) - 1000, min(e["ymin"] for e in ext) - 1000,   # the course + 1 km, either profile
+            max(e["xmax"] for e in ext) + 1000, max(e["ymax"] for e in ext) + 1000)
+    files = sorted(Path(c.SOURCES).rglob("*.geojson")) + [p for p in [Path(c.RESEARCH) / "layout.geojson"] if p.exists()]
+    fix = f"reproject it to {c.CRS} ({frame.name}; QGIS: Export > Save Features As, CRS {c.CRS})"
+    out = []
+    for f in files:
+        name = f"courses/{Path(c.COURSE_DIR).name}/{f.relative_to(c.COURSE_DIR).as_posix()}"
+        try:
+            with open(f) as fh:
+                fc = json.load(fh)
+        except ValueError as e:  # not JSON, or not UTF-8
+            out.append(f"{name}: not a JSON file ({e}): fix it, or export it again (QGIS: Export > Save Features As, "
+                       "GeoJSON)")
+            continue
+        if isinstance(fc, dict) and fc.get("type") == "FeatureCollection" and not isinstance(fc.get("features"), list):
+            out.append(f"{name}: its \"features\" is " + ("missing" if "features" not in fc else
+                       f"a {type(fc['features']).__name__}, not a list") + ": the build reads the FeatureCollection's "
+                       "features list, \"features\": [{\"type\": \"Feature\", ...}, ...]: fix it, or export it again "
+                       "(QGIS: Export > Save Features As, GeoJSON)")
+            continue
+        if not (isinstance(fc, dict) and fc.get("type") == "FeatureCollection"):
+            kind = fc.get("type") if isinstance(fc, dict) else type(fc).__name__
+            out.append(f"{name}: a {kind or 'JSON object'}, not a FeatureCollection: the build reads a "
+                       "FeatureCollection's features, so wrap it: "
+                       "{\"type\": \"FeatureCollection\", \"features\": [...]}")
+            continue
+        b, bad = [], None
+        for i, x in enumerate(fc["features"]):
+            try:
+                if x.get("geometry"):
+                    b.append(shape(x["geometry"]).bounds)
+            except (ValueError, KeyError, TypeError, AttributeError, ShapelyError) as e:
+                bad = (f"{name}: feature {i + 1}: {e.__class__.__name__}: {str(e).strip()}: fix or redraw it (a "
+                       "GeoJSON geometry type, a line of two or more points, a polygon ring of four or more closing on "
+                       "itself)")
+                break
+        if bad:
+            out.append(bad)
+            continue
+        named = ((fc.get("crs") or {}).get("properties") or {}).get("name")
+        if named:
+            try:
+                fcrs = CRS(named)
+            except CRSError:
+                out.append(f"{name}: names CRS {named!r}, which pyproj does not know: {fix}")
+                continue
+            if not (fcrs.equals(frame, ignore_axis_order=True) or (fcrs.to_epsg() or -1) == frame.to_epsg()):
+                out.append(f"{name}: in {fcrs.name!r} ({named}), the course frame is {c.CRS}: {fix}")
+                continue
+        if not b:
+            continue
+        x0, y0 = min(v[0] for v in b), min(v[1] for v in b); x1, y1 = max(v[2] for v in b), max(v[3] for v in b)
+        if max(abs(x0), abs(x1)) <= 180 and max(abs(y0), abs(y1)) <= 90:
+            out.append(f"{name}: coordinates look like lon/lat ({x0:.4f}, {y0:.4f}); feature files are in the course "
+                       f"CRS (metres): {fix}")
+        elif x1 < near[0] or x0 > near[2] or y1 < near[1] or y0 > near[3]:
+            out.append(f"{name}: E {x0:.0f}-{x1:.0f} N {y0:.0f}-{y1:.0f} is far outside the course terrain: if it was "
+                       f"drawn in another CRS, {fix}")
     return out
 
 
 def main():
     from surface_classify import osm_geoms
-    print(f"course {C.SLUG}: {C.COURSE_NAME} ({C.REGION_NAME}, {C.CRS})")
+    tr = C.REGION.get("trees", {})
+    print(f"course {C.SLUG}: {C.COURSE_NAME} ({C.REGION_NAME}, {C.CRS}, scorecard in {C.SCORECARD_UNITS})")
+    print(f"leaf-off: LiDAR {C.LIDAR_LEAF_OFF}, photo {C.IMAGERY_LEAF_OFF}; tree classifier {tr.get('classifier')}")
+    from pyproj import CRS
+    from pyproj.exceptions import CRSError
+    try:
+        CRS(C.CRS)
+    except CRSError:   # every check below reads the frame: say what is wrong instead of a traceback
+        sys.exit("\n".join(["!! " + x for x in frame_crs_report()]) or
+                 f"!! courses/{C.SLUG}/course.toml [frame] crs = {C.CRS!r} is not a CRS pyproj knows")
+    features = feature_files_report()
+    if features:
+        print("\n== course feature files")
+        for x in features:
+            print("!!", x)
     print("\n== OSM and course features (per playable hole)")
     rows, problems = osm_report(osm_geoms())
+    problems += par_problems(rows, C.SCORECARD)
     print("hole  par  line green tee fairway bunkers water  source")
     for r in rows:
         y = lambda b: "yes" if b else " - "
@@ -127,7 +462,7 @@ def main():
     for x in problems:
         print("!!", x)
     print("\n== data")
-    for x in data_report():
+    for x in data_report() + lidar_crs_report() + photo_crs_report():
         print(x)
     print("\n== course.toml")
     for x in course_report() or ["complete"]:

@@ -38,7 +38,11 @@ backdrop = { kinds = ["maple", "oak", "spruce"], share = [0.5, 0.35, 0.15], crow
 # conifer = penetration < conifer_pen, or (crown NDVI > a and penetration < b) for each [a, b] of conifer_green;
 # pine = a conifer with crown base > pine_base of its height, or taller than pine_tall[0] m and flatter than pine_tall[1];
 # oak = the hardwoods broader than the oak_pct percentile of crown radius / height (trees over oak_min_h m).
+# lidar_leaf_off / imagery_leaf_off: the data these rules need (check_course.py flags a course whose [lidar] / [imagery]
+# leaf_off differs: hardwoods in leaf stop the pulses as the evergreens do, and every crown is green in a summer photo).
 [trees.leaf_off_parkland]
+lidar_leaf_off = true
+imagery_leaf_off = true
 shrub_h = 4.5
 conifer_pen = 0.24
 conifer_green = [[0.28, 0.32], [0.22, 0.27]]
@@ -295,11 +299,14 @@ native = "withered_grass"
 species_tint = { maple = [1.0, 1.04, 0.9], oak = [0.9, 0.94, 0.78], pine = [0.84, 0.95, 0.9], spruce = [0.7, 0.84, 0.86], shrub = [1.0, 1.0, 0.9] }
 sky = [[0.0, "#2f6db8"], [0.3, "#5f97d3"], [0.45, "#a9c7e3"], [0.5, "#d6e2ea"], [0.53, "#c2cdb8"], [1.0, "#7d8a64"]]
 
-# new_course.py: datum, vertical datum, data providers and photo resolution for a new course in this region.
+# new_course.py: datum, vertical datum, data providers, photo resolution and the usual leaf state of the data (written
+# into a new course's [lidar] / [imagery] leaf_off, to be checked against its own flight and photo dates).
 [scaffold]
 datum = "NAD83(CSRS)"
 vertical = "CGVD2013"
 imagery_res = 0.16
+lidar_leaf_off = true    # OMAFRA LiDAR: mostly spring flights
+imagery_leaf_off = true  # SWOOP spring photo
 lidar = { provider = "nrcan_copc", province = "ON" }
 backdrop = { provider = "cog_dem", url = "https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/{province}-{project}-1m-{kind}.tif" }
 imagery = { provider = "arcgis_imageserver", url = "https://ws.geoservices.lrc.gov.on.ca/arcgis5/rest/services/AerialImagery/GEO_Imagery_Data_Service_2023to2027/ImageServer", mosaic_rule = { mosaicMethod = "esriMosaicNorthwest", where = "Project='SWOOP2025'" }, bands = [0, 1, 2, 3] }

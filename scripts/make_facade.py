@@ -1,7 +1,7 @@
 """Procedural facade texture: stucco wall with a storey of windows (tiles 4 m wide x 3.5 m tall)."""
 import sys, numpy as np
 from PIL import Image, ImageDraw, ImageFilter
-sys.path.insert(0, 'scripts'); import config as C
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent)); import config as C
 W, H = 1024, 896  # 4 m x 3.5 m at 256 px/m
 base = Image.open(C.DATA / 'textures/white_stucco/diffuse.jpg').convert('RGB').resize((1024, 1024)).crop((0, 0, W, H))
 a = np.asarray(base).astype(np.float32)

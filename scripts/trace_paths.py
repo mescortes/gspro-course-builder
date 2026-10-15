@@ -10,7 +10,7 @@ too). Candidates are cleaned, skeletonised and kept as centre lines where the st
 
 Output: build/<slug>/paths_detected.geojson (LineStrings, properties golf=cartpath, source=trace_paths) in config.CRS.
 surface_classify.osm_geoms() reads it like OSM paths, so classification, vectorize and the cart-path surfaces use it.
-QA overrides correct what this misses.
+QA overrides correct what this misses. A photo without a NIR band has no NDVI: the file is written empty.
 """
 import json, sys
 from pathlib import Path
@@ -78,8 +78,9 @@ def _trace(skel):
     return paths
 
 
-def centrelines(mask, T, min_len=MIN_LEN):
-    """Clean candidate mask -> list of simplified centre LineStrings (map coordinates) of path-wide, long strips."""
+def centrelines(mask, T, min_len=MIN_LEN, width=WIDTH):
+    """Clean candidate mask -> list of simplified centre LineStrings (map coordinates) of long strips whose full
+    width at the skeleton lies in `width` (m)."""
     from skimage.morphology import skeletonize
     res = abs(T.a)
     m = ndimage.binary_closing(mask, iterations=2)
@@ -87,9 +88,9 @@ def centrelines(mask, T, min_len=MIN_LEN):
     half = ndimage.distance_transform_edt(m) * res
     skel = skeletonize(m)
     w = 2 * half
-    skel &= (w >= WIDTH[0]) & (w <= WIDTH[1])
+    skel &= (w >= width[0]) & (w <= width[1])
     # drop skeleton spurs inside blobs: a pixel whose strip is wider than a path anywhere nearby
-    wide = ndimage.maximum_filter(np.where(m, w, 0), size=int(round(3.0 / res)) | 1) > WIDTH[1] + 1.0
+    wide = ndimage.maximum_filter(np.where(m, w, 0), size=int(round(3.0 / res)) | 1) > width[1] + 1.0
     skel &= ~wide
     lines = []
     for path in _trace(skel):
@@ -159,18 +160,26 @@ def bridge(lines, max_gap=MAX_GAP, max_angle=MAX_ANGLE, ok=None):
     return _merge(list(lines) + conn)
 
 
-def main():
-    from skimage.color import rgb2lab
-    from surface_classify import grid, read_imagery_window, read_nir_window, osm_geoms
-    W, H, T = grid()
-    G = [x for x in osm_geoms() if x[1].get("source") != "trace_paths"]
+def write(lines):
+    feats = [{"type": "Feature", "geometry": mapping(g), "properties": {"golf": "cartpath", "source": "trace_paths",
+                                                                        "length_m": round(g.length, 1)}} for g in lines]
+    OUT.parent.mkdir(exist_ok=True)
+    json.dump({"type": "FeatureCollection", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::" + C.CRS.split(":")[1]}},
+               "features": feats}, open(OUT, "w"))
+    print(f"traced {len(lines)} path lines, {sum(g.length for g in lines):.0f} m -> {OUT}")
+
+
+def masks(G, W, H, T):
+    """(inside the course, excluded) on the grid: the course outline + 5 m, and the ground no path is traced on
+    (mapped greens, bunkers, water, buildings, parking, roads, fairway interiors, sports pitches and their rims)."""
+    from surface_classify import is_water   # a pond mapped golf=lateral_water_hazard only is water too
     def burn(geoms):
         geoms = [g for g in geoms if not g.is_empty]
         return rasterize([(g, 1) for g in geoms], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) \
             if geoms else np.zeros((H, W), bool)
     course = burn([g.buffer(5) for _, t, g in G if t.get("leisure") == "golf_course"])
     excl = burn([g.buffer(3.0) for _, t, g in G if t.get("golf") == "green" and g.geom_type == "Polygon"])
-    excl |= burn([g.buffer(2.0) for _, t, g in G if (t.get("golf") in ("bunker", "water_hazard") or t.get("natural") == "water"
+    excl |= burn([g.buffer(2.0) for _, t, g in G if (t.get("golf") == "bunker" or is_water(t)
                                                         or "building" in t or t.get("amenity") == "parking") and g.geom_type != "LineString"])
     excl |= burn([g.buffer(4.0) for _, t, g in G if t.get("highway") and t.get("highway") not in ("path", "footway", "track")
                   and g.geom_type == "LineString"])
@@ -179,14 +188,28 @@ def main():
     excl |= burn([g.buffer(2.0) for _, t, g in G if (t.get("leisure") in ("pitch", "sports_centre") or t.get("sport") not in (None, "golf"))
                   and t.get("leisure") != "golf_course"
                   and g.geom_type == "Polygon"])
+    return course, excl
+
+
+def main():
+    from skimage.color import rgb2lab
+    from surface_classify import grid, has_nir, read_imagery_window, read_nir_window, osm_geoms
+    if not has_nir():
+        # the paths are NDVI ridges: without NIR nothing is traced, and the empty file replaces any older trace
+        print("trace_paths: the photo has no NIR band (paths are traced from NDVI), so no cart path is traced: map them "
+              f"in OSM or the course overrides, or set [tuning] trace_paths = false in courses/{C.SLUG}/course.toml",
+              flush=True)
+        write([])
+        return
+    W, H, T = grid()
+    G = [x for x in osm_geoms() if x[1].get("source") != "trace_paths"]
+    course, excl = masks(G, W, H, T)
     cand = np.zeros((H, W), bool)
     pad = 32
     for r0 in range(0, H, 1024):
         r1 = min(H, r0 + 1024); p0, p1 = max(0, r0 - pad), min(H, r1 + pad)
         rgb = read_imagery_window(T, p0, p1, 0, W)
         nir = read_nir_window(T, p0, p1, 0, W)
-        if nir is None:
-            raise SystemExit("trace_paths needs a 4-band (RGB + NIR) photo")
         ndvi = (nir - rgb[0]) / (nir + rgb[0] + 1e-3)
         ridge = ndvi_ridges(ndvi, C.DEM_RES)
         L = ndimage.gaussian_filter(rgb2lab(np.moveaxis(rgb, 0, -1))[..., 0], 1.0)
@@ -202,12 +225,7 @@ def main():
     lines = bridge(lines)
     lines = bridge([g for g in lines if g.length >= 6.0], LONG_GAP, LONG_ANGLE, ok=clear)
     lines = [g for g in lines if g.length >= MIN_LEN]
-    feats = [{"type": "Feature", "geometry": mapping(g), "properties": {"golf": "cartpath", "source": "trace_paths",
-                                                                        "length_m": round(g.length, 1)}} for g in lines]
-    OUT.parent.mkdir(exist_ok=True)
-    json.dump({"type": "FeatureCollection", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::" + C.CRS.split(":")[1]}},
-               "features": feats}, open(OUT, "w"))
-    print(f"traced {len(lines)} path lines, {sum(g.length for g in lines):.0f} m -> {OUT}")
+    write(lines)
 
 
 if __name__ == "__main__":

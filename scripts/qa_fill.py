@@ -1,7 +1,7 @@
 """Render a GeoJSON surface partition as filled colours (optionally blended with imagery)."""
 import sys, json, numpy as np
 from PIL import Image, ImageDraw
-sys.path.insert(0,'scripts')
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 from qa_overlay import imagery
 from qa_crops import grid
 FILL = {"deeprough":(22,75,32),"green":(188,229,164),"fringe":(150,200,130),"fairway":(67,229,97),"semirough":(54,183,77),"rough":(39,132,56),

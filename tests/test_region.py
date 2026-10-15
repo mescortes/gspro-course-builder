@@ -142,3 +142,94 @@ def test_the_viewer_gets_title_model_and_region_tints_from_a_generated_file():
     assert set(v["species_tint"]) == set(C.TREE_ARCHETYPES) and v["sky"][0][0] == 0.0
     html = (ROOT / "viewer/index.html").read_text()
     assert "viewer.json" in html and "Westmount" not in html
+
+
+SOCAL = """
+import sys, json; sys.path.insert(0, 'scripts')
+import config as C, region_spec, check_course as K, detect_trees as D, make_trees as M, make_foliage as F
+import add_vegetation as A, fetch_textures as X, export_course as E
+feats = [{"properties": dict(height=h, crown_r=r, crown_base=b, sharpness=s, penetration=p, L=40.0 + l, A=-12.0, B=20.0)}
+         for h, r, b, s, p, l in ((3, 1.5, 1, 0.3, 0.2, 0), (24, 4, 9, 0.4, 0.45, 0), (10, 4, 3, 0.3, 0.2, 14)) + tuple(
+             (8 + k % 9, 3 + k % 4, 2 + k % 3, 0.2 + 0.05 * (k % 5), 0.15 + 0.02 * (k % 7), (k % 11) - 5) for k in range(60))]
+D.assign_archetypes(feats)
+tris = {a: M.build(a, 0, "lo")[0] for a in C.TREE_ARCHETYPES}
+print(json.dumps({"problems": region_spec.problems(C.REGION, scaffold=False), "report": K.course_report(),
+                  "cards": {a: F.card_kind(a, F.SPEC[a]) for a in C.TREE_ARCHETYPES}, "tris": tris,
+                  "bark": {a: A.BARK[a] in X.IDS for a in C.TREE_ARCHETYPES},
+                  "tint": sorted(E.viewer_config()["species_tint"]), "found": sorted({f["properties"]["archetype"] for f in feats})}))
+"""
+
+
+def test_southern_california_reaches_every_script_that_reads_a_region(tmp_path):
+    """A region for the courses round Los Angeles and San Diego (MountainGate's species: coast live oak, Aleppo pine,
+    sycamore, eucalyptus, shrub). A course on it loads, check_course finds nothing missing for leaf-on data, its
+    classifier sorts trees into every archetype, each archetype's tree model builds, Aleppo pine gets needle cards
+    and every bark set is in fetch_textures' list."""
+    shutil.copytree(ROOT / "scripts", tmp_path / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
+    (tmp_path / "regions").mkdir()
+    shutil.copy(ROOT / "regions/southern_california.toml", tmp_path / "regions")
+    (tmp_path / "courses/alpha").mkdir(parents=True)
+    (tmp_path / "courses/alpha/course.toml").write_text("""
+[course]
+name = "Alpha"
+region = "southern_california"
+[frame]
+crs = "EPSG:6340"
+origin = [362650.0, 3775300.0]
+base_h = 350.0
+core = { xmin = 362394.0, ymin = 3775044.0, xmax = 362906.0, ymax = 3775556.0 }
+terrain = { xmin = 361626.0, ymin = 3774276.0, xmax = 363674.0, ymax = 3776324.0 }
+[lidar]
+leaf_off = false
+[imagery]
+leaf_off = false
+[holes]
+playable = "1"
+[[tees]]
+key = "blue"
+name = "Blue"
+colour = "#2050c0"
+gkd_slot = "Blue"
+[scorecard]
+1 = [4, 400]
+[stroke_index]
+men = [1]
+women = "same"
+[ratings]
+blue = { men = [72.0, 130], women = [74.0, 132], yards = 400 }
+[sources.lidar]
+provider = "usgs_3dep"
+[sources.imagery]
+provider = "arcgis_imageserver"
+[sources.backdrop]
+provider = "cog_dem"
+dtm = ["u"]
+[osm]
+outline = ["way/1"]
+""")
+    env = {k: v for k, v in os.environ.items() if k not in ("COURSE", "MG_PROFILE")}
+    r = subprocess.run([sys.executable, "-c", SOCAL], cwd=tmp_path, env=env, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    v = json.loads(r.stdout.splitlines()[-1])
+    arch = ["coast_live_oak", "aleppo_pine", "sycamore", "eucalyptus", "shrub"]
+    assert v["problems"] == [] and not [x for x in v["report"] if "leaf_off" in x or "region" in x], v["report"]
+    assert v["found"] == sorted(arch), v["found"]
+    assert all(v["tris"][a] > 100 for a in arch) and v["bark"] == {a: True for a in arch} and v["tint"] == sorted(arch)
+    assert v["cards"] == {a: "pine" if a == "aleppo_pine" else "sprites" for a in arch}
+
+
+def test_southern_california_flags_leaf_off_data_and_frames_the_course_in_utm_11n():
+    """The region's tree rule reads leaf-on LiDAR and a summer photo (3DEP and NAIP are both); a course flown leaf-off
+    is told so. new_course frames a Los Angeles course in NAD83(2011) / UTM zone 11N."""
+    import tomllib
+    import check_course as K, new_course as N
+    r = tomllib.load(open(ROOT / "regions/southern_california.toml", "rb"))
+    class Course:
+        REGION_NAME = "southern_california"; REGION = {k: v for k, v in r.items() if k in C.REGION_TABLES}
+        LEAF_OFF_UNSET = (); LIDAR_LEAF_OFF = False; IMAGERY_LEAF_OFF = False
+    assert K._leaf_problems(Course) == []
+    Course.LIDAR_LEAF_OFF, Course.IMAGERY_LEAF_OFF = True, True
+    p = K._leaf_problems(Course)
+    assert len(p) == 2 and all("leaf_on_suburban_socal" in x and "regions/southern_california.toml" in x for x in p)
+    assert not r["scaffold"]["lidar_leaf_off"] and not r["scaffold"]["imagery_leaf_off"]
+    assert N.utm_crs(-118.49, 34.08, r["scaffold"]["datum"]) == "EPSG:6340"

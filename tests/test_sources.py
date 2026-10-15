@@ -67,7 +67,8 @@ def test_3dep_tiles_are_the_projects_tiles_that_reach_the_extent(tmp_path, monke
         calls.append(params); return _Resp(200, payload=TNM)
     monkeypatch.setattr(usgs_3dep.http.requests, "get", get)
     monkeypatch.setattr(usgs_3dep.http, "download", lambda url, dst, size=None: got.append(dst.name))
-    ext = dict(xmin=536600.0, ymin=4291100.0, xmax=537000.0, ymax=4291500.0)   # EPSG:6339, inside tile 536291
+    # EPSG:6339, inside tile 536291 (its box: E 536351-537355, N 4291337-4292351; the fetch checks the tiles cover it)
+    ext = dict(xmin=536600.0, ymin=4291500.0, xmax=537000.0, ymax=4291900.0)
     usgs_3dep.fetch(spec, ext, tmp_path, crs="EPSG:6339")
     assert got == ["USGS_LPC_CA_NorthCoastRanges_B23_536291.laz"]
     assert calls[0]["datasets"] == "Lidar Point Cloud (LPC)" and len(calls[0]["bbox"].split(",")) == 4

@@ -163,6 +163,30 @@ def test_synthetic_deck_does_not_feather_into_a_cart_path():
     assert np.abs(out - dem)[inside].max() > 0.3, "the tee is still levelled"
 
 
+def test_a_synthetic_deck_stopped_at_a_protected_edge_is_reported(capsys):
+    """Round-3 review: the feather is cut off where it meets a protected surface, so a deck cut into a slope next to a
+    path, green or bunker ends in a cliff (Brambles: 1.0 m at the 10th green's fringe), silently. level_tees now says
+    where, how high, and that a LiDAR flown after every tee was built needs [tuning.level_tees] enabled = false. The
+    DEM it returns is unchanged."""
+    from build_terrain_mesh import level_tees
+    from rasterio.features import rasterize
+    from shapely.geometry import box
+    dem, T, c = _plane(slope=0.12)
+    tee = Point(c, c).buffer(5.0)
+    path = box(c + 5.6, 0, c + 8.0, dem.shape[0] * RES)
+    protect = rasterize([(path, 1)], out_shape=dem.shape, transform=T).astype(bool)
+    out = level_tees(dem.copy(), T, [tee], protect=protect, holes=[7])
+    msg = capsys.readouterr().out
+    assert "hole 7 tee at" in msg and "step" in msg and "[tuning.level_tees] enabled = false" in msg, msg
+    step = float(msg.split(" m step")[0].split()[-1])
+    pr = rasterize([(path.buffer(0.3), 1)], out_shape=dem.shape, transform=T).astype(bool) & ~protect
+    assert abs(step - np.abs(out - dem)[pr].max()) < 0.05, (step, np.abs(out - dem)[pr].max())
+    assert np.abs(out - level_tees(dem.copy(), T, [tee], protect=protect, holes=[7], warn_step=99.0)).max() == 0.0
+    assert "step" not in capsys.readouterr().out, "warn_step: a larger step is still quiet"
+    level_tees(dem.copy(), T, [tee], holes=[7])
+    assert "step" not in capsys.readouterr().out, "nothing protected: the bank runs out, no step"
+
+
 def test_new_tee_is_built_up_to_its_neighbouring_deck():
     """Hole 8's 2025 Blue tee sat 1.7 m below the White deck 26 m away, in a hole cut into the slope (its deck was at
     the 2018 slope's mean height). A new tee next to a real deck of the same hole is built up to that deck's level."""
@@ -197,3 +221,15 @@ def test_new_tee_is_never_dug_down_to_a_lower_neighbour():
     out = level_tees(dem.copy(), T, [old, new], holes=[11, 11])
     m = rasterize([(new.buffer(-0.3), 1)], out_shape=dem.shape, transform=T).astype(bool)
     assert abs(out[m].mean() - dem[m].mean()) < 0.02
+
+
+def test_synthetic_decks_can_be_turned_off():
+    """A course whose LiDAR was flown after every tee was built (Brambles, 2023) has no deck-less new tees; its drafted
+    tee polygons take in the banks, and synthetic decks would cut and fill them (up to 1.5 m: by the 10th green the
+    hole-7 back tee's bank ended in a 1.0 m step at the fringe). [tuning.level_tees] enabled = false leaves the DEM as
+    it is."""
+    from build_terrain_mesh import level_tees
+    dem, T, c = _plane(slope=0.06)
+    tee = Point(c, c).buffer(5.0)
+    assert np.abs(level_tees(dem.copy(), T, [tee], enabled=False) - dem).max() == 0.0
+    assert np.abs(level_tees(dem.copy(), T, [tee]) - dem).max() > 0.1

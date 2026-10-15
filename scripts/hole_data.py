@@ -108,8 +108,24 @@ def pad_axes(pad, toward, step=1.5):
     return out  # back of pad, front, offset
 
 
-def place_tees(pads, aims, green_c, card):
-    """Assign card tees to pads and slide markers to match the card yardage. Returns list of tee dicts."""
+TEE_MARKER_GAP = C.tuning("tee_marker_gap", 2.0)  # m: two tee sets' markers closer than this share one spot
+
+
+def clashes(pos, yards, others, min_sep):
+    """Would a marker at `pos` for a `yards` card sit on another set's marker (a tee dict with "pos" and "card")? Only
+    when the two are within `min_sep` m and their cards are not: then one of them misses its card (clamped to the end of
+    a pad). Two sets with the same card, or cards under min_sep apart, share the spot (a forward and a combo set on one
+    box)."""
+    return any(math.dist(pos, o["pos"]) < min_sep and abs(yards - o["card"]) / YD >= min_sep for o in others)
+
+
+def place_tees(pads, aims, green_c, card, min_sep=None):
+    """Assign card tees to pads and slide markers to match the card yardage. Returns list of tee dicts. Back to front,
+    each set takes the pad that comes closest to its card. A set whose marker would land on an earlier set's (within
+    `min_sep` m while their cards are further apart: one clamped to the end of a pad, a card longer than the ground,
+    Brambles hole 7) takes the next best pad instead and its gap is reported (pad_err); sets share a spot only when no
+    pad is left for them. Sets whose cards are the same (within min_sep) share their spot (`clashes`)."""
+    min_sep = TEE_MARKER_GAP if min_sep is None else min_sep
     first = aims[0] if aims else green_c
     info = []
     for pad in pads:
@@ -121,18 +137,44 @@ def place_tees(pads, aims, green_c, card):
         lo, hi = sorted((ax["dist_front"], ax["dist_back"]))
         return 0.0 if lo <= yards <= hi else min(abs(yards - lo), abs(yards - hi))
 
+    def spot(i, yards):
+        ax = min(i["axes"], key=lambda ax: (round(err(ax, yards), 3), abs(ax["off"])))   # nearest the centre line
+        lo, hi = ax["dist_front"], ax["dist_back"]
+        t = 0.5 if abs(hi - lo) < 1e-6 else float(np.clip((yards - lo) / (hi - lo), 0, 1))
+        return ax, ax["front"] + (ax["back"] - ax["front"]) * t
+
     tees = []
     for key, yards in zip(TEE_KEYS, card):
         if not info:
             break
-        # distance error if the marker is placed anywhere on this pad
-        best = min(info, key=lambda i: (min(err(ax, yards) for ax in i["axes"]), abs(i["dist_c"] - yards)))
-        ax = min(best["axes"], key=lambda ax: (round(err(ax, yards), 3), abs(ax["off"])))   # nearest the centre line
-        lo, hi = ax["dist_front"], ax["dist_back"]
-        t = 0.5 if abs(hi - lo) < 1e-6 else float(np.clip((yards - lo) / (hi - lo), 0, 1))
-        pos = ax["front"] + (ax["back"] - ax["front"]) * t
+        # pads by the distance error if the marker is placed anywhere on them
+        ranked = sorted(info, key=lambda i: (min(err(ax, yards) for ax in i["axes"]), abs(i["dist_c"] - yards)))
+        choice = None
+        for i in ranked:
+            ax, pos = spot(i, yards)
+            choice = choice or (i, ax, pos)
+            if not clashes(pos, yards, tees, min_sep):
+                choice = (i, ax, pos)
+                break
+        best, ax, pos = choice
         measured = play_distance(pos, aims, green_c) * YD
         tees.append(dict(key=key, pad=best["pad"], pos=pos, measured=measured, card=yards, pad_err=err(ax, yards)))
+    return tees
+
+
+def fairway_markers(tees, aims, green_c, min_sep=None):
+    """In place: no tee pad can deliver a set's card yardage (composite forward tees): its marker goes on the line of play
+    at exactly the card distance, as forward markers on a fairway are - unless that spot is on another set's marker
+    (`clashes`; Brambles hole 7: the Middle card equals the Back deck's length, so the fairway marker sat on the Back
+    marker, clamped there from a longer card); then it stays on its pad and the gap is reported. Sets each tee's
+    "source"."""
+    min_sep = TEE_MARKER_GAP if min_sep is None else min_sep
+    for t in tees:
+        t["source"] = "pad"
+        if t["pad_err"] > FAIRWAY_MARKER_GAP and t["key"] != TEE_KEYS[0]:
+            pos = point_at_distance(t["card"] / YD, aims, green_c, np.asarray(tees[0]["pos"]))
+            if pos is not None and not clashes(pos, t["card"], [o for o in tees if o is not t], min_sep):
+                t["pos"] = pos; t["measured"] = play_distance(pos, aims, green_c) * YD; t["source"] = "fairway_marker"
     return tees
 
 
@@ -198,14 +240,7 @@ def hole_record(h, line, feats, terr, all_feats):
         aims = []
     pads = [g for g, p in hf if p["surface"] == "tee" and g.area > 15]
     tees = place_tees(pads, aims, gc, card)
-    # No tee pad can deliver the card yardage (composite forward tees): put the marker on the line of play at exactly the
-    # card distance, as forward markers on a fairway are. QA overrides below still win.
-    for t in tees:
-        t["source"] = "pad"
-        if t["pad_err"] > FAIRWAY_MARKER_GAP and t["key"] != TEE_KEYS[0]:
-            pos = point_at_distance(t["card"] / YD, aims, gc, np.asarray(tees[0]["pos"]))
-            if pos is not None:
-                t["pos"] = pos; t["measured"] = play_distance(pos, aims, gc) * YD; t["source"] = "fairway_marker"
+    fairway_markers(tees, aims, gc)   # QA overrides below still win
     for t in tees:  # QA-pinned marker positions (e.g. a forward tee that sits in the fairway)
         fixed = meta.get("tees_utm", {}).get(t["key"])
         if fixed:
@@ -317,7 +352,7 @@ def main():
         holes.append(rec)
         if "tees" in rec and rec["tees"]:
             print(f"hole {h:2d} ({rec['nine']} {rec['nine_hole']}) par {rec['par']}: " +
-                  "  ".join(f"{t['key'][0].upper()} {t['yards']:.0f}/{t['scorecard_yards']}" + (f" (pad off {t['pad_error_yd']:.0f})" if t['pad_error_yd'] > 3 else "")
+                  "  ".join(f"{C.TEE_LABEL[t['key']]} {t['yards']:.0f}/{t['scorecard_yards']}" + (f" (pad off {t['pad_error_yd']:.0f})" if t['pad_error_yd'] > 3 else "")
                             for t in rec["tees"]) + f"  green {rec['green']['area_sqft']} sqft", flush=True)
         else:
             print(f"hole {h}: {rec.get('error', 'no tees')}")

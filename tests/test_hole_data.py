@@ -62,3 +62,78 @@ def test_green_includes_touching_override_fills():
     assert g.geom_type == "Polygon"
     assert abs(g.area - (main.area + notch.area + sliver_gap.area)) < 2.0
     assert g.intersection(other).is_empty
+
+
+def _yd(m):
+    return m * HD.YD
+
+
+def test_two_tee_sets_never_share_one_marker_spot():
+    """Brambles hole 7 (card 611 / 572 / 449; the Back deck measures 572): each set took the pad nearest its card, so
+    the Middle marker went to the Back deck and, clamped to its back end, sat on the Back marker. A set whose marker
+    would land on an earlier set's takes the next pad (its own deck) and the gap is reported."""
+    back, middle, front = box(-5, 0, 5, 20), box(-5, 60, 5, 75), box(-5, 120, 5, 130)
+    card = [_yd(330.0), _yd(320.0), _yd(175.0)]            # both cards beyond the Back deck (its back end: 298.5 m)
+    t = HD.place_tees([front, back, middle], [], GREEN, card)
+    assert [x["pad"] for x in t] == [back, middle, front]
+    assert np.hypot(*(t[0]["pos"] - t[1]["pos"])) > 30
+    assert t[1]["pad_err"] > 50, "the Middle gap is reported, not hidden on the Back marker"
+    assert t[0]["pad_err"] > 30 and t[2]["pad_err"] == 0.0
+
+
+def test_sets_share_a_pad_at_their_own_yardages():
+    """Two sets on one long pad at different yardages are two marker spots: nothing moves."""
+    pad, front = box(-5, 0, 5, 30), box(-5, 120, 5, 130)
+    t = HD.place_tees([pad, front], [], GREEN, [_yd(295.0), _yd(285.0), _yd(175.0)])
+    assert t[0]["pad"] is pad and t[1]["pad"] is pad and t[2]["pad"] is front
+    assert t[0]["pad_err"] == 0.0 and t[1]["pad_err"] == 0.0
+    assert abs(np.hypot(*(t[0]["pos"] - t[1]["pos"])) - 10.0) < 0.5
+
+
+def test_sets_with_the_same_card_share_their_deck():
+    """Round-3 review: scorecards often give two sets the same yardage on a hole (a forward and a combo set sharing a
+    box). Both markers are exactly at their card on the deck, so they share its spot: the second set must not be sent
+    to the forward pad (304.6 yd off) because its marker is within tee_marker_gap of the first's."""
+    deck, front = box(-5, -95, 5, -65), box(-5, 20, 5, 30)           # the deck measures 366.5-393.5 m from the green
+    for card in ([380.0, 380.0, 275.0], [380.0, 378.5, 275.0]):
+        t = HD.place_tees([front, deck], [], GREEN, [_yd(m) for m in card])
+        assert [x["pad"] for x in t] == [deck, deck, front], card
+        assert [x["pad_err"] for x in t] == [0.0, 0.0, 0.0], card
+        assert abs(np.hypot(*(t[0]["pos"] - t[1]["pos"])) - (card[0] - card[1])) < 0.1
+        HD.fairway_markers(t, [], GREEN)
+        assert [x["source"] for x in t] == ["pad"] * 3
+
+
+def test_a_set_whose_card_is_the_clamped_spot_still_moves():
+    """Brambles hole 7 exactly: the Back card is longer than the ground, so its marker clamps to the back of the Back
+    deck - which is where the Middle card is. The Middle marker is at its card there, but on a marker that misses its
+    own card by 31 m: it takes its own deck and its gap is reported (and no fairway marker lands on the Back marker)."""
+    back, middle = box(-2, 0, 2, 20), box(-5, 60, 5, 75)              # one axis; the Back deck's back end: 298.5 m
+    t = HD.place_tees([back, middle], [], GREEN, [_yd(330.0), _yd(298.5)])
+    assert t[0]["pad"] is back and t[0]["pad_err"] > 30
+    assert t[1]["pad"] is middle and t[1]["pad_err"] > 50
+    HD.fairway_markers(t, [], GREEN)
+    assert t[1]["source"] == "pad" and np.hypot(*(t[0]["pos"] - t[1]["pos"])) > 30
+
+
+def test_one_pad_for_every_set_doubles_them_up():
+    """With a single pad (Brambles hole 15 before QA: the shared back deck is another hole's) there is nowhere else:
+    the sets share its back end and the gaps are reported."""
+    pad = box(-5, 100, 5, 120)
+    t = HD.place_tees([pad], [], GREEN, [_yd(250.0), _yd(240.0), _yd(185.0)])
+    assert all(x["pad"] is pad for x in t)
+    assert np.hypot(*(t[0]["pos"] - t[1]["pos"])) < 0.1 and t[0]["pad_err"] > 40 and t[1]["pad_err"] > 30
+
+
+def test_fairway_marker_never_lands_on_another_marker():
+    """No pad delivers Brambles hole 7's Middle card, and the card equals the Back deck's length: the fairway-marker
+    fallback put Middle on the Back marker again. A fairway marker must be clear of the other sets' markers; otherwise
+    the set stays on its pad and its gap is reported."""
+    back, middle = box(-5, 0, 5, 20), box(-5, 60, 5, 75)
+    tees = HD.place_tees([back, middle], [], GREEN, [_yd(330.0), _yd(320.0)])
+    HD.fairway_markers(tees, [], GREEN)
+    assert tees[1]["source"] == "pad" and tees[1]["pad"] is middle
+    # a fairway marker that is clear of the others is still used
+    tees = HD.place_tees([back, middle], [], GREEN, [_yd(298.5), _yd(260.0)])
+    HD.fairway_markers(tees, [], GREEN)
+    assert tees[1]["source"] == "fairway_marker" and abs(tees[1]["measured"] - _yd(260.0)) < 0.5

@@ -127,6 +127,12 @@ gold = { men = [66.3, 113], women = [71.3, 121], yards = 5432 }
 [structures]
 parking = [824691380, 485368326, 184857598]  # OSM amenity=parking lots by the clubhouse that get parked cars
 
+# Engine settings pinned to the behaviour the golden build (fingerprint.json) was made with.
+[tuning.bunker_hollow]
+# Unmapped bunkers were validated with the mean-depth hollow test alone. The closed-hollow test (vectorize.closed_hollow)
+# would drop two shallow hole-99 patches that hold no water (26 m2 at E 537872 N 4810855, 20 m2 at E 537917 N 4810805).
+pond_frac = 0.0
+
 [test_profile]  # MG_PROFILE=test: a small regression build around holes 1-2, in build/westmount-test/
 core = { xmin = 537340.0, ymin = 4810720.0, xmax = 537980.0, ymax = 4811360.0 }
 terrain = { xmin = 537340.0, ymin = 4810720.0, xmax = 537980.0, ymax = 4811360.0 }

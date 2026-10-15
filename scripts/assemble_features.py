@@ -19,12 +19,17 @@ def min_part(surface):
     return max(0.05, 0.25 * MIN_AREA[surface]) if surface in MIN_AREA else 0.05
 
 
-def burn_overrides(feats, over):
+def burn_overrides(feats, over, aoi=None):
     """feats, over: lists of (shapely geometry, properties). Later overrides win: each one is cut out of the automatic
-    partition and of every earlier override."""
+    partition and of every earlier override. An override reaching past `aoi` (the build area) is clipped to it: the
+    test profile reads every hole's overrides for a small extent. One inside it is used exactly as drawn."""
     out = [(g, p) for g, p in feats]
     for g, p in over:
         g = g.buffer(0)
+        if aoi is not None and not aoi.contains(g):
+            g = g.intersection(aoi)
+            if g.is_empty or g.area <= 0:
+                continue
         nxt, specks = [], []
         for h, q in out:
             if not h.intersects(g):
@@ -60,7 +65,7 @@ def main():
         for f in json.load(open(p))["features"]:
             over.append((shape(f["geometry"]), f["properties"]))
     if over:
-        feats = burn_overrides(feats, over)
+        feats = burn_overrides(feats, over, aoi=box(C.CORE["xmin"], C.CORE["ymin"], C.CORE["xmax"], C.CORE["ymax"]))
     json.dump({"type": "FeatureCollection", "crs": auto.get("crs"),
                "features": [{"type": "Feature", "geometry": mapping(g), "properties": p} for g, p in feats]},
               open(C.FEATURES / "course_surfaces.geojson", "w"))

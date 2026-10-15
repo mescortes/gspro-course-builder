@@ -44,3 +44,15 @@ def test_engine_code_names_no_course_or_region():
     assert not bad, bad
     html = (ROOT / "viewer/index.html").read_text()
     assert not re.search(r"westmount", re.sub(r"//.*", "", html), re.I)
+
+
+def test_no_script_finds_the_engine_through_the_working_directory():
+    """make_facade.py put 'scripts' on sys.path: run from another checkout (a second course's worktree) it imported that
+    checkout's config and failed on an unknown course. Scripts find their modules next to their own file."""
+    bad = []
+    for p in SCRIPTS:
+        for n in ast.walk(ast.parse(p.read_text())):
+            if isinstance(n, ast.Call) and ast.unparse(n.func) == "sys.path.insert" and len(n.args) == 2 \
+                    and isinstance(n.args[1], ast.Constant):
+                bad.append(f"{p.name}:{n.lineno} {ast.unparse(n)}")
+    assert not bad, bad
