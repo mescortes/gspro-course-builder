@@ -141,6 +141,59 @@ def test_a_green_holding_two_holes_ends_is_split_between_them():
     part3 = next(p for p, h in out if h == 3)
     assert part3.contains(Point(0, 0)) and not part3.contains(Point(30, 0)) and part3.area > 0.9 * a.area
     assert next(p for p, h in out if h == 7).equals(single)
+
+
+def test_a_fairway_shared_by_several_holes_is_split_between_their_corridors():
+    """Brambles QA round 1: one connected zoysia area holds the 13th, 14th and 5th fairways, and all 39,134 m2 went to
+    hole 13 (the line nearest its representative point): holes 5 and 14 had no fairway. A fairway polygon that several
+    lines of play run through is split along the boundaries between their corridors, each part to its hole."""
+    from shapely.geometry import LineString, Point, box
+    lines = {13: LineString([(0, 0), (0, 300)]), 14: LineString([(60, 0), (60, 300)]), 2: LineString([(400, 0), (400, 300)])}
+    shared = box(-20, 0, 80, 300)                                  # both corridors, one polygon
+    own = box(380, 0, 420, 300)                                    # hole 2's own fairway
+    out = V.split_shared_fairways([shared, own], lines)
+    parts = {}
+    for p, h in out:
+        parts[h] = parts.get(h, 0.0) + p.area
+    assert set(parts) == {13, 14, None}
+    assert abs(parts[13] - 50 * 300) < 50 and abs(parts[14] - 50 * 300) < 50, parts
+    assert abs(sum(p.area for p, _ in out) - shared.area - own.area) < 1e-6, "the parts tile the polygon"
+    assert all(p.distance(Point(0, 150)) < 1e-9 for p, h in out if h == 13)
+    (o,) = [p for p, h in out if h is None]
+    assert o is own, "a fairway one line runs through is left whole, for the nearest-line assignment"
+
+
+def test_a_line_clipping_a_fairway_corner_does_not_take_a_sliver():
+    """A neighbouring line of play that just clips a fairway (a green or tee beside it) takes no part smaller than a
+    fairway; the polygon stays whole."""
+    from shapely.geometry import LineString, box
+    lines = {10: LineString([(0, 0), (0, 300)]), 7: LineString([(26, 310), (19.5, 299.5)])}   # hole 7's tee by the corner
+    fw = box(-20, 0, 20, 300)
+    out = V.split_shared_fairways([fw], lines, min_part=150.0)
+    assert len(out) == 1 and out[0][0] is fw and out[0][1] is None
+    assert {h for _, h in V.split_shared_fairways([fw], lines, min_part=100.0)} == {7, 10}, "a bigger part is split off"
+
+
+def test_grass_and_dirt_tracks_on_the_course_are_not_cart_paths():
+    """Classify review: every highway=track mostly inside the course became a 2.8 m cart path (OPCD Concrete). Tracks
+    mapped as grass or earth (surface=grass / ground / dirt / earth, tracktype=grade4 / grade5) are mown maintenance
+    routes: turf, neither cart path nor road. A gravel or paved track stays a cart path."""
+    from shapely.geometry import LineString, Point, box
+    from shapely.ops import unary_union
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 400, 400)),
+         (2, {"highway": "track", "surface": "grass"}, LineString([(50, 50), (350, 50)])),
+         (3, {"highway": "track", "tracktype": "grade5"}, LineString([(50, 100), (350, 100)])),
+         (4, {"highway": "track", "surface": "dirt"}, LineString([(50, 150), (350, 150)])),
+         (5, {"highway": "track", "tracktype": "grade4", "surface": "ground"}, LineString([(50, 200), (350, 200)])),
+         (6, {"highway": "track", "surface": "gravel", "tracktype": "grade2"}, LineString([(50, 250), (350, 250)])),
+         (7, {"highway": "service", "surface": "earth"}, LineString([(50, 300), (350, 300)]))]
+    vector, tracks, _ = V.osm_vectors(G)
+    assert len(tracks) == 1 and tracks[0].contains(Point(200, 250))
+    roads = unary_union(vector["road"]) if vector["road"] else box(0, 0, 0, 0)
+    for y in (50, 100, 150, 200, 300):
+        assert not roads.contains(Point(200, y)) and not tracks[0].contains(Point(200, y)), y
+
+
 def test_cart_paths_tagged_service_road_are_cart_path_labels(monkeypatch):
     """Whistle Bear maps its cart paths golf=cartpath + highway=service (+ golf_cart=designated): the classifier's
     training labels must call them cart path, not road; a plain service road stays road."""

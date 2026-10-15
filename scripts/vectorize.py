@@ -26,6 +26,7 @@ STROKE = {"green": "#BCE5A4", "fringe": "#A4C88F", "fairway": "#43E561", "semiro
           "road": "#555555", "building": "#C83C3C", "court": "#3355AA", "water": "#0000C0"}
 FORWARD_TEE_FRAC = C.tuning("forward_tee_frac", 0.45)   # tee pads past this fraction of a hole are not its tees (Westmount <= 0.35)
 BUNKER_CLEARANCE = C.tuning("bunker_clearance", (1.0, 10.0))  # unmapped bunkers: m clear of roads / of buildings
+SHARED_FAIRWAY_MIN_PART = C.tuning("shared_fairway_min_part", 150.0)  # m2: smallest part of a shared fairway a hole takes
 MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 150, "cartpath": 6, "native": 25, "road": 25,
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
 # Photo colour rules (CIELAB of the photo, NDVI with a NIR band), tuned on Westmount's SWOOP 2025 photo. White silica
@@ -150,10 +151,54 @@ def split_shared_greens(greens, ends, pins, reach=4.0, pin_near=8.0):
     return out
 
 
+def split_shared_fairways(fairways, lines, min_part=None, step=2.0):
+    """[(fairway polygon, hole or None)] in the order of `fairways`. A fairway polygon that the lines of play of several
+    holes run through (connected zoysia: Brambles' 13th polygon also held the whole 14th and 5th fairways, and its 18th
+    fairway was part of the 1st's) is split between them along the boundaries of their corridors, the Voronoi cells of
+    the lines (points every `step` m), each part to its hole. A line whose part would be under `min_part` m2 (a green
+    or tee beside the fairway, default [tuning] shared_fairway_min_part) takes none. None: at most one line runs
+    through the polygon; it is assigned as before, to the nearest line. lines: {course hole: LineString}."""
+    from shapely.geometry import MultiPoint
+    from shapely.ops import voronoi_diagram
+    from shapely import STRtree, segmentize
+    min_part = SHARED_FAIRWAY_MIN_PART if min_part is None else min_part
+    out = []
+    for p in fairways:
+        cand = {h: l for h, l in sorted(lines.items()) if l.intersects(p) and l.intersection(p).length > 0}
+        parts = {}
+        while len(cand) >= 2:
+            pts, own = [], []
+            for h, l in cand.items():
+                for c in segmentize(l, step).coords:
+                    pts.append(Point(c)); own.append(h)
+            tree = STRtree(pts)
+            cells = {h: [] for h in cand}
+            for c in voronoi_diagram(MultiPoint(pts), envelope=p.envelope.buffer(50)).geoms:
+                i = tree.query(c, predicate="contains")
+                if len(i):
+                    cells[own[min(i)]].append(c)
+            parts = {h: p.intersection(unary_union(cs)) for h, cs in cells.items()}
+            small = min(parts, key=lambda h: parts[h].area)
+            if parts[small].area >= min_part:
+                break
+            del cand[small]; parts = {}
+        if len(parts) < 2:
+            out.append((p, None))
+            continue
+        for h, q in parts.items():
+            out.extend((r, h) for r in polys_of(q))
+    return out
+
+
+# grass maintenance routes: tracks (or service ways) mapped as grass or earth are turf, not a paved cart path
+TURF_TRACK = {"surface": {"grass", "ground", "dirt", "earth", "mud"}, "tracktype": {"grade4", "grade5"}}
+
+
 def osm_vectors(G):
     """OSM-authoritative non-golf surfaces ({road, building, court, water: [polygons]}), the service roads and tracks
     that run inside the golf course, which are cart paths (GSPro surface: cart path, hole 98), and the course area.
-    Roads are the highway classes of ROAD_HALF_WIDTH, drawn that wide each side of the centre line."""
+    Roads are the highway classes of ROAD_HALF_WIDTH, drawn that wide each side of the centre line. A track or service
+    way inside the course mapped as grass or earth (TURF_TRACK: mown maintenance routes) is left to the turf."""
     osm = lambda pred: [g for _, t, g in G if pred(t)]
     course_area = unary_union(osm(lambda t: t.get("leisure") == "golf_course"))
     roads, course_tracks = [], []
@@ -161,7 +206,8 @@ def osm_vectors(G):
         hw = t.get("highway")
         if hw in ROAD_HALF_WIDTH and g.geom_type == "LineString":
             if hw in ("service", "track") and not course_area.is_empty and g.intersection(course_area).length > 0.6 * g.length:
-                course_tracks.append(g.buffer(1.4, cap_style=1))
+                if not any(t.get(k) in v for k, v in TURF_TRACK.items()):
+                    course_tracks.append(g.buffer(1.4, cap_style=1))
                 continue
             roads.append(g.buffer(ROAD_HALF_WIDTH[hw], cap_style=2))
     roads += osm(lambda t: t.get("amenity") == "parking")
@@ -572,9 +618,11 @@ def main():
         if n == "tee":
             return nearest_line(p, 40, "start")
         return nearest_line(p, 45)
+    # a fairway several lines of play run through is split between their corridors (the rest: nearest line)
+    fairway_hole = split_shared_fairways(polys_of(final["fairway"]), {r: l for r, l in holes.items() if r != 99})
     feats = []
     for n, g in final.items():
-        for p, h in (green_hole if n == "green" else [(q, None) for q in polys_of(g)]):
+        for p, h in (green_hole if n == "green" else fairway_hole if n == "fairway" else [(q, None) for q in polys_of(g)]):
             if p.area < 1e-6:
                 continue
             h = assign(p, n) if h is None else h
