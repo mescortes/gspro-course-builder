@@ -119,6 +119,13 @@ gkd_slot = "Red"
 17 = [5, 542, 514, 468]
 18 = [4, 510, 467, 327]
 
+# Built-course test limits (tests/test_course.py). Brambles' greens are large (the 6th 1500 m2; the 18th, 1610 m2,
+# takes in the practice putting green). Tee gaps: on the real decks holes 1, 7 and 18 measure short of the feed's card,
+# as the GPS tee and green points do (research/NOTES.md): no deck or line of play reaches the card.
+[tests]
+green_area = [120.0, 2000.0]
+known_tee_gaps = { "1.back" = 8.0, "1.middle" = 12.0, "7.back" = 40.0, "7.middle" = 57.0, "18.middle" = 10.0 }
+
 [stroke_index]  # the feed's handicap row (the women's row is the same)
 men = [7, 13, 15, 1, 11, 5, 9, 17, 3, 4, 12, 18, 2, 14, 10, 16, 6, 8]
 women = [7, 13, 15, 1, 11, 5, 9, 17, 3, 4, 12, 18, 2, 14, 10, 16, 6, 8]

@@ -49,3 +49,12 @@ polygons (farmland, farmyard, industrial, meadow) across the playing area: cours
 numbering and the lines of play follow the GolfNow GPS layout (tee and green-centre points), checked against NAIP;
 all features are drawn in features/golf.geojson. Holes 1, 4, 6 and 7 are doglegs: the straight tee-to-green line is
 well short of the card (hole 7: 556 vs 611 yd), so their lines follow the fairway.
+
+## Card against the ground (QA round 1)
+
+From the built tee decks, holes 1, 7 and 18 measure short of the feed's card (yards, measured / card): hole 1 Back
+524 / 531 and Middle 485 / 496; hole 7 Back 572 / 611 and Middle 516 / 572; hole 18 Middle 458 / 467. The GPS tee and
+green points of the same feed give the same shortfall along the line of play (hole 7: 557 / 518 / 389 against 611 /
+572 / 449), and no source explains it: no deck, aim point or routing reaches the card. The model keeps the markers on
+the real decks; course.toml [tests] known_tee_gaps documents the gaps.
+
