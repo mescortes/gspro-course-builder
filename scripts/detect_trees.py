@@ -104,15 +104,21 @@ def off_surfaces(feats, polys, max_shift=4.0, clearance=0.75):
 CLEARED = C.SOURCES / "trees_cleared.geojson"
 
 
-def drop_cleared(feats, pts, radius=1.5):
-    """Trees within `radius` m of a reviewed clearance point (courses/<slug>/features/trees_cleared.geojson): 2018 LiDAR
-    trees the 2025 photo shows gone, cut down for the tees and paths built since (holes 5 and 8 Blue)."""
-    if not len(pts):
-        return feats
-    from scipy.spatial import cKDTree
-    xy = np.array([f["geometry"]["coordinates"][:2] for f in feats], float)
-    d, _ = cKDTree(np.asarray(pts, float)).query(xy)
-    return [f for f, di in zip(feats, d) if di > radius]
+def drop_cleared(feats, pts, radius=1.5, areas=()):
+    """Trees within `radius` m of a reviewed clearance point, or inside a reviewed clearance polygon
+    (courses/<slug>/features/trees_cleared.geojson): LiDAR trees the newer photo shows gone, cut down for the tees and
+    paths built since (Westmount holes 5 and 8 Blue) or a stripped grove (Whistle Bear, 2022-25)."""
+    if len(pts) and len(feats):
+        from scipy.spatial import cKDTree
+        xy = np.array([f["geometry"]["coordinates"][:2] for f in feats], float)
+        d, _ = cKDTree(np.asarray(pts, float)).query(xy)
+        feats = [f for f, di in zip(feats, d) if di > radius]
+    if areas:
+        from shapely.geometry import Point
+        from shapely.ops import unary_union
+        a = unary_union(list(areas))
+        feats = [f for f in feats if not a.contains(Point(f["geometry"]["coordinates"][:2]))]
+    return feats
 
 
 def main(out=None):
@@ -159,8 +165,11 @@ def main(out=None):
         n0 = len(feats); feats = off_surfaces(feats, polys)
         print(f"trees on tees / greens / bunkers: {n0 - len(feats)} dropped (cleared), the rest moved off the edge", flush=True)
     if CLEARED.exists():
-        pts = [f["geometry"]["coordinates"][:2] for f in json.load(open(CLEARED))["features"]]
-        n0 = len(feats); feats = drop_cleared(feats, pts)
+        from shapely.geometry import shape
+        cl = json.load(open(CLEARED))["features"]
+        pts = [f["geometry"]["coordinates"][:2] for f in cl if f["geometry"]["type"] == "Point"]
+        areas = [shape(f["geometry"]) for f in cl if f["geometry"]["type"] in ("Polygon", "MultiPolygon")]
+        n0 = len(feats); feats = drop_cleared(feats, pts, areas=areas)
         print(f"trees cleared since the LiDAR (trees_cleared.geojson): {n0 - len(feats)} dropped", flush=True)
     json.dump({"type": "FeatureCollection", "features": feats}, open(out or (C.FEATURES / "trees.geojson"), "w"))
     from collections import Counter

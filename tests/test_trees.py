@@ -95,3 +95,13 @@ def test_cleared_tree_list_is_reviewed_and_local():
     for f in fc["features"]:
         p = f["properties"]
         assert p.get("note") and p.get("hole") in (5, 8) and f["geometry"]["type"] == "Point"
+
+
+def test_trees_in_a_cleared_area_are_dropped():
+    """Whistle Bear: a ~70 x 65 m conifer grove the 2017 LiDAR has was stripped between 2022 and 2025. A reviewed
+    clearance polygon drops every tree inside it; points still drop trees within the radius."""
+    from shapely.geometry import box
+    feats = [{"type": "Feature", "geometry": {"type": "Point", "coordinates": c}, "properties": {"id": i}}
+             for i, c in enumerate([(10.0, 10.0), (60.0, 40.0), (75.0, 40.0), (200.0, 200.0)])]
+    kept = D.drop_cleared(feats, [(200.4, 200.0)], radius=1.5, areas=[box(0, 0, 70, 65)])
+    assert [f["properties"]["id"] for f in kept] == [2]
