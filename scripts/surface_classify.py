@@ -55,7 +55,8 @@ def is_water(t):
 
 
 # OSM highway classes that are roads, with the half width (m) of the road surface vectorize draws round the centre line
-# (the training labels use at most 2.5 m of it). A service road or a track inside the golf course is a cart path.
+# (the training labels use at most 2.5 m of it). A service road or a track inside the golf course is a cart path,
+# unless it is mapped as grass or earth (TURF_TRACK).
 ROAD_HALF_WIDTH_DEFAULT = {
     "motorway": 7.0, "trunk": 7.0, "primary": 6.5, "secondary": 6.0, "tertiary": 5.0, "residential": 4.0,
     "unclassified": 3.5, "living_street": 3.0, "service": 3.0, "track": 1.5,
@@ -76,6 +77,14 @@ def road_half_widths():
 
 
 ROAD_HALF_WIDTH = road_half_widths()
+# grass maintenance routes: tracks or service ways mapped as grass or earth are turf, neither road nor a paved cart path
+# (vectorize.osm_vectors on the course; the training labels everywhere)
+TURF_TRACK = {"surface": {"grass", "ground", "dirt", "earth", "mud"}, "tracktype": {"grade4", "grade5"}}
+
+
+def turf_track(t):
+    """OSM tags of a track or service way mapped as grass or earth (TURF_TRACK)."""
+    return t.get("highway") in ("track", "service") and any(t.get(k) in v for k, v in TURF_TRACK.items())
 
 
 def grid():
@@ -241,7 +250,8 @@ def osm_label_raster(W, H, T, chm):
     feat_m = rasterize([(g, 1) for g in feats], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if feats else np.zeros((H, W), bool)
     # unlabelled bands where the real edge of a path/road is unknown (OSM gives centre lines only)
     # a golf=cartpath is a cart path whatever its highway tag (Whistle Bear: golf=cartpath + highway=service)
-    road = lambda t: t.get("highway") in ROAD_HALF_WIDTH and t.get("golf") != "cartpath"
+    # and a grass or earth track is grass (turf_track)
+    road = lambda t: t.get("highway") in ROAD_HALF_WIDTH and t.get("golf") != "cartpath" and not turf_track(t)
     lines = polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway"), 1.8) + \
         polys(road, 6.0)
     line_m = rasterize([(g, 1) for g in lines], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if lines else np.zeros((H, W), bool)

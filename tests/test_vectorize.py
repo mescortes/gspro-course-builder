@@ -256,6 +256,26 @@ def test_cart_paths_tagged_service_road_are_cart_path_labels(monkeypatch):
     assert lab[row(30) - int(2.0 / 0.25), 200] != CID["road"]    # no 2.5 m road band around the cart path
 
 
+def test_grass_tracks_are_not_road_in_the_training_labels(monkeypatch):
+    """Round-3 review: vectorize leaves tracks mapped as grass or earth to the turf, but the classifier's training labels
+    still burnt them as road (1.5 m each side), teaching it that mown grass is road. They are left out of the road
+    class there too (and its unlabelled band): grass round them is rough. A plain track stays road."""
+    import rasterio
+    from shapely.geometry import LineString, box
+    import surface_classify as S
+    T = rasterio.transform.from_origin(0.0, 100.0, 0.25, 0.25)
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 100, 100)),
+         (2, {"highway": "track", "surface": "grass"}, LineString([(10, 30), (90, 30)])),
+         (3, {"highway": "service", "surface": "mud"}, LineString([(10, 50), (90, 50)])),
+         (4, {"highway": "track"}, LineString([(10, 70), (90, 70)]))]
+    monkeypatch.setattr(S, "osm_geoms", lambda: G)
+    lab, _ = S.osm_label_raster(400, 400, T, np.zeros((400, 400), np.float32))
+    row = lambda y: int((100 - y) / 0.25)
+    assert lab[row(30), 200] == CID["rough"] and lab[row(50), 200] == CID["rough"]
+    assert lab[row(70), 200] == CID["road"]
+    assert S.TURF_TRACK is V.TURF_TRACK, "one rule for vectorize and the training labels"
+
+
 def test_tracks_on_the_course_are_cart_path_and_main_roads_are_road():
     """highway=primary / trunk / *_link / living_street / track had no road width, so a highway past the course played
     as rough, and the 'track inside the course is cart path' branch could never run. A pond mapped

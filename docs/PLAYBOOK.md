@@ -279,8 +279,9 @@ Engine settings for problems QA finds on many holes (`course.toml [tuning]`, def
 | Two tee sets on one marker | `tee_marker_gap` (2 m): a set never takes a spot this close to another set's while another pad is free, unless their cards are this close too (two sets with the same yardage share a box); the gap is reported |
 | Holes in the terrain at tees, steps around greens | `[tuning.level_tees] enabled = false` when the LiDAR shows every tee (§2) |
 
-Tracks inside the course mapped `surface=grass / ground / dirt / earth` or `tracktype=grade4 / grade5` are turf;
-other tracks and service roads there are cart paths.
+Tracks and service ways inside the course mapped `surface=grass / ground / dirt / earth / mud` or
+`tracktype=grade4 / grade5` are turf (mown maintenance routes; the classifier's training labels never call them
+road); other tracks and service roads there are cart paths.
 
 **Checkpoint:** every hole scores at least 8 of 10 from its verifier; the tests pass or each failure is documented.
 

@@ -17,6 +17,7 @@ from shapely import make_valid
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
 from surface_classify import CLASSES, CID, osm_geoms, grid, ROAD_HALF_WIDTH, is_water, SAND, SHADOW_SAND, TURF, tuned
+from surface_classify import TURF_TRACK, turf_track
 
 RES = C.DEM_RES
 # OSM/override water outranks everything (dark water is easily mistaken for green by the classifier)
@@ -393,10 +394,6 @@ def split_shared_fairways(fairways, lines, min_part=None, step=2.0, min_run=None
     return out
 
 
-# grass maintenance routes: tracks (or service ways) mapped as grass or earth are turf, not a paved cart path
-TURF_TRACK = {"surface": {"grass", "ground", "dirt", "earth", "mud"}, "tracktype": {"grade4", "grade5"}}
-
-
 def osm_vectors(G):
     """OSM-authoritative non-golf surfaces ({road, building, court, water: [polygons]}), the service roads and tracks
     that run inside the golf course, which are cart paths (GSPro surface: cart path, hole 98), and the course area.
@@ -409,7 +406,7 @@ def osm_vectors(G):
         hw = t.get("highway")
         if hw in ROAD_HALF_WIDTH and g.geom_type == "LineString":
             if hw in ("service", "track") and not course_area.is_empty and g.intersection(course_area).length > 0.6 * g.length:
-                if not any(t.get(k) in v for k, v in TURF_TRACK.items()):
+                if not turf_track(t):
                     course_tracks.append(g.buffer(1.4, cap_style=1))
                 continue
             roads.append(g.buffer(ROAD_HALF_WIDTH[hw], cap_style=2))
