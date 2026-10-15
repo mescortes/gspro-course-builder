@@ -46,11 +46,14 @@ course values said to be in `scripts/config.py` are in `courses/<slug>/course.to
   * Markers slide along any line of play across the pad (`hole_data.pad_axes`; L-shaped complexes have their
     centroid outside the pad), nearest the centre line. If no pad can deliver the card yardage, pin the marker in
     `holeNN_meta.json` and document the gap. Two sets never share a marker spot while another pad is free: a card
-    longer than the ground clamped both to the back of one deck (`hole_data.place_tees`).
+    longer than the ground clamped both to the back of one deck (`hole_data.place_tees`). Sets with the same card do
+    share it (a forward and a combo set on one box): only a clamped marker is moved (`hole_data.clashes`).
   * Tees built after the LiDAR survey get a synthetic deck (`build_terrain_mesh.level_tees`); see §11b.
 * **Hole numbers.** A connected zoysia area holds several holes' fairways (Brambles 13 / 14 / 5): split a fairway
-  that several lines of play run through between their Voronoi cells (`vectorize.split_shared_fairways`), as greens
-  that hold several holes' ends are split.
+  that several lines of play run along between their Voronoi cells (`vectorize.split_shared_fairways`), as greens
+  that hold several holes' ends are split. Only lines that run along it count (80 m inside it, or the green end by
+  it: `vectorize.runs_along`): on Brambles the tees of five holes sit by other holes' greens, and their tee shots
+  across those green surrounds took bowtie-shaped pieces of them.
 * **Greens.** Trim banks steeper than 12 % within 2.5 m of the edge. 8 % split tiered greens. Hillside greens can
   average 6 % on the bare LiDAR; test against the raw LiDAR, not a fixed number.
 

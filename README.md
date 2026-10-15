@@ -42,16 +42,17 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
 6. **Surfaces**: a random forest on photo colour, near-infrared and LiDAR features, trained on the OSM golf features
    (plus `features/golf.geojson` where OSM is missing or wrong), then vectorised into a gap-free surface partition.
    LiDAR checks keep an unmapped bunker only if it is a closed hollow (it holds water or has a real face; a coarse
-   photo's bunkers are cut to their LiDAR pans) and a tee only if it is a flat deck; a fairway several holes share is
-   split between their corridors. Cart paths OSM lacks can be traced from the photo (`trace_paths.py`).
+   photo's bunkers are cut to their LiDAR pans) and a tee only if it is a flat deck; a fairway several holes run along
+   is split between their corridors (a line that only crosses it takes none). Cart paths OSM lacks can be traced from the photo (`trace_paths.py`).
 7. **Trees** from the LiDAR canopy, sorted into the region's archetypes (`detect_trees.py`; leaf-off or leaf-on rules
    per region), each in several shape variants.
 8. **Structures**: OSM buildings with LiDAR roof shapes, plus what a course adds by hand (shelters, patios, fountains,
    parked cars).
 9. **Mesh**: one conforming triangulation with fine triangles in the playing corridors, bunker lips and water
    objects, joined without seams to the imagery-draped backdrop.
-10. **Hole data**: tee markers slid along the real tee decks to the card yardages (never two sets on one spot), pins
-    from a green-slope analysis, aim points from the line of play.
+10. **Hole data**: tee markers slid along the real tee decks to the card yardages (never two sets on one spot while
+    another pad is free, unless their cards are the same), pins from a green-slope analysis, aim points from the line
+    of play.
 11. **QA** (multi-agent, `workflows/hole_qa.js` with `args: {root, course, round}`; the course's context is in
     `courses/<slug>/research/qa_brief.md`): per-hole inspectors compare the model with the photo and the LiDAR;
     adversarial verifiers approve or reject every proposed correction, which lands in `courses/<slug>/features/overrides/`.

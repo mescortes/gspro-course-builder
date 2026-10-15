@@ -178,14 +178,43 @@ def test_a_shared_fairway_split_leaves_no_shards():
 
 
 def test_a_line_clipping_a_fairway_corner_does_not_take_a_sliver():
-    """A neighbouring line of play that just clips a fairway (a green or tee beside it) takes no part smaller than a
-    fairway; the polygon stays whole."""
+    """A neighbouring line of play that just clips a fairway (its green beside it) takes no part smaller than a
+    fairway; the polygon stays whole, the hole of the line that runs along it."""
     from shapely.geometry import LineString, box
-    lines = {10: LineString([(0, 0), (0, 300)]), 7: LineString([(26, 310), (19.5, 299.5)])}   # hole 7's tee by the corner
+    lines = {10: LineString([(0, 0), (0, 300)]), 7: LineString([(26, 310), (19.5, 299.5)])}   # hole 7's green by the corner
     fw = box(-20, 0, 20, 300)
     out = V.split_shared_fairways([fw], lines, min_part=150.0)
-    assert len(out) == 1 and out[0][0] is fw and out[0][1] is None
+    assert len(out) == 1 and out[0][0] is fw and out[0][1] == 10
     assert {h for _, h in V.split_shared_fairways([fw], lines, min_part=100.0)} == {7, 10}, "a bigger part is split off"
+
+
+def test_a_line_crossing_a_fairway_takes_no_part_of_it():
+    """Round-3 review: a hole whose line of play crosses another hole's fairway (a tee shot over it, a dogleg over its
+    corner) took a bowtie of it round the crossing (800 m2 square-on, 644 m2 near its end) and cut it in two. On
+    Brambles the tees of holes 7, 9, 12, 16 and 17 sit by other holes' greens, and their lines took 257-2041 m2 of
+    those green surrounds. A line takes a part only if it runs along the polygon (80 m inside it) or ends by it."""
+    from shapely.geometry import LineString, box
+    fw = box(-20, 0, 20, 300)
+    for cross in ([(-150, 150), (150, 160)], [(-150, 290), (150, 295)], [(30, 296), (-3, 302), (-250, 340)]):
+        lines = {4: LineString([(0, -20), (0, 320)]), 9: LineString(cross)}     # the last: hole 9's tee by the corner
+        out = V.split_shared_fairways([fw], lines)
+        assert len(out) == 1 and out[0][0] is fw and out[0][1] == 4, (cross, [(round(p.area), h) for p, h in out])
+    lines = {4: LineString([(0, -20), (0, 320)]), 9: LineString([(-150, 150), (150, 160)])}
+    assert {h for _, h in V.split_shared_fairways([fw], lines, min_run=30.0)} == {4, 9}, \
+        "shared_fairway_min_run 30: the 40 m crossing runs along it"
+
+
+def test_a_par_3_keeps_the_surround_of_its_green_in_a_shared_fairway():
+    """A par 3 runs a few metres inside the connected zoysia round its green (Brambles' 3rd, in the 13th's polygon):
+    it ends by the polygon, so it takes the part round its green."""
+    from shapely.geometry import LineString, Point, box
+    green = Point(40, 270).buffer(12.0)
+    fw = box(-20, 0, 60, 300).difference(green)
+    lines = {13: LineString([(0, -50), (0, 350)]), 3: LineString([(200, 200), (40, 270)])}
+    out = V.split_shared_fairways([fw], lines)
+    parts = {h: sum(p.area for p, k in out if k == h) for h in {h for _, h in out}}
+    assert set(parts) == {3, 13}, parts
+    assert next(p for p, h in out if h == 3).distance(green) < 1e-6 and parts[3] < 0.2 * fw.area
 
 
 def test_grass_and_dirt_tracks_on_the_course_are_not_cart_paths():

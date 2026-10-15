@@ -27,6 +27,8 @@ STROKE = {"green": "#BCE5A4", "fringe": "#A4C88F", "fairway": "#43E561", "semiro
 FORWARD_TEE_FRAC = C.tuning("forward_tee_frac", 0.45)   # tee pads past this fraction of a hole are not its tees (Westmount <= 0.35)
 BUNKER_CLEARANCE = C.tuning("bunker_clearance", (1.0, 10.0))  # unmapped bunkers: m clear of roads / of buildings
 SHARED_FAIRWAY_MIN_PART = C.tuning("shared_fairway_min_part", 150.0)  # m2: smallest part of a shared fairway a hole takes
+SHARED_FAIRWAY_MIN_RUN = C.tuning("shared_fairway_min_run", 80.0)     # m of a line inside a fairway it runs along ...
+SHARED_FAIRWAY_GREEN_REACH = C.tuning("shared_fairway_green_reach", 30.0)  # ... or m from it to the line's green end
 MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 150, "cartpath": 6, "native": 25, "road": 25,
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
 # Photo colour rules SAND, SHADOW_SAND and TURF ([tuning.sand], [tuning.shadow_sand], [tuning.turf]): surface_classify.py
@@ -198,26 +200,46 @@ def split_shared_greens(greens, ends, pins, reach=4.0, pin_near=8.0):
     return out
 
 
-def split_shared_fairways(fairways, lines, min_part=None, step=2.0):
+def runs_along(line, p, min_run=None, reach=None):
+    """Does a line of play run along fairway polygon p, so that it may take a part of it? At least `min_run` m of the
+    line lie inside p (default [tuning] shared_fairway_min_run), or its green end (the line's last point) is within
+    `reach` m of p (shared_fairway_green_reach: the approach and green surround of a par 3). A line that only crosses p
+    does not: a tee shot over another hole's fairway or green surround (Brambles: the tees of holes 7, 9, 12, 16 and 17
+    sit by other holes' greens), or a dogleg over its corner."""
+    min_run = SHARED_FAIRWAY_MIN_RUN if min_run is None else min_run
+    reach = SHARED_FAIRWAY_GREEN_REACH if reach is None else reach
+    run = line.intersection(p).length
+    return run > 0 and (run >= min_run or Point(line.coords[-1]).distance(p) <= reach)
+
+
+def split_shared_fairways(fairways, lines, min_part=None, step=2.0, min_run=None, reach=None):
     """[(fairway polygon, hole or None)] in the order of `fairways`. A fairway polygon that the lines of play of several
-    holes run through (connected zoysia: Brambles' 13th polygon also held the whole 14th and 5th fairways, and its 18th
-    fairway was part of the 1st's) is split between them along the boundaries of their corridors, the Voronoi cells of
-    the lines (points every `step` m), each part to its hole. A line whose part would be under `min_part` m2 (a green
-    or tee beside the fairway, default [tuning] shared_fairway_min_part) takes none. None: at most one line runs
-    through the polygon; it is assigned as before, to the nearest line. lines: {course hole: LineString}."""
+    holes run along (runs_along; connected zoysia: Brambles' 13th polygon also held the whole 14th and 5th fairways,
+    and its 18th fairway was part of the 1st's) is split between them along the boundaries of their corridors in it:
+    the Voronoi cells of the lines' points (every `step` m) inside it or within `step` m of it, each part to its hole.
+    A line whose part would be under `min_part` m2 (a green or tee beside the fairway, default [tuning]
+    shared_fairway_min_part) takes none, and nor does a line that only crosses the polygon. When only one of the lines
+    through it runs along it, the whole polygon is that line's hole (the nearest-line rule could give it to a line
+    crossing its middle). None: at most one line runs through the polygon, or none runs along it; it is assigned as
+    before, to the nearest line. lines: {course hole: LineString}."""
     from shapely.geometry import MultiPoint
     from shapely.ops import voronoi_diagram
     from shapely import STRtree, segmentize
     min_part = SHARED_FAIRWAY_MIN_PART if min_part is None else min_part
     out = []
     for p in fairways:
-        cand = {h: l for h, l in sorted(lines.items()) if l.intersects(p) and l.intersection(p).length > 0}
+        through = [h for h, l in sorted(lines.items()) if l.intersects(p) and l.intersection(p).length > 0]
+        cand = {h: lines[h] for h in through if runs_along(lines[h], p, min_run, reach)}
+        near = p.buffer(step)
         parts = {}
         while len(cand) >= 2:
             pts, own = [], []
             for h, l in cand.items():
-                for c in segmentize(l, step).coords:
-                    pts.append(Point(c)); own.append(h)
+                l = l.intersection(near)
+                for g in getattr(l, "geoms", [l]):
+                    if g.geom_type == "LineString":
+                        for c in segmentize(g, step).coords:
+                            pts.append(Point(c)); own.append(h)
             tree = STRtree(pts)
             cells = {h: [] for h in cand}
             for c in voronoi_diagram(MultiPoint(pts), envelope=p.envelope.buffer(50)).geoms:
@@ -230,7 +252,7 @@ def split_shared_fairways(fairways, lines, min_part=None, step=2.0):
                 break
             del cand[small]; parts = {}
         if len(parts) < 2:
-            out.append((p, None))
+            out.append((p, next(iter(cand)) if len(cand) == 1 and len(through) > 1 else None))
             continue
         # a shard the corridor boundary cuts off a ragged edge (smaller than any fairway part vectorize keeps) joins
         # the piece it shares the longest edge with

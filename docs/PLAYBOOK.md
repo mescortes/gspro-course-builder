@@ -238,8 +238,9 @@ one). A mistyped key or a value that is not a number stops `check_course.py` wit
 
 Read failures as data: a tee yardage gap means a wrong or missing pad, or a card that disagrees with the ground; a
 green size or slope failure means a green outline that takes in banks or misses half the putting surface; "no
-fairway" means a fairway that carries another hole's number (a fairway polygon several lines of play run through is
-split between their corridors; one that misses its own line goes to the nearest one); a step around a green is
+fairway" means a fairway that carries another hole's number (a fairway polygon several lines of play run along is
+split between their corridors, a line that only crosses it takes none; one that misses its own line goes to the
+nearest one); a step around a green is
 usually the bank of a synthetic tee deck nearby (§2, `[tuning.level_tees]`). Course-dependent limits go in
 `course.toml [tests]` (`green_area`, `min_bunkers`, `green_slope_max`, `known_tee_gaps = { "7.back" = 40 }` with the
 reason in research/NOTES.md); fix the rest. A course with few bunkers needs `min_bunkers` (the bunker tests count
@@ -271,8 +272,8 @@ Engine settings for problems QA finds on many holes (`course.toml [tuning]`, def
 |---|---|
 | Bare soil in channels, ditches or path cuts kept as unmapped bunkers | `[tuning.bunker_hollow]`: an unmapped bunker must hold `pond` m (0.05) of water on `pond_frac` (0.2) of its area, or lie `face` m (0.35) below the ground around it; `pond_frac = 0` turns the test off |
 | Bunkers spilling onto their grass faces with a coarse photo | `[tuning.bunker_trim]`: with a photo of `photo_res` m (0.3) or coarser, bunkers are cut to their LiDAR pans (`radius` 5 m rim search, `depth` 0.08 m, `lip` 0.5 m); `photo_res = 100` turns it off |
-| A shared fairway split badly between holes | `shared_fairway_min_part` (150 m2): the smallest part a hole takes from a fairway another line of play also runs through |
-| Two tee sets on one marker | `tee_marker_gap` (2 m): a set never takes a spot this close to another set's while another pad is free; the gap is reported |
+| A shared fairway split badly between holes | A fairway several lines of play run along is split between their corridors. `shared_fairway_min_part` (150 m2): the smallest part a hole takes; `shared_fairway_min_run` (80 m) and `shared_fairway_green_reach` (30 m): a line runs along a fairway when that much of it lies inside, or its green end is that close (a par 3's green surround); a line that only crosses it (a tee shot over another hole's fairway or green surround) takes none |
+| Two tee sets on one marker | `tee_marker_gap` (2 m): a set never takes a spot this close to another set's while another pad is free, unless their cards are this close too (two sets with the same yardage share a box); the gap is reported |
 | Holes in the terrain at tees, steps around greens | `[tuning.level_tees] enabled = false` when the LiDAR shows every tee (§2) |
 
 Tracks inside the course mapped `surface=grass / ground / dirt / earth` or `tracktype=grade4 / grade5` are turf;
