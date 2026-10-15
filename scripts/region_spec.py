@@ -33,6 +33,8 @@ CLASSIFIERS = {
                            "oak_default"), ("shrub", "pine", "conifer", "broad", "other")),
     "leaf_on_woodland": (("shrub_h", "pine_min_h", "pine_max_ratio", "pine_min_pen", "big_h"),
                          ("shrub", "pine", "big", "other")),
+    "leaf_on_suburban_socal": (("shrub_h", "z_min_h", "euc_min_h", "euc_max_ratio", "euc_min_pen", "syc_min_z",
+                                "syc_min_h", "pine_margin"), ("shrub", "eucalyptus", "sycamore", "pine", "oak")),
 }
 # new_course.py: [scaffold] keys (crs is optional: an EPSG code, or a CRS name with {zone} / {hemisphere} for a
 # datum whose UTM zones EPSG names otherwise, e.g. "GDA2020 / MGA zone {zone}")

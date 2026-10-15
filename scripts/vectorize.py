@@ -16,7 +16,7 @@ from shapely import make_valid
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
-from surface_classify import CLASSES, CID, osm_geoms, grid, ROAD_HALF_WIDTH, is_water, tuned
+from surface_classify import CLASSES, CID, osm_geoms, grid, ROAD_HALF_WIDTH, is_water, SAND, SHADOW_SAND, TURF
 
 RES = C.DEM_RES
 # OSM/override water outranks everything (dark water is easily mistaken for green by the classifier)
@@ -28,13 +28,7 @@ FORWARD_TEE_FRAC = C.tuning("forward_tee_frac", 0.45)   # tee pads past this fra
 BUNKER_CLEARANCE = C.tuning("bunker_clearance", (1.0, 10.0))  # unmapped bunkers: m clear of roads / of buildings
 MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 150, "cartpath": 6, "native": 25, "road": 25,
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
-# Photo colour rules (CIELAB of the photo, NDVI with a NIR band), tuned on Westmount's SWOOP 2025 photo. White silica
-# sand (b* ~4-6), another camera or another season needs other values: course.toml [tuning.sand] (sunlit sand),
-# [tuning.shadow_sand] (sand in shade, NIR photos only) and [tuning.turf] (clearly green turf, trimmed off bunkers)
-# override any of these keys. measure_registration.py reads the same sand rule.
-SAND = tuned("sand", dict(L_min=66.0, a_min=-12.0, b_min=8.5, b_max=26.0, ndvi_max=0.12))
-SHADOW_SAND = tuned("shadow_sand", dict(ndvi_max=0.02, L_min=25.0, a_min=-8.0, b_min=2.0))
-TURF = tuned("turf", dict(a_max=-14.0, ndvi_min=0.25))
+# Photo colour rules SAND, SHADOW_SAND and TURF ([tuning.sand], [tuning.shadow_sand], [tuning.turf]): surface_classify.py
 
 
 def under_canopy_labels(lab, canopy, leaf_off_photo):

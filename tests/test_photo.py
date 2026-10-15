@@ -72,7 +72,11 @@ def test_a_16_bit_photo_is_refused_with_the_conversion(tmp_path, monkeypatch):
     silently."""
     rgb, nir = _scene()
     monkeypatch.setattr(S.C, "IMAGERY", _photo(tmp_path / "p16.tif", [b * 200 for b in rgb + [nir]], dtype="uint16"))
-    with pytest.raises(SystemExit, match="gdal_translate -ot Byte"):
+    with pytest.raises(SystemExit) as e:
         S.has_nir()
+    # the conversion uses the tools the .venv has (rasterio's rio; GDAL's command-line tools are not installed)
+    msg = str(e.value)
+    assert ".venv/bin/rio convert" in msg and "--dtype uint8" in msg and ".venv/bin/rio stack" in msg
+    assert "gdal_translate -ot Byte" in msg and "scripts/build_all.py register" in msg
     with pytest.raises(SystemExit, match="uint16"):
         S.read_imagery_window(T, 0, 40, 0, 40)

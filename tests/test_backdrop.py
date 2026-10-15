@@ -1,6 +1,6 @@
 """Unit tests for the backdrop (build_backdrop, fetch_backdrop): the photo grading, a photo without NIR, the square it
 covers and the backdrop DEM's datum. Synthetic pixels and rasters only, no network."""
-import sys
+import os, sys
 from pathlib import Path
 
 import numpy as np
@@ -112,6 +112,11 @@ def test_the_backdrop_photos_are_regraded_when_the_grade_changes(tmp_path, monke
     assert [b for _, b in svc.asked] == [(0, 1, 2), (3,)]
     graded, t0 = _rgb(B.summer_tif(p)), B.summer_tif(p).stat().st_mtime_ns
     assert not np.array_equal(graded, _rgb(p.with_suffix(".tif")))
+    # the photos are a second older than the graded files, as after a real download: the files written within one
+    # clock tick here share an mtime on Linux ext4 / tmpfs (4 ms), which reads as 'the photo changed'
+    old = t0 - 10 ** 9
+    for f in (p.with_suffix(".tif"), p.with_name(p.stem + "_nir.tif")):
+        os.utime(f, ns=(old, old))
     B.imagery(EXT, 0.5, p)                                                # nothing changed: reused, nothing refetched
     assert B.summer_tif(p).stat().st_mtime_ns == t0 and len(svc.asked) == 2
     monkeypatch.setitem(B._GRADE, "summer_grade", False)
@@ -185,8 +190,51 @@ def test_a_backdrop_dem_on_another_vertical_datum_is_reported(tmp_path, capsys):
     assert "!!" not in capsys.readouterr().out
     B.check_datum(tmp_path / "dem_final.tif", tmp_path / "bd1.0.tif", core)       # warned, not stopped
     assert "!!" in capsys.readouterr().out
-    with pytest.raises(SystemExit, match=r"\[sources.backdrop\] z_offset"):
+    with pytest.raises(SystemExit, match=r"\[sources.backdrop\] z_offset = -31.40") as e:
         B.check_datum(tmp_path / "dem_final.tif", tmp_path / "bd31.4.tif", core)
+    assert "build_all.py backdrop" in str(e.value) and "[tuning] backdrop_datum_max_m" in str(e.value)
+
+
+def test_the_suggested_z_offset_counts_the_one_already_set(tmp_path, monkeypatch, capsys):
+    """fetch_backdrop adds [sources.backdrop] z_offset to the DEM, so the offset check_datum measures already carries
+    it. The stop always suggested -median: a backdrop 31.4 m above the LiDAR, set to +31.4 by mistake, measured +62.8
+    and was told -62.80, then +31.40 again ... The suggestion is now z_offset - median, also in the warning."""
+    core = dict(xmin=1000.0, ymin=2000.0, xmax=1200.0, ymax=2200.0)
+    _dem(tmp_path / "dem_final.tif", 1000.0, 2200.0, 0.5, np.full((400, 400), 300.0))
+    # (z_offset set, backdrop - LiDAR measured, the z_offset that removes it): the raw backdrop is 31.4 m too high
+    for now, dz, want in ((31.4, 62.8, -31.4), (-20.0, 11.4, -31.4), (-30.4, 1.0, -31.4), (0.0, 1.0, -1.0)):
+        monkeypatch.setattr(B.C, "DATA_SOURCES", {"backdrop": {"provider": "cog_dem", "z_offset": now}})
+        _dem(tmp_path / "bd.tif", 900.0, 2300.0, 2.0, np.full((200, 200), 300.0 + dz))
+        if abs(dz) > 3:
+            with pytest.raises(SystemExit, match=rf"z_offset = {want:.2f} ") as e:
+                B.check_datum(tmp_path / "dem_final.tif", tmp_path / "bd.tif", core)
+            assert f"now {now:g}" in str(e.value) and "fetch_backdrop.py again" in str(e.value)
+        else:
+            B.check_datum(tmp_path / "dem_final.tif", tmp_path / "bd.tif", core)
+            out = capsys.readouterr().out
+            assert out.startswith("!!") and f"z_offset = {want:.2f} " in out and "fetch_backdrop.py" in out
+
+
+def test_a_backdrop_dem_with_a_gap_stops_before_it_becomes_nan_vertices(tmp_path):
+    """cog_dem writes the whole square and leaves NaN where its DEMs do not reach: a DEM with such a band passed the
+    bounds check, and the backdrop got NaN vertex heights (glTF, FBX) or, in the GSPro outer plot, a flat plateau at
+    the DEM's mean height, with no message."""
+    ext = dict(xmin=1000.0, ymin=2000.0, xmax=1400.0, ymax=2400.0)
+    z = np.full((200, 200), 50.0)
+    _dem(tmp_path / "full.tif", 1000.0, 2400.0, 2.0, z)
+    B.require_cover(tmp_path / "full.tif", ext, "the far backdrop ring")
+    z[:, 150:] = np.nan                                                            # the east quarter: no data
+    _dem(tmp_path / "gap.tif", 1000.0, 2400.0, 2.0, z)
+    with pytest.raises(SystemExit, match=r"25\.0% of the far backdrop ring .*\[sources\.backdrop\] dtm"):
+        B.require_cover(tmp_path / "gap.tif", ext, "the far backdrop ring")
+    # a gap narrower than require_cover's 20 m samples still stops the backdrop mesh rather than reach its vertices
+    z[:, 150:] = 50.0; z[:, 102] = np.nan
+    _dem(tmp_path / "thin.tif", 1000.0, 2400.0, 2.0, z)
+    o = np.array([1000.0, 2000.0])
+    xy = np.c_[np.linspace(5, 395, 50), np.full(50, 200.0)]
+    assert np.all(B.dem_heights(tmp_path / "full.tif", xy, o) == 50.0)
+    with pytest.raises(SystemExit, match=r"no height .*E 120\d N 2200.*\[sources\.backdrop\] dtm"):
+        B.dem_heights(tmp_path / "thin.tif", xy, o)
 
 
 def test_z_offset_moves_the_backdrop_dems_onto_the_lidar_datum(tmp_path, monkeypatch):

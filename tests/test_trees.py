@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -119,6 +120,57 @@ def test_leaf_on_woodland_rules_separate_oaks_and_pines():
     assert got[:30].count("valley_oak") >= 28 and got[30:60].count("live_oak") >= 28
     assert got[60:70].count("gray_pine") >= 9 and got[70] == "shrub"
     assert "leaf_on_woodland" in D.CLASSIFIERS
+
+
+def _mountaingate(P):
+    """The MountainGate build's species rule (detect_trees.assign_archetypes at git b694bd4), as it was."""
+    big = P["height"] > 6
+    def z(v):
+        med = np.median(v[big]); mad = np.median(np.abs(v[big] - med)) * 1.4826 + 1e-6
+        return (v - med) / mad
+    ratio = P["crown_r"] / np.maximum(P["height"], 1)
+    pine = z(P["sharpness"]) + z(P["penetration"]) + 0.5 * z(P["crown_base"]) - 0.5 * z(ratio)
+    oak = -z(P["penetration"]) + z(ratio) - 0.5 * z(P["crown_base"])
+    syc = z(P["L"]) + 0.7 * z(P["A"]) + 0.3 * z(P["B"])
+    out = []
+    for i in range(len(P["height"])):
+        h = P["height"][i]
+        if h < 4.5:
+            out.append("shrub")
+        elif h > 19 and ratio[i] < 0.3 and P["penetration"][i] > 0.3:
+            out.append("eucalyptus")
+        elif syc[i] > 1.6 and h > 6:
+            out.append("sycamore")
+        elif pine[i] > oak[i] + 0.3:
+            out.append("pine")
+        else:
+            out.append("oak")
+    return out
+
+
+def test_southern_california_sorts_trees_as_mountaingate_did():
+    """regions/southern_california.toml's classifier is MountainGate's z-score rule (crown structure from the LiDAR,
+    crown colour from the photo), its thresholds in [trees.leaf_on_suburban_socal]: the same trees get the same
+    species, under the region's names."""
+    import tomllib
+    prm = tomllib.load(open(ROOT / "regions/southern_california.toml", "rb"))["trees"]["leaf_on_suburban_socal"]
+    rng = np.random.default_rng(11)
+    n = 800
+    h = rng.uniform(2, 28, n)
+    P = dict(height=h, crown_r=h * rng.uniform(0.15, 0.6, n), crown_base=h * rng.uniform(0.1, 0.6, n),
+             sharpness=rng.normal(0.5, 0.3, n), penetration=rng.uniform(0.05, 0.6, n), L=rng.normal(40, 6, n),
+             A=rng.normal(-12, 3, n), B=rng.normal(20, 4, n))
+    got = D.leaf_on_suburban_socal(P, np.full(n, -1.0), prm)
+    assert got == [prm["names"][a] for a in _mountaingate(P)]
+    assert {a: got.count(a) > 10 for a in prm["names"].values()} == {a: True for a in prm["names"].values()}
+    # no tree over z_min_h (a course of young plantings): the z-scores are taken over every tree, not over none
+    small = {k: v[h < 6] for k, v in P.items()}
+    assert len(D.leaf_on_suburban_socal(small, np.full(len(small["height"]), -1.0), prm)) == len(small["height"])
+    # no crown colour (NaN): never a sycamore
+    nocol = dict(P, L=np.full(n, np.nan))
+    assert "sycamore" not in D.leaf_on_suburban_socal(nocol, np.full(n, -1.0), prm)
+
+
 def test_trees_in_a_cleared_area_are_dropped():
     """Whistle Bear: a ~70 x 65 m conifer grove the 2017 LiDAR has was stripped between 2022 and 2025. A reviewed
     clearance polygon drops every tree inside it; points still drop trees within the radius."""
@@ -166,11 +218,29 @@ def test_vegetation_classes_3_to_5_are_tree_returns(tmp_path, monkeypatch):
     assert base.tolist() == base1.tolist() and pen.tolist() == pen1.tolist()
 
 
-def test_no_vegetation_returns_is_a_warning_not_a_crash(tmp_path, monkeypatch, capsys):
-    """A tile whose trees are in a class the engine does not read (here 6): crown bases fall back to the default, and
-    the warning names the classes found and the setting."""
-    lab, T = _one_crown_tile(tmp_path, monkeypatch, [6])
-    base, pen = D.crown_base(lab, T, 1)
-    assert np.isnan(base).all() and pen[0] == 1.0
-    out = capsys.readouterr().out
-    assert "lidar_vegetation_classes" in out and "6: 400" in out
+def test_trees_in_classes_the_engine_does_not_read_stop_with_the_classes_found(tmp_path, monkeypatch):
+    """A tile whose trees are in a class the engine does not read (here 6, then 0 with 3 stray class-1 returns): every
+    crown's penetration came out ~1 and its base the default, so the classifier found no conifers (leaf-off) or made
+    every tall narrow tree a pine (leaf-on). The warning fired only without a single vegetation return and said the
+    archetypes rested on the canopy shape. It now stops, names the classes found and the setting, with a way out for
+    sparse LiDAR."""
+    for cls, found in (([6], "6: 400"), ([0] * 397 + [1] * 3, "0: 397")):
+        lab, T = _one_crown_tile(tmp_path, monkeypatch, cls)
+        with pytest.raises(SystemExit) as e:
+            D.crown_base(lab, T, 1)
+        msg = str(e.value)
+        assert found in msg and "2: 6400" in msg and "lidar_vegetation_classes = [1, 3, 4, 5]" in msg
+        assert "penetration" in msg and "build_all.py trees" in msg and "lidar_vegetation_min_share = 0" in msg
+    monkeypatch.setattr(D.C, "tuning", lambda k, d: 0.0 if k == "lidar_vegetation_min_share" else d)
+    base, pen = D.crown_base(lab, T, 1)                        # sparse LiDAR, classes right: the default crown bases
+    assert np.isnan(base).all() and pen[0] > 0.95
+
+
+def test_a_share_of_crowns_without_vegetation_returns_is_what_stops():
+    """Small or sparse crowns may miss the 8 returns a crown base needs (Westmount: 3 %); the stop is for the build
+    whose vegetation classes miss most crowns."""
+    seen = np.bincount([1, 2, 2], minlength=256)
+    D.require_vegetation(np.array([True, True, False, False]), seen)            # half: built
+    D.require_vegetation(np.array([], bool), seen)                              # no crown at all
+    with pytest.raises(SystemExit, match=r"only 1 of the 4 crowns \(25%\)"):
+        D.require_vegetation(np.array([True, False, False, False]), seen)

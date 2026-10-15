@@ -27,9 +27,14 @@ def _tuning_files():
     return f"courses/{C.SLUG}/course.toml" + (f" or regions/{C.REGION_NAME}.toml" if C.REGION_NAME else "")
 
 
+def _number(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
 def tuned(name, default):
-    """A table of thresholds: the engine defaults, with the keys a course.toml [tuning.<name>] table (else the region's)
-    sets over them. An unknown key stops the build, so a typo cannot leave the default in force silently."""
+    """A table of thresholds: the engine defaults, with the keys the region's [tuning.<name>] table and then the
+    course.toml one set over them (key by key, config.tuning). An unknown key or a value that is not a number stops
+    the build, so a typo cannot leave the default in force silently (or fail as a bare TypeError)."""
     v = C.tuning(name, {})
     where = _tuning_files()
     if not isinstance(v, dict):
@@ -37,6 +42,9 @@ def tuned(name, default):
     bad = sorted(set(v) - set(default))
     if bad:
         sys.exit(f"[tuning.{name}] in {where}: unknown key {', '.join(bad)} (the keys are {', '.join(default)})")
+    for k, x in v.items():
+        if not _number(x):
+            sys.exit(f"[tuning.{name}] in {where}: {k} = {x!r} is not a number (the default is {default[k]})")
     return {k: float(v.get(k, d)) for k, d in default.items()}
 
 
@@ -60,6 +68,10 @@ def road_half_widths():
     v = C.tuning("road_half_width", {})
     if not isinstance(v, dict):
         sys.exit(f"[tuning.road_half_width] in {_tuning_files()} must be a table of highway class = metres, not {v!r}")
+    for k, x in v.items():
+        if not _number(x):
+            sys.exit(f"[tuning.road_half_width] in {_tuning_files()}: {k} = {x!r} is not a number (half the road's "
+                     "width in metres; 0 leaves the class out)")
     return {k: float(x) for k, x in dict(ROAD_HALF_WIDTH_DEFAULT, **v).items() if x > 0}
 
 
@@ -251,6 +263,32 @@ def osm_label_raster(W, H, T, chm):
 # Native / mulch seed colour (1 m-smoothed CIELAB of the photo, NDVI with a NIR band; canopy height in m), tuned on
 # Westmount's SWOOP 2025 photo: course.toml [tuning.native] sets the keys another photo or another soil needs.
 NATIVE = tuned("native", dict(a_min=3.0, b_min=11.0, L_max=55.0, chm_max=1.2, ndvi_max=0.18))
+# vectorize's photo colour rules (CIELAB of the photo, NDVI with a NIR band), tuned on the same photo. White silica
+# sand (b* ~4-6), another camera or another season needs other values: course.toml [tuning.sand] (sunlit sand),
+# [tuning.shadow_sand] (sand in shade, NIR photos only) and [tuning.turf] (clearly green turf, trimmed off bunkers)
+# override any of these keys. measure_registration.py reads the same sand rule. Defined here, with NATIVE, so that
+# check_course (which imports this module) reports a mistyped key before the build, not at the vectorize step.
+SAND = tuned("sand", dict(L_min=66.0, a_min=-12.0, b_min=8.5, b_max=26.0, ndvi_max=0.12))
+SHADOW_SAND = tuned("shadow_sand", dict(ndvi_max=0.02, L_min=25.0, a_min=-8.0, b_min=2.0))
+TURF = tuned("turf", dict(a_max=-14.0, ndvi_min=0.25))
+
+
+def lidar_classes(key, default):
+    """A [tuning] list of ASPRS point classes. A string or a single number used to match no point (np.isin), which
+    showed only later as the tree step's warning."""
+    v = C.tuning(key, default)
+    if not (isinstance(v, (list, tuple)) and v
+            and all(isinstance(c, int) and not isinstance(c, bool) and 0 <= c <= 255 for c in v)):
+        sys.exit(f"[tuning] {key} = {v!r} in {_tuning_files()}: a list of ASPRS point classes (whole numbers 0-255), "
+                 f"e.g. {key} = {list(default)}")
+    return tuple(v)
+
+
+# ASPRS classes of the tree returns (detect_trees): 1 (unclassified: the Ontario and USGS QL2 tiles leave vegetation
+# there) and 3-5 (low / medium / high vegetation: Spain PNOA, Denmark, many 3DEP QL1 projects). Ground is 2;
+# buildings, noise, water, bridges and overlap stay out. course.toml [tuning] lidar_vegetation_classes for a programme
+# that uses others (0). Checked here so check_course reports a malformed list.
+VEG_CLASSES = lidar_classes("lidar_vegetation_classes", (1, 3, 4, 5))
 
 
 def add_native_seeds(lab, X, names):
@@ -288,8 +326,13 @@ def has_nir():
         with rasterio.open(C.IMAGERY) as ds:
             if ds.count < 3 or ds.dtypes[0] != "uint8":
                 sys.exit(f"{C.IMAGERY}: {ds.count} band(s) of {ds.dtypes[0]}, but the engine reads an 8-bit R, G, B (+ NIR) "
-                         f"photo. Convert {C.IMAGERY_RAW.name} in {C.IMAGERY_RAW.parent}, e.g. gdal_translate -ot Byte "
-                         "-scale <min> <max> 0 255 -b 1 -b 2 -b 3 [-b <NIR band>] in.tif out.tif, and build from 'register'")
+                         f"photo. Convert {C.IMAGERY_RAW.name} in {C.IMAGERY_RAW.parent} with the rasterio tools of the "
+                         ".venv: .venv/bin/rio stack in.tif --bidx 1,2,3[,<NIR band>] rgbn.tif (keep R, G, B and NIR), "
+                         "then .venv/bin/rio convert rgbn.tif out.tif --dtype uint8 --scale-ratio <255 / the photo's "
+                         "maximum> (.venv/bin/rio info --stats in.tif gives it); or with GDAL's tools, gdal_translate -ot "
+                         "Byte -scale <min> <max> 0 255 -b 1 -b 2 -b 3 [-b <NIR band>] in.tif out.tif. Save out.tif as "
+                         f"{C.IMAGERY_RAW.name} (keep the original elsewhere) and rerun from the registration: "
+                         "scripts/build_all.py register")
             nir = False
             if ds.count >= 4:   # a central block is enough to tell a mask from a photo band
                 w = Window(max(0, ds.width // 2 - 1024), max(0, ds.height // 2 - 1024), min(2048, ds.width), min(2048, ds.height))

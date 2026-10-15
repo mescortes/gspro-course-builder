@@ -18,13 +18,9 @@ from rasterio.enums import Resampling
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
-from surface_classify import osm_geoms
+from surface_classify import osm_geoms, VEG_CLASSES   # VEG_CLASSES: the ASPRS classes of the tree returns ([tuning])
 
 MIN_H = 2.5
-# ASPRS classes of the tree returns: 1 (unclassified: the Ontario and USGS QL2 tiles leave vegetation there) and 3-5
-# (low / medium / high vegetation: Spain PNOA, Denmark, many 3DEP QL1 projects). Ground is 2; buildings, noise, water,
-# bridges and overlap stay out. course.toml [tuning] lidar_vegetation_classes for a programme that uses others (0).
-VEG_CLASSES = C.tuning("lidar_vegetation_classes", (1, 3, 4, 5))
 
 
 def smooth_chm(chm, r, leaf_off=None):
@@ -192,7 +188,7 @@ def crown_base(lab, T, n):
     hag_all = [[] for _ in range(n + 1)]
     out = np.full(n, np.nan)
     sums = []; gcount = []; acount = []
-    seen = np.zeros(256, np.int64)  # returns per class inside CORE, for the warning below
+    seen = np.zeros(256, np.int64)  # returns per class inside CORE, for require_vegetation's message
     for f, fr in C.lidar_readers(say=False):   # in the frame (a tile in another CRS reprojected as it is read)
         with laspy.open(f) as rr:
             h = rr.header
@@ -218,12 +214,6 @@ def crown_base(lab, T, n):
                 sel = (L > 0) & (hag > 0.8) & ~g_
                 sums.append(np.c_[L[sel], hag[sel]])
     S = np.concatenate(sums) if sums else np.zeros((0, 2))
-    if n and not len(S):
-        found = ", ".join(f"{c}: {k}" for c, k in enumerate(seen) if k)
-        print(f"warning: no return of the LiDAR vegetation classes {tuple(VEG_CLASSES)} in any of the {n} crowns: every "
-              f"crown base is the default (0.35 x height) and the archetypes rest on the canopy shape alone. Returns per "
-              f"class inside CORE: {found or 'none'}. Set [tuning] lidar_vegetation_classes in "
-              f"courses/{C.SLUG}/course.toml to the classes that hold the trees.", flush=True)
     S = S[np.argsort(S[:, 0])]
     ids = S[:, 0].astype(int)
     bounds = np.flatnonzero(np.r_[True, ids[1:] != ids[:-1], True]) if len(S) else []
@@ -232,8 +222,31 @@ def crown_base(lab, T, n):
         i = ids[a]
         if b - a >= 8:
             out[i - 1] = np.percentile(S[a:b, 1], 8)
+    require_vegetation(np.isfinite(out), seen)
     pen = np.sum(gcount, 0)[1:] / np.maximum(np.sum(acount, 0)[1:], 1)
     return out, pen
+
+
+def require_vegetation(has_base, seen):
+    """Stop when fewer than [tuning] lidar_vegetation_min_share (0.5) of the crowns hold the 8 vegetation returns a
+    crown base needs (Westmount 97 %, Brambles over 99 %): the vegetation is then in classes VEG_CLASSES leaves out.
+    `has_base`: per crown, True when it has them; `seen`: returns per ASPRS class inside CORE. A warning used to fire
+    only when not one return was found (a few stray ones kept it silent) and said the archetypes rested on the canopy
+    shape, while every crown's penetration came out about 1: the tree species were wrong either way."""
+    n = len(has_base)
+    share = float(np.mean(has_base)) if n else 1.0
+    if share >= C.tuning("lidar_vegetation_min_share", 0.5):
+        return
+    found = ", ".join(f"{c}: {k}" for c, k in enumerate(seen) if k)
+    sys.exit(f"detect_trees: only {int(np.sum(has_base))} of the {n} crowns ({share:.0%}) hold 8 or more returns of the "
+             f"LiDAR vegetation classes {tuple(VEG_CLASSES)}. Without them a crown's base is the default (0.35 x its "
+             "height) and its penetration about 1 (all ground returns), so the tree classifier sorts the trees on a "
+             "wrong signal: leaf_off_parkland finds no conifers, leaf_on_woodland makes every tall narrow tree a pine. "
+             f"Returns per ASPRS class inside CORE: {found or 'none'}. Set the classes that hold the trees in "
+             f"courses/{C.SLUG}/course.toml, e.g. [tuning] lidar_vegetation_classes = [1, 3, 4, 5] (ASPRS 1 = "
+             "unclassified, 3 / 4 / 5 = low / medium / high vegetation), then rerun from the trees step "
+             "(scripts/build_all.py trees). If the classes are right and the LiDAR is only sparse, [tuning] "
+             "lidar_vegetation_min_share = 0 builds with the default crown bases.")
 
 
 def crown_colour(lab, T, n, W, H):
@@ -260,6 +273,8 @@ def assign_archetypes(feats):
         return
     K = ("height", "crown_r", "crown_base", "sharpness", "penetration")
     P = {k: np.array([f["properties"][k] for f in feats], float) for k in K}
+    for k in ("L", "A", "B"):   # crown colour in the photo (CIELAB)
+        P[k] = np.array([f["properties"].get(k, np.nan) for f in feats], float)
     nd = np.array([f["properties"].get("ndvi", np.nan) for f in feats], float)
     nd = np.where(np.isfinite(nd), nd, -1.0)
     tr = C.REGION["trees"]
@@ -329,7 +344,49 @@ def leaf_on_woodland(P, nd, prm):
     return out
 
 
-CLASSIFIERS = {"leaf_off_parkland": leaf_off_parkland, "leaf_on_woodland": leaf_on_woodland}
+def leaf_on_suburban_socal(P, nd, prm):
+    """Leaf-on suburban parkland (Southern California, the rule of the MountainGate build): archetype names per tree,
+    from robust z-scores (median, 1.4826 x MAD over the trees taller than z_min_h m) of the crown structure (LiDAR)
+    and the crown colour (summer photo, CIELAB):
+      shrub       under shrub_h m
+      eucalyptus  very tall (over euc_min_h m), narrow (crown radius / height under euc_max_ratio) and open
+                  (penetration over euc_min_pen)
+      sycamore    a light, yellow-green crown: z(L) + 0.7 z(a*) + 0.3 z(b*) over syc_min_z, taller than syc_min_h m
+      pine        (Aleppo pine) open, peaked, high crown base: z(sharpness) + z(penetration) + 0.5 z(crown base)
+                  - 0.5 z(radius / height) beats the oak score by more than pine_margin
+      oak         (coast live oak) the rest: dense, broad, low crowns, -z(penetration) + z(radius / height)
+                  - 0.5 z(crown base)"""
+    names = prm["names"]
+    h, pen = P["height"], P["penetration"]
+    ratio = P["crown_r"] / np.maximum(h, 1)
+    ref = h > prm["z_min_h"]
+    ref = ref if ref.any() else np.ones(len(h), bool)   # no tall tree: the site's trees as they are
+    def z(v):
+        w = v[ref][np.isfinite(v[ref])]
+        if not w.size:
+            return np.full(len(v), np.nan)
+        med = np.median(w); mad = np.median(np.abs(w - med)) * 1.4826 + 1e-6
+        return (v - med) / mad
+    pine = z(P["sharpness"]) + z(pen) + 0.5 * z(P["crown_base"]) - 0.5 * z(ratio)
+    oak = -z(pen) + z(ratio) - 0.5 * z(P["crown_base"])
+    syc = z(P["L"]) + 0.7 * z(P["A"]) + 0.3 * z(P["B"])   # NaN without a crown colour: never a sycamore
+    out = []
+    for i in range(len(h)):
+        if h[i] < prm["shrub_h"]:
+            out.append(names["shrub"])
+        elif h[i] > prm["euc_min_h"] and ratio[i] < prm["euc_max_ratio"] and pen[i] > prm["euc_min_pen"]:
+            out.append(names["eucalyptus"])
+        elif syc[i] > prm["syc_min_z"] and h[i] > prm["syc_min_h"]:
+            out.append(names["sycamore"])
+        elif pine[i] > oak[i] + prm["pine_margin"]:
+            out.append(names["pine"])
+        else:
+            out.append(names["oak"])
+    return out
+
+
+CLASSIFIERS = {"leaf_off_parkland": leaf_off_parkland, "leaf_on_woodland": leaf_on_woodland,
+               "leaf_on_suburban_socal": leaf_on_suburban_socal}
 
 
 if __name__ == "__main__":

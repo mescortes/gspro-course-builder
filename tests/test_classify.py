@@ -198,3 +198,67 @@ def test_a_tuned_rule_names_an_unknown_key(monkeypatch):
     monkeypatch.setattr(S.C, "tuning", lambda k, d: 4.0 if k == "sand" else d)
     with pytest.raises(SystemExit, match="table"):
         S.tuned("sand", {"b_min": 8.5})
+
+
+def test_tuning_tables_merge_the_region_and_the_course_key_by_key(monkeypatch):
+    """A course.toml [tuning.sand] replaced the region's [tuning.sand] whole: region b_min = 4 under course L_min = 70
+    gave b_min 8.5 (the engine default) although the region file promises a key-by-key override."""
+    C = S.C
+    monkeypatch.setattr(C, "_region", {"tuning": {"sand": {"b_min": 4.0}, "road_half_width": {"track": 0}}})
+    monkeypatch.setattr(C, "_T", dict(C._T, tuning={"sand": {"L_min": 70}, "road_half_width": {"primary": 8}}))
+    assert S.tuned("sand", dict(L_min=66.0, b_min=8.5, b_max=26.0)) == dict(L_min=70.0, b_min=4.0, b_max=26.0)
+    w = S.road_half_widths()
+    assert "track" not in w and w["primary"] == 8.0 and w["service"] == S.ROAD_HALF_WIDTH_DEFAULT["service"]
+    monkeypatch.setattr(C, "_T", dict(C._T, tuning={"sand": 3.0}))       # not a table: no merge, tuned() names it
+    with pytest.raises(SystemExit, match="must be a table"):
+        S.tuned("sand", dict(b_min=8.5))
+
+
+def test_a_tuning_value_that_is_not_a_number_is_named(monkeypatch):
+    """track = "1.5" raised a bare TypeError when surface_classify was imported, so every step failed, check_course
+    included; a list in [tuning.sand] raised one from float()."""
+    for k, table, words in (("road_half_width", {"track": "1.5"}, r"\[tuning\.road_half_width\].*track = '1\.5' is not"),
+                            ("sand", {"b_min": [4, 5]}, r"\[tuning\.sand\].*b_min = \[4, 5\] is not a number"),
+                            ("sand", {"b_min": True}, r"b_min = True is not a number")):
+        monkeypatch.setattr(S.C, "tuning", lambda key, d, k=k, table=table: table if key == k else d)
+        with pytest.raises(SystemExit, match=words):
+            S.road_half_widths() if k == "road_half_width" else S.tuned("sand", dict(b_min=8.5))
+
+
+def test_lidar_vegetation_classes_must_be_a_list_of_classes(monkeypatch):
+    """A string ("1, 3") or a single number made np.isin match no point, which showed only as the tree warning."""
+    for v, ok in (((0, 1), True), ([3, 4, 5], True), ("1, 3", False), (1, False), ((), False), ((1, 256), False),
+                  ((1.0, 3.0), False)):
+        monkeypatch.setattr(S.C, "tuning", lambda k, d, v=v: v if k == "lidar_vegetation_classes" else d)
+        if ok:
+            assert S.lidar_classes("lidar_vegetation_classes", (1, 3, 4, 5)) == tuple(v)
+        else:
+            with pytest.raises(SystemExit, match=r"\[tuning\] lidar_vegetation_classes = .* e\.g\. "
+                                                 r"lidar_vegetation_classes = \[1, 3, 4, 5\]"):
+                S.lidar_classes("lidar_vegetation_classes", (1, 3, 4, 5))
+
+
+def test_check_course_sees_every_tuned_photo_rule(tmp_path):
+    """[tuning.sand], [tuning.shadow_sand] and [tuning.turf] were read only when vectorize was imported, so a typo
+    there stopped the build at the vectorize step, after rasters, paths and classify. They are read with
+    [tuning.native] by surface_classify, which check_course imports, as is lidar_vegetation_classes."""
+    import shutil, subprocess
+    (tmp_path / "scripts").mkdir()
+    for f in ("config.py", "surface_classify.py"):
+        shutil.copy(ROOT / "scripts" / f, tmp_path / "scripts" / f)
+    (tmp_path / "courses/alpha").mkdir(parents=True)
+    frame = ('[course]\nname = "Alpha"\n[frame]\ncrs = "EPSG:2958"\norigin = [500000.0, 4800000.0]\nbase_h = 300.0\n'
+             'core = { xmin = 499000.0, ymin = 4799000.0, xmax = 501000.0, ymax = 4801000.0 }\n'
+             'terrain = { xmin = 499000.0, ymin = 4799000.0, xmax = 501000.0, ymax = 4801000.0 }\n')
+    env = {k: v for k, v in os.environ.items() if k not in ("COURSE", "MG_PROFILE")}
+    code = "import sys; sys.path.insert(0, 'scripts'); import surface_classify as S; print(S.TURF, S.VEG_CLASSES)"
+    for tuning, words in (("[tuning.turf]\na_mx = -10.0\n", "[tuning.turf] in courses/alpha/course.toml: unknown key a_mx"),
+                          ("[tuning.shadow_sand]\nL_min = 'dark'\n", "L_min = 'dark' is not a number"),
+                          ('[tuning]\nlidar_vegetation_classes = "1, 3"\n', "lidar_vegetation_classes = '1, 3'"),
+                          ("[tuning.turf]\na_max = -10.0\n", None)):
+        (tmp_path / "courses/alpha/course.toml").write_text(frame + tuning)
+        r = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, env=env, capture_output=True, text=True)
+        if words:
+            assert r.returncode != 0 and words in r.stderr and "Traceback" not in r.stderr, (tuning, r.stderr)
+        else:
+            assert r.stdout.strip() == "{'a_max': -10.0, 'ndvi_min': 0.25} (1, 3, 4, 5)", r.stderr

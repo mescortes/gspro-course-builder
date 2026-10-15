@@ -123,7 +123,8 @@ matches them, `fetch_data.py` (or the build, for the LiDAR) stops and names the 
 the keys that allow an expected data gap (open water).
 
 Feature files drawn by hand (`features/`, `research/layout.geojson`) are in the course CRS (`[frame] crs`, metres),
-not lon/lat. A course outside the existing regions needs a region preset: copy `regions/TEMPLATE.toml.example` to
+not lon/lat. The regions are `southern_ontario`, `northern_california` and `southern_california` (no palm model
+yet: see its header). A course outside them needs a region preset: copy `regions/TEMPLATE.toml.example` to
 `regions/<name>.toml` and run the unit tests, which check every region against `scripts/region_spec.py`.
 
 ## Rules for engine changes

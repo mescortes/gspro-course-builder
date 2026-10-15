@@ -31,7 +31,8 @@ def osm_report(G, playable=None):
         problems.append(f"{len(courses)} leisure=golf_course outlines in the OSM box ({', '.join(map(str, courses))}): "
                         "set [osm] outline to this course's so the others' golf features are left out")
     kinds = {k: [g for _, t, g in G if t.get("golf") == k] for k in ("green", "tee", "fairway", "bunker")}
-    water = [g for _, t, g in G if t.get("golf") in ("water_hazard", "lateral_water_hazard") or t.get("natural") == "water"]
+    from surface_classify import is_water   # the water the build sees
+    water = [g for _, t, g in G if is_water(t)]
     rows = []
     for h in playable:
         r = {"hole": h, "line": h in lines, "par": None, "green": False, "tee": False, "fairway": False, "bunkers": 0,

@@ -93,9 +93,12 @@ TUNING, REGION_TUNING = _T.get("tuning", {}), _region.get("tuning", {})  # check
 
 
 def tuning(key, default):
-    """A tuned limit: course.toml [tuning], else the region's [tuning], else the engine default. A TOML list for a tuple
-    default comes back as a tuple, a TOML integer for a float default as a float."""
+    """A tuned limit: course.toml [tuning], else the region's [tuning], else the engine default. A table both set (e.g.
+    [tuning.sand]) is merged key by key, the course's keys over the region's. A TOML list for a tuple default comes
+    back as a tuple, a TOML integer for a float default as a float."""
     v = TUNING.get(key, REGION_TUNING.get(key, default))
+    if isinstance(v, dict) and key in TUNING and isinstance(REGION_TUNING.get(key), dict):
+        v = _merge(REGION_TUNING[key], v)
     if isinstance(default, tuple) and isinstance(v, list):
         return tuple(v)
     if isinstance(default, float) and isinstance(v, int) and not isinstance(v, bool):
