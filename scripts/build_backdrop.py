@@ -66,17 +66,30 @@ def _rel(p):
         return Path(p)
 
 
-def require_cover(path, ext, what):
-    """Exit unless the raster `path` covers `ext`: past its border the samplers repeat its edge heights (flat smeared
-    bands with no message), e.g. a backdrop DEM fetched before the [frame] terrain grew."""
+def require_cover(path, ext, what, step=20.0):
+    """Exit unless the raster `path` covers `ext` with heights: past its border the samplers repeat its edge heights
+    (flat smeared bands with no message), e.g. a backdrop DEM fetched before the [frame] terrain grew; inside it a cell
+    without data (sampled every `step` m) became a NaN backdrop vertex, or a flat plateau at the DEM's mean height in
+    the GSPro outer plot."""
     if not Path(path).exists():
         sys.exit(f"{_rel(path)}: missing (the backdrop DEM): run scripts/fetch_backdrop.py")
+    span = f"E {ext['xmin']:.0f}-{ext['xmax']:.0f} N {ext['ymin']:.0f}-{ext['ymax']:.0f}"
     with rasterio.open(path) as ds:
         b = ds.bounds
-    if b.left > ext["xmin"] + 1e-6 or b.right < ext["xmax"] - 1e-6 or b.bottom > ext["ymin"] + 1e-6 or b.top < ext["ymax"] - 1e-6:
-        sys.exit(f"{_rel(path)} covers E {b.left:.0f}-{b.right:.0f} N {b.bottom:.0f}-{b.top:.0f}, but {what} needs "
-                 f"E {ext['xmin']:.0f}-{ext['xmax']:.0f} N {ext['ymin']:.0f}-{ext['ymax']:.0f}: run scripts/fetch_backdrop.py "
-                 "again (it sizes the backdrop to the course.toml [frame] terrain), then build_all.py backdrop")
+        if b.left > ext["xmin"] + 1e-6 or b.right < ext["xmax"] - 1e-6 or b.bottom > ext["ymin"] + 1e-6 or b.top < ext["ymax"] - 1e-6:
+            sys.exit(f"{_rel(path)} covers E {b.left:.0f}-{b.right:.0f} N {b.bottom:.0f}-{b.top:.0f}, but {what} needs "
+                     f"{span}: run scripts/fetch_backdrop.py again (it sizes the backdrop to the course.toml [frame] "
+                     "terrain), then build_all.py backdrop")
+        from rasterio.windows import from_bounds
+        shape = (max(1, int((ext["ymax"] - ext["ymin"]) / step)), max(1, int((ext["xmax"] - ext["xmin"]) / step)))
+        z = ds.read(1, window=from_bounds(ext["xmin"], ext["ymin"], ext["xmax"], ext["ymax"], transform=ds.transform),
+                    out_shape=shape, masked=True)
+    gap = float((np.ma.getmaskarray(z) | ~np.isfinite(z.filled(0))).mean())
+    if gap:
+        sys.exit(f"{_rel(path)}: {gap:.1%} of {what} ({span}) has no height (cells without data): the DEMs listed in "
+                 f"[sources.backdrop] dtm of courses/{C.SLUG}/course.toml do not cover it all. Add one that does and run "
+                 "scripts/fetch_backdrop.py again (it fills small gaps up to [sources.backdrop] max_missing), then "
+                 "build_all.py backdrop")
 
 
 def datum_offset(dem, backdrop, core, band=(10.0, 50.0), res=2.0):
@@ -104,21 +117,27 @@ def datum_offset(dem, backdrop, core, band=(10.0, 50.0), res=2.0):
 def check_datum(dem, backdrop, core):
     """The backdrop DEM's offset from the LiDAR DEM round the build extent. Another vertical datum (ellipsoidal vs
     orthometric heights, an older national datum) or unit (feet) would leave a wall or a berm all round the course:
-    a warning above [tuning] backdrop_datum_warn_m (0.3 m), a stop above backdrop_datum_max_m (3 m)."""
+    a warning above [tuning] backdrop_datum_warn_m (0.3 m), a stop above backdrop_datum_max_m (3 m). The z_offset
+    suggested is the one that removes the offset: the measured DEM already carries any [sources.backdrop] z_offset
+    (fetch_backdrop adds it), so suggesting -median sent a wrong sign round in a loop (+30 -> -60 -> +30 ...)."""
     r = datum_offset(dem, backdrop, core)
     if r is None:
         print("!! backdrop DEM vs LiDAR DEM: no cell near the edge of the build extent has both heights", flush=True)
         return
     med, mad, n = r
     msg = f"backdrop DEM - LiDAR DEM, 10-50 m inside the build extent: median {med:+.2f} m, MAD {mad:.2f} m ({n} cells)"
+    now = float(C.DATA_SOURCES.get("backdrop", {}).get("z_offset", 0.0))
+    fix = (f"[sources.backdrop] z_offset = {round(now - med, 2):.2f} in courses/{C.SLUG}/course.toml"
+           + (f" (now {now:g}: the offset is measured on the DEM it already moved)" if now else "")
+           + ", then run scripts/fetch_backdrop.py again and build_all.py backdrop")
     if abs(med) > C.tuning("backdrop_datum_max_m", 3.0):
         sys.exit(f"{msg}. The backdrop DEM ([sources.backdrop]) is on another vertical datum than the point cloud "
                  "([sources.lidar]), or in feet. Use a backdrop DEM in metres on the LiDAR's datum, or for a constant "
-                 f"datum offset set [sources.backdrop] z_offset = {-med:.2f} in courses/{C.SLUG}/course.toml and run "
-                 "scripts/fetch_backdrop.py again")
+                 f"datum offset set {fix}. If the step is real (the build extent ends at a cliff or a quarry), raise "
+                 f"[tuning] backdrop_datum_max_m above {abs(med):.1f}")
     warn = abs(med) > C.tuning("backdrop_datum_warn_m", 0.3)
-    print(("!! " if warn else "") + msg + (": a step round the course (another vertical datum? [sources.backdrop] "
-                                           "z_offset moves the backdrop)" if warn else ""), flush=True)
+    print(("!! " if warn else "") + msg + (f": a step round the course (another vertical datum?): {fix}" if warn else ""),
+          flush=True)
 
 
 def lift_shadows(a, knee=40.0, keep=0.6, chroma=1.25):
@@ -241,6 +260,23 @@ def imagery(ext, res, path):
     Image.fromarray(lift_shadows(g)).save(path, quality=88)
 
 
+def dem_heights(dem, xy, o):
+    """Heights of the GeoTIFF `dem` at the points `xy` (n x 2, metres from the origin `o`), bilinear. Exits on a point
+    next to a cell without data (a gap between require_cover's samples): it became a NaN vertex in
+    backdrop_mesh.npz, the glTF and the FBX."""
+    with rasterio.open(dem) as ds:
+        Z = ds.read(1).astype(np.float64); T = ds.transform
+    xs = T.c + (np.arange(Z.shape[1]) + 0.5) * T.a - o[0]; ys = T.f + (np.arange(Z.shape[0]) + 0.5) * T.e - o[1]
+    f = RegularGridInterpolator((ys[::-1], xs), Z[::-1], bounds_error=False, fill_value=None)
+    z = f(np.c_[xy[:, 1], xy[:, 0]])
+    if not np.isfinite(z).all():
+        bad = xy[~np.isfinite(z)] + o
+        sys.exit(f"{_rel(dem)}: {len(bad)} backdrop vertices have no height (a gap in the DEM near E {bad[0, 0]:.0f} "
+                 f"N {bad[0, 1]:.0f}): the DEMs listed in [sources.backdrop] dtm of courses/{C.SLUG}/course.toml do not "
+                 "cover it all. Add one that does and run scripts/fetch_backdrop.py again, then build_all.py backdrop")
+    return z
+
+
 def main():
     dem = C.DATA / "dem/backdrop_dem.tif"
     require_cover(dem, FAR, "the far backdrop ring")
@@ -272,13 +308,8 @@ def main():
                         [FAR["xmin"] - o[0] + 5, FAR["ymin"] - o[1] + 5, 2, 250.0]])  # far ring
     tri = triangle.triangulate({"vertices": P, "segments": S, "regions": regions, "holes": core_c[None]}, "pq28Aa")
     Vt = tri["vertices"]; Ft = tri["triangles"]; ring = tri["triangle_attributes"][:, 0].astype(int)
-    with rasterio.open(dem) as ds:
-        Z = ds.read(1).astype(np.float64); T = ds.transform
-    xs = T.c + (np.arange(Z.shape[1]) + 0.5) * T.a - o[0]; ys = T.f + (np.arange(Z.shape[0]) + 0.5) * T.e - o[1]
-    f = RegularGridInterpolator((ys[::-1], xs), Z[::-1], bounds_error=False, fill_value=None)
-    z = f(np.c_[Vt[:, 1], Vt[:, 0]])
     # seam vertices keep the exact core heights
-    z[:n0] = PV[:, 2]
+    z = np.r_[PV[:, 2], dem_heights(dem, Vt[n0:], o)]
     V = np.c_[Vt + o, z]
     np.savez_compressed(C.BUILD / "backdrop_mesh.npz", V=V, F=Ft.astype(np.int32), ring=ring, n_seam=n0)
     print("backdrop triangles", len(Ft), "near", (ring == 1).sum(), "far", (ring == 2).sum())
