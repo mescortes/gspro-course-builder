@@ -284,7 +284,38 @@ def test_the_3dep_coverage_error_gives_a_small_share_and_says_where_the_gap_is(t
     msg = stop((-10.0, -10.0, 1980.0, 1980.0))   # a ring of margin
     assert "north, south, east and west edges" in msg
     msg = stop((-15.0, -15.0, 900.0, 1985.0), (1000.0, -15.0, 1700.0, 1985.0), (1750.0, -15.0, 1985.0, 1985.0))
-    assert "2 gaps, the largest E 900-1000 N -15-1985" in msg   # not the box of both: E 900-1750
+    # not the box of both (E 900-1750), and a strip through the course is not 'on its north and south edges'
+    assert "uncovered (2 gaps, the largest E 900-1000 N -15-1985 across it, south to north)" in msg
+
+
+def test_a_3dep_gap_through_the_extent_is_not_described_by_the_edges_its_ends_touch(tmp_path, monkeypatch):
+    """A 100 m strip missing through the middle of a 2 km extent read 'on its north and south edges' (a horizontal one
+    'on its east and west edges'): a newcomer took a missing strip of the course for out-of-play margins."""
+    from sources import usgs_3dep
+    ext = dict(xmin=0.0, ymin=0.0, xmax=1970.0, ymax=1970.0)   # + 15 m margin: -15 .. 1985
+
+    def where(*boxes):
+        tiles = [(f"t{i}", f"https://x/t{i}.laz", b) for i, b in enumerate(boxes)]
+        monkeypatch.setattr(usgs_3dep, "listing", lambda *a, **k: [])
+        monkeypatch.setattr(usgs_3dep, "keep", lambda *a, **k: tiles)
+        with pytest.raises(SystemExit) as ex:
+            usgs_3dep.fetch({"provider": "usgs_3dep", "project": "B23"}, ext, tmp_path, crs="EPSG:6339")
+        return str(ex.value).split(" uncovered (", 1)[1].split("):", 1)[0]
+    assert where((-15.0, -15.0, 900.0, 1985.0), (1000.0, -15.0, 1985.0, 1985.0)) == \
+        "E 900-1000 N -15-1985 across it, south to north"
+    assert where((-15.0, -15.0, 1985.0, 900.0), (-15.0, 1000.0, 1985.0, 1985.0)) == \
+        "E -15-1985 N 900-1000 across it, west to east"
+    # a notch 100 m wide and 1 km deep from the north edge
+    assert where((-15.0, -15.0, 900.0, 1985.0), (1000.0, -15.0, 1985.0, 1985.0), (900.0, -15.0, 1000.0, 1000.0)) == \
+        "E 900-1000 N 1000-1985 inside it, reaching its north edge"
+    # a hole that reaches no edge
+    assert where((-15.0, -15.0, 900.0, 1985.0), (1000.0, -15.0, 1985.0, 1985.0), (900.0, -15.0, 1000.0, 1000.0),
+                 (900.0, 1100.0, 1000.0, 1985.0)) == "E 900-1000 N 1000-1100 inside it"
+    # a band along the east edge is still on it
+    assert where((-15.0, -15.0, 1900.0, 1985.0)) == "E 1900-1985 N -15-1985 on its east edge"
+
+
+# ---- OSM
 
 def test_an_overpass_reply_with_a_runtime_error_is_not_a_snapshot(tmp_path, monkeypatch):
     """Overpass answers HTTP 200 with a 'remark' and empty or partial elements when the query times out or runs out of
@@ -569,6 +600,24 @@ def test_an_asset_poly_haven_does_not_have_names_where_its_id_comes_from(tmp_pat
     monkeypatch.setattr(http.requests, "get", lambda url, params=None, **kw: Resp(200, payload={}))   # no maps at all
     with pytest.raises(SystemExit, match=r"no 2k maps.*typo_bark"):
         T.main(["typo_bark"])
+    monkeypatch.setattr(http.requests, "get", lambda url, params=None, **kw: Resp(410, body="Gone"))
+    with pytest.raises(SystemExit, match=r"no asset 'typo_bark'.*command line"):
+        T.main(["typo_bark"])
+
+
+def test_a_poly_haven_request_a_proxy_refuses_is_not_called_a_wrong_asset_id(tmp_path, monkeypatch):
+    """A 403 (a Cloudflare bot block, an egress proxy) for the engine's own sand_01 read 'Poly Haven has no asset
+    'sand_01' ... the id comes from IDS in scripts/fetch_textures.py: fix it there': a newcomer edited a correct id."""
+    from sources import http
+    monkeypatch.setattr(C, "DATA", tmp_path); _no_sleep(monkeypatch)
+    import fetch_textures as T
+    for status, body in ((403, "Forbidden: blocked by proxy"), (401, "Unauthorized"), (451, "Unavailable")):
+        monkeypatch.setattr(http.requests, "get", lambda url, params=None, **kw: Resp(status, body=body))
+        with pytest.raises(SystemExit) as ex:
+            T.main(["sand_01"])
+        msg = str(ex.value)
+        assert f"HTTP {status}" in msg and body in msg and "network" in msg and "sand_01" in msg, msg
+        assert "has no asset" not in msg and "fix it there" not in msg, msg
 
 
 # ---- check_course.py

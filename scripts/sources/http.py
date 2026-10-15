@@ -13,10 +13,15 @@ def permanent(code):
 
 class PermanentError(RuntimeError):
     """A permanent HTTP error (see permanent()); `status` is its code. A caller can tell a wrong URL or asset id from
-    a network failure with it."""
+    a network failure with it: `missing` (404, 410) is the server saying the thing is not there; any other code (401,
+    403, 451: a proxy, a firewall or a bot block refusing the request) says nothing about the URL."""
     def __init__(self, message, status):
         super().__init__(message)
         self.status = status
+
+    @property
+    def missing(self):
+        return self.status in (404, 410)
 
 
 def _total(r, have):

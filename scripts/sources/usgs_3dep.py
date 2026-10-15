@@ -74,10 +74,24 @@ def items(spec, ext, crs, margin=15.0, pad=5.0):
     return [(t, u) for t, u, _ in keep(spec, listing(ext, crs, margin), ext, crs, margin, pad)]
 
 
+def _where(along, touched):
+    """Where a gap lies in the extent, for the coverage message: on the edges it runs along; else across it when it
+    reaches two opposite edges (a strip of the course missing, not a margin); else inside it, naming the edges it
+    reaches."""
+    def edges(es):
+        return f"{' and '.join(', '.join(es).rsplit(', ', 1))} edge{'s' * (len(es) > 1)}"
+    if along:
+        return f"on its {edges(along)}"
+    across = [f"{a} to {b}" for a, b in (("south", "north"), ("west", "east")) if a in touched and b in touched]
+    if across:
+        return f"across it, {' and '.join(across)}"
+    return f"inside it, reaching its {edges(touched)}" if touched else "inside it"
+
+
 def uncovered(boxes, ext, margin=15.0, step=10.0):
     """(share, gaps) of ext + margin outside every box, sampled every `step` m; (0.0, []) when covered. Each connected
-    gap is ((x0, y0, x1, y1), edges): the box of its samples (padded by half a sample) and the edges of the extent it
-    lies along, the largest gap first. The boxes are the listed ones, a few metres too big, so two abutting tiles leave
+    gap is ((x0, y0, x1, y1), where): the box of its samples (padded by half a sample) and where it lies in the extent
+    (_where), the largest gap first. The boxes are the listed ones, a few metres too big, so two abutting tiles leave
     no sliver between them."""
     from scipy import ndimage
     (ax, bx), (ay, by) = _read_box(ext, margin)
@@ -100,7 +114,7 @@ def uncovered(boxes, ext, margin=15.0, step=10.0):
         runs = dict(north=(g[-1].sum(), h), south=(g[0].sum(), h), east=(g[:, -1].sum(), w), west=(g[:, 0].sum(), w))
         touched = [e for e, (run, _) in runs.items() if run]
         gaps.append(((max(ax, X[0, cols.min()] - hx), max(ay, Y[rows.min(), 0] - hy), min(bx, X[0, cols.max()] + hx),
-                      min(by, Y[rows.max(), 0] + hy)), [e for e in touched if runs[e][0] >= runs[e][1]] or touched))
+                      min(by, Y[rows.max(), 0] + hy)), _where([e for e in touched if runs[e][0] >= runs[e][1]], touched)))
     return float((~inside).mean()), gaps
 
 
@@ -118,10 +132,9 @@ def fetch(spec, ext, out, crs, margin=15.0):
                  f"{', '.join(there) if there else 'no point cloud'} over it: set [sources.lidar] project in course.toml")
     share, gaps = uncovered([b for _, _, b in tiles], ext, margin)
     if share > spec.get("max_uncovered", 0.0):
-        (x0, y0, x1, y1), edges = gaps[0]
-        where = (f"{len(gaps)} gaps, the largest " if len(gaps) > 1 else "") + f"E {x0:.0f}-{x1:.0f} N {y0:.0f}-{y1:.0f}"
-        where += (f" on its {' and '.join(', '.join(edges).rsplit(', ', 1))} edge{'s' * (len(edges) > 1)}" if edges
-                  else " inside it")
+        (x0, y0, x1, y1), there = gaps[0]
+        where = ((f"{len(gaps)} gaps, the largest " if len(gaps) > 1 else "") +
+                 f"E {x0:.0f}-{x1:.0f} N {y0:.0f}-{y1:.0f} {there}")
         sys.exit(f"lidar: the {spec['project']} tiles leave {f'{share:.1%}' if share >= 0.001 else 'under 0.1%'} of the "
                  f"extent ([frame] core + {margin:g} m) uncovered ({where}): set [sources.lidar] project in course.toml "
                  f"to one that covers the course or, if that part is open water or out of play, allow it with "

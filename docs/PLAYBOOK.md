@@ -140,7 +140,9 @@ from. The LiDAR tiles are listed in `data/<slug>/lidar/tiles.json`. A rerun of `
 but first checks it against course.toml:
 
 * If the photo or the OSM snapshot no longer fits `[frame] core`, `[imagery] res` or `[sources.imagery]`, the fetch
-  stops and names the setting. Delete the file and fetch again.
+  stops and names the setting. Delete the file and fetch again. A new photo has its own registration: re-measure
+  `[imagery] shift` (`measure_registration.py`, §5) before building on it, or the build applies the old photo's shift.
+  After a new OSM snapshot, check the course's overrides (`courses/<slug>/features/overrides/`, §7) against it.
 * If the LiDAR tiles were fetched for another `[sources.lidar]` or `[frame] core`, the build stops and names the key.
   Rerun `fetch_data.py lidar` (it needs the network). It moves every tile that is not part of the new fetch into
   `data/<slug>/lidar/unused/`.
@@ -156,6 +158,10 @@ allow it in course.toml. These keys only accept or refuse a fetch, so changing o
 | `[sources.lidar] missing_ok` (`nrcan_copc`) | none | tiles that no project folder has, as `[[E/100 m, N/100 m], ...]` |
 | `[sources.imagery] max_empty` | 0.01 | share of the course photo that the service leaves black |
 | `[sources.backdrop] max_missing` | 0.01 | share of the backdrop square with no DTM (filled from the heights around it) |
+
+The 3DEP message says where the largest gap is. "On its east edge" runs along the extent's edge (open water or ground
+out of play are often there); "across it, south to north" (a strip through the course) or "inside it" (a hole) usually
+means tiles the project does not have, so look for another project before allowing it.
 
 **LiDAR in another CRS.** Tiles need not be in the course frame (`[frame] crs`): a project in State Plane feet (many
 California 3DEP projects, e.g. NAD83(2011) / California zone 2 (ftUS) + NAVD88 height (ftUS)) or in the neighbouring
@@ -328,8 +334,11 @@ can take an hour on a slow server); first build 0.5-1 h; two QA rounds with rebu
 * **An image server is slow or times out**: the downloads are chunked and retried; rerun the step to resume. A service
   error about a parameter (bands, the mosaic rule's where clause) stops the fetch at once and names it: fix
   `[sources.imagery]`.
-* **fetch_textures says Poly Haven has no asset**: the id is mistyped. The message says where the id comes from (the
-  region's `[trees] bark` or `[materials]`, or course.toml).
+* **fetch_textures says Poly Haven has no asset** (it answered 404 or 410): the id is mistyped. The message says where
+  the id comes from (the region's `[trees] bark` or `[materials]`, or course.toml).
+* **fetch_textures says Poly Haven refuses the request** (HTTP 401, 403, 451): the id is not the problem; a proxy, a
+  firewall or a bot block is. On Claude cloud, add `api.polyhaven.com` and `dl.polyhaven.org` to the network access
+  (§0).
 * **The course is wider than about 1.85 km**: the build extent no longer fits the 2048 m terrain square;
   check_course says so.
 * **`[frame] dem_res`**: the engine builds the DEM at 0.25 m only, so leave it out. check_course flags it, and a
