@@ -158,8 +158,24 @@ def filter_ground(P):
     return ~((dev > 0.25) & (dev > 4 * 1.4826 * np.maximum(mad, 0.01)))
 
 
+def check_grid(ext, res):
+    """The DEM grid must be exactly twice as fine as the 0.5 m DSM / CHM grid: the DEM is averaged 2 x 2 onto it below,
+    and surface_classify, vectorize, export_course and measure_registration expand the CHM 2 x 2 back onto the DEM grid.
+    Checked before the LiDAR pass, which takes minutes."""
+    where = f"courses/{C.SLUG}/course.toml"
+    if res != 0.25:
+        sys.exit(f"{where}: [frame] dem_res = {res:g}, but the engine builds the DEM at 0.25 m only (half the 0.5 m "
+                 "canopy grid): remove dem_res")
+    for a, b in (("xmin", "xmax"), ("ymin", "ymax")):
+        side = ext[b] - ext[a]
+        if abs(side / 0.5 - round(side / 0.5)) > 1e-6:
+            sys.exit(f"{where}: [{'test_profile' if C.PROFILE == 'test' else 'frame'}] core {a}..{b} is {side:g} m: "
+                     "each side of the build extent must be a whole number of 0.5 m (new_course.py writes whole tiles)")
+
+
 def main(ext=C.CORE, res=C.DEM_RES):
     t0 = time.time()
+    check_grid(ext, res)
     buckets, cnt, isum, dsm, bdsm = pass1(ext, res)
     W, H, T, xc, yc = grid_spec(ext, res)
     write(C.BUILD / "ground_count.tif", cnt, T, nodata=-1)
