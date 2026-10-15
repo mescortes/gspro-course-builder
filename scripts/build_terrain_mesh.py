@@ -151,6 +151,12 @@ def seed_point(q):
     return q.representative_point()
 
 
+def label_dtype(n):
+    """The smallest raster type for the labels 0..n: rasterize needs about four times its output (the 0.125 m label
+    raster of a 1.5 km square course is 0.6 GB as int32)."""
+    return "uint8" if n < 2**8 else "uint16" if n < 2**16 else "int32"
+
+
 def label_faces(Vt, Ft, nbr, segs, feats):
     """Label triangles by majority vote of centroid-in-polygon over each constraint-bounded face."""
     from scipy.sparse import coo_matrix
@@ -177,7 +183,8 @@ def label_faces(Vt, Ft, nbr, segs, feats):
     e = C.CORE
     Wr = int(round((e["xmax"] - e["xmin"]) / res)); Hr = int(round((e["ymax"] - e["ymin"]) / res))
     Tr = rasterio.transform.from_origin(e["xmin"], e["ymax"], res, res)
-    lab_r = rasterize([(g, i + 1) for i, (g, _, _) in enumerate(fg)], out_shape=(Hr, Wr), transform=Tr, fill=0, dtype="int32")
+    lab_r = rasterize([(g, i + 1) for i, (g, _, _) in enumerate(fg)], out_shape=(Hr, Wr), transform=Tr, fill=0,
+                      dtype=label_dtype(len(fg)))
     cent = Vt[Ft].mean(1) + [C.ORIGIN_E, C.ORIGIN_N]
     cc = np.clip(((cent[:, 0] - e["xmin"]) / res).astype(int), 0, Wr - 1)
     rr = np.clip(((e["ymax"] - cent[:, 1]) / res).astype(int), 0, Hr - 1)
@@ -332,35 +339,49 @@ def blended_dem(dem, T, feats):
     heights (a bunker hollow next to a green). A masked smooth is biased toward the interior near the edge on a slope;
     that bias is removed by smoothing the residual from a large-scale, unmasked trend (exact for planes). Outside the
     surface only the smoothing *correction* is carried on, fading continuously, so banks keep their own shape and there
-    is no step where the smooth ends (QA round 2: 6-8 cm rings ~1.5 m outside the fringes)."""
+    is no step where the smooth ends (QA round 2: 6-8 cm rings ~1.5 m outside the fringes).
+
+    Memory: each full-grid float64 array is 0.3 GB on a 1.5 km square course. The masks stay uint8 (gaussian_filter
+    with a float64 output and resid * m read them as the float64 0/1 they used to be cast to), temporaries are freed
+    once used and the arithmetic is in place, in the same order: bit for bit the result of the out-of-place version,
+    at about half its peak (tests/test_mesh_memory.py)."""
     from rasterio.features import rasterize
     H, W = dem.shape; r = T.a
     def mask(names):
         gs = [g for g, s, _ in feats if s in names]
-        return rasterize([(g, 1) for g in gs], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(np.float64) if gs else np.zeros((H, W))
-    trend = ndimage.gaussian_filter(dem, 1.5 / r)
-    resid = dem - trend
+        return rasterize([(g, 1) for g in gs], out_shape=(H, W), transform=T, fill=0, dtype="uint8") if gs else None
+    resid = dem - ndimage.gaussian_filter(dem, 1.5 / r)   # the residual from a large-scale trend
     out = dem.copy()
     for names, sigma_m, feather in ((("green", "fringe"), 0.45, 1.0), (("tee",), 0.6, 0.75), (("cartpath",), 0.6, 0.5),
                                      (("bunker",), 0.35, 0.3)):
         m = mask(names)
-        if not m.any():
+        if m is None or not m.any():
             continue
         inside = m > 0
-        den = ndimage.gaussian_filter(m, sigma_m / r)
-        delta = ndimage.gaussian_filter(resid * m, sigma_m / r) / np.maximum(den, 1e-6) - resid  # smooth - dem
+        delta = ndimage.gaussian_filter(resid * m, sigma_m / r)
+        delta /= np.maximum(ndimage.gaussian_filter(m, sigma_m / r, output=np.float64), 1e-6)
+        delta -= resid                                     # smooth - dem
         delta[~inside] = 0.0
-        gm = ndimage.gaussian_filter(m, feather / r)
+        gm = ndimage.gaussian_filter(m, feather / r, output=np.float64)
+        del m
         # outside: the edge correction spread out and decaying to 0 (max(.., 0.5) keeps it continuous at the edge)
-        ext = ndimage.gaussian_filter(delta, feather / r) / np.maximum(gm, 0.5)
-        corr = np.where(inside, delta, ext)
-        w = np.clip(2.0 * gm, 0, 1)  # 1 inside and on the edge, fades outside
-        out = out * (1 - w) + (dem + corr) * w
-        del den, delta, gm, ext, corr, w
+        corr = ndimage.gaussian_filter(delta, feather / r)
+        corr /= np.maximum(gm, 0.5)
+        corr[inside] = delta[inside]
+        del delta, inside
+        w = np.clip(2.0 * gm, 0, 1, out=gm)  # 1 inside and on the edge, fades outside
+        # out = out * (1 - w) + (dem + corr) * w
+        corr += dem
+        corr *= w
+        out *= np.subtract(1, w, out=w)
+        out += corr
+        del gm, w, corr
     # tees with no LiDAR deck (built after the 2018 survey) get a synthetic one
+    protect = mask(("cartpath", "road", "building", "green", "fringe", "bunker", "water"))
     out = level_tees(out, T, [g for g, s, _ in feats if s == "tee"], holes=[h for g, s, h in feats if s == "tee"],
-                     protect=mask(("cartpath", "road", "building", "green", "fringe", "bunker", "water")) > 0,
+                     protect=protect > 0 if protect is not None else np.zeros((H, W), bool),
                      **C.tuning("level_tees", {}))
+    del protect
     # water: a flat water level per body (lowest ~20 % of the shoreline); under it a shelving bed (OPCD Water_Base),
     # and the banks inside the WaterPlane's outset kept above the water
     import edges
@@ -411,6 +432,7 @@ def main(features_path=None):
             V2, S = build_pslg(feats, aoi, zone, zone2=zone2, grid=grids[gi + 1])
     Vt = tri["vertices"]; Ft = tri["triangles"].astype(np.int32)
     surf, hole = label_faces(Vt, Ft, tri["neighbors"], tri["segments"], feats)
+    del tri   # triangles, neighbours, attributes, markers: about 0.2 GB on Whistle Bear
     surf, hole = edges.label_rings(Vt[Ft].mean(1) + [C.ORIGIN_E, C.ORIGIN_N], surf, hole, rings, SID)
     print("triangles", len(Ft), "vertices", len(Vt), flush=True)
 
@@ -421,13 +443,14 @@ def main(features_path=None):
                edges.water_plane_polygon(p, demb, T, lv).exterior.coords]}
               for p, lv, h in edges.water_levels(feats0, dem, T) if p.area >= 20]
     json.dump(planes, open(C.BUILD / "water_planes.json", "w"))
+    H, W = dem.shape
+    del dem   # the vertices are sampled from demb
     print("water planes", len(planes), flush=True)
     # the surface the meshes are built from (extra smoothing on greens/tees/paths) -> used by maps, heightmap, hole data
     with rasterio.open(C.BUILD / "dem.tif") as src:
         prof = src.profile
     with rasterio.open(C.BUILD / "dem_final.tif", "w", **prof) as dst:
         dst.write((demb - edges.lip_drop_raster(rings, T, demb.shape)).astype(np.float32), 1)
-    H, W = dem.shape
     xs = T.c + (np.arange(W) + 0.5) * T.a - C.ORIGIN_E
     ys = T.f + (np.arange(H) + 0.5) * T.e - C.ORIGIN_N
     interp = RegularGridInterpolator((ys[::-1], xs), demb[::-1], bounds_error=False, fill_value=None)
