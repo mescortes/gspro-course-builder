@@ -128,6 +128,7 @@ gkd_slot = "Red"
 # as the GPS tee and green points do (research/NOTES.md): no deck or line of play reaches the card.
 [tests]
 green_area = [120.0, 2000.0]
+min_bunkers = 20  # few, large bunkers: 25 over 40 m2 after the closed-hollow check (Westmount: 40)
 known_tee_gaps = { "1.back" = 8.0, "1.middle" = 12.0, "7.back" = 40.0, "7.middle" = 57.0, "18.middle" = 10.0 }
 
 [stroke_index]  # the feed's handicap row (the women's row is the same)
