@@ -10,7 +10,9 @@ can be run by hand.
 ## 0. Setup (once)
 
 * Python 3.12 and [uv](https://github.com/astral-sh/uv); headless Blender 4.2 LTS for the FBX step (`BLENDER=` its
-  binary). About 15 GB of RAM at peak and 5-10 GB of disk per course.
+  binary; without it `build_all.py` looks on PATH, then in `/Applications/Blender.app` or the Windows installer's
+  folder). The build prints the Blender it uses, with a `!!` line when it is not 4.2. About 15 GB of RAM at peak and
+  5-10 GB of disk per course.
 * `uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements-lock.txt` (the exact
   packages of the golden Westmount build; `requirements.txt` lists the direct dependencies unpinned)
 * `COURSE= .venv/bin/python -m pytest -q tests --ignore=tests/test_course.py` must pass (no data needed).
@@ -36,8 +38,9 @@ and 30 GB of disk, and no GPU (code.claude.com/docs/en/cloud-environments). For 
   `x-deny-reason: host_not_allowed`.
 * **Nothing in `data/`, `build/` or `output/` survives the session** (they are not in git): download and build in one
   session, and commit what the course needs (`courses/<slug>/`) before it ends.
-* **Memory**: 16 GB is at the edge for an 18-hole build; `build_all.py` prints each step's peak memory. Prefer your
-  own machine (or Remote Control to it) for full builds when a course peaks above about 14 GB.
+* **Memory**: 16 GB is at the edge for an 18-hole build; `build_all.py` prints each step's peak memory (e.g.
+  `rasters done in 312s, peak memory 8.4 GB`) and the highest at the end (not on Windows). Prefer your own
+  machine (or Remote Control to it) for full builds when a course peaks above about 14 GB.
 * **Long steps**: run builds as background commands with an explicit timeout (a background command gets 30 min by
   default and up to 2 h); run `build_all.py` in ranges of steps rather than all at once.
 * **Commit attribution**: cloud sessions add a session link to commits and PR bodies; the `attribution` settings
@@ -76,7 +79,10 @@ course and what changed on the course since the LiDAR was flown.
 ```
 
 It writes `courses/<slug>/course.toml`: the frame (UTM CRS from the region's datum, origin, base height, build extent
-CORE = outline + 100 m in 256 m tiles, the 2048 m GSPro terrain square) and the likely `[sources]`.
+CORE = outline + 100 m in 256 m tiles, the 2048 m GSPro terrain square) and the likely `[sources]`. `--crs EPSG:<code>`
+sets another frame, such as the national metre grid the LiDAR is delivered in. It is written as its EPSG code. A
+compound CRS, Web Mercator, or a grid whose metres are more than 0.5 % off ground metres at the course is refused
+(`new_course.py` MAX_SCALE_ERROR: yardages would be off by as much).
 
 **A region** (`regions/<name>.toml`) holds what is true of a whole area: tree archetypes and the rules that sort LiDAR
 crowns into them, foliage cards, 3D grass, the turf colour target, building palettes, backdrop vegetation, viewer sky,
@@ -102,7 +108,8 @@ COURSE=<slug> .venv/bin/python scripts/check_course.py
 ```
 
 **Checkpoint:** check_course reports nothing missing in course.toml; every hole has a line, a green and a tee (or the
-course goes the no-OSM route, §4).
+course goes the no-OSM route, §4). check_course also names any `[tuning]` key, table or table key (in course.toml or
+the region) that the engine does not read, with the closest name it does read: the build would ignore a misspelt one.
 
 ## 3. Download
 
@@ -178,7 +185,9 @@ classify, vectorize, export and the first backdrop (it downloads a 5 km photo; s
 ```
 
 Put the shift in `[imagery] shift` (metres east, north) when the quarters agree, then rebuild from `register`
-(and redraft, §4, if the features were drafted from the photo). Westmount: 0.25 m south; Brambles: 0.75 m east;
+(and redraft, §4, if the features were drafted from the photo). The printed `shift = [...]` line is the shift the
+registered photo already carries plus the measurement, so it stays right when you measure again; a `!!` line says
+when course.toml's shift has changed since `register` last ran. Westmount: 0.25 m south; Brambles: 0.75 m east;
 Whistle Bear: 0.25 m east.
 
 **Checkpoint:** `build_all.py` ends without error; `measure_registration.py` shows no shift beyond a pixel.
@@ -269,5 +278,7 @@ can take an hour on a slow server); first build 0.5-1 h; two QA rounds with rebu
   region's `[trees] bark` or `[materials]`, or course.toml).
 * **The course is wider than about 1.85 km**: the build extent no longer fits the 2048 m terrain square;
   check_course says so.
+* **`[frame] dem_res`**: the engine builds the DEM at 0.25 m only, so leave it out. check_course flags it, and a
+  `[frame]` or `[test_profile]` core side that is not a whole number of 0.5 m, before anything is fetched.
 * **Changing `[osm]`, `[frame]` or a source** takes effect on the next run of the steps that read it; rebuild from the
   first step that reads the changed input (`build_all.py <step> ...`).

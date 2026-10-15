@@ -99,6 +99,53 @@ def _leaf_problems(c):
     return p
 
 
+def tuning_keys(scripts=Path(__file__).parent):
+    """{name: None for a value, else the keys of its table} of every [tuning] name the engine reads: the literal first
+    arguments of the config.tuning() and surface_classify.tuned() calls in the scripts. A table's keys come from its
+    default (dict(...) or {...}); an empty default, such as road_half_width's, takes any key (an empty set)."""
+    import ast
+    out = {}
+    for p in sorted(Path(scripts).rglob("*.py")):
+        for n in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
+            if not (isinstance(n, ast.Call) and ast.unparse(n.func).split(".")[-1] in ("tuning", "tuned") and n.args
+                    and isinstance(n.args[0], ast.Constant) and isinstance(n.args[0].value, str)):
+                continue
+            d = n.args[1] if len(n.args) > 1 else None
+            if isinstance(d, ast.Dict):
+                keys = frozenset(k.value for k in d.keys if isinstance(k, ast.Constant))
+            elif isinstance(d, ast.Call) and ast.unparse(d.func) == "dict":
+                keys = frozenset(k.arg for k in d.keywords if k.arg)
+            else:
+                keys = None
+            if out.get(n.args[0].value) is None:
+                out[n.args[0].value] = keys
+    return out
+
+
+def tuning_problems(c=C, keys=None):
+    """course.toml and region [tuning] names the engine does not read (tuning_keys), with the closest one it reads:
+    config.tuning() takes the engine default for a name nothing asks for, so a misspelt key changed nothing."""
+    import difflib
+    keys = tuning_keys() if keys is None else keys
+    near = lambda k, among: difflib.get_close_matches(k, among, 1)
+    out = []
+    for where, t in ((f"courses/{getattr(c, 'SLUG', '<slug>')}/course.toml", getattr(c, "TUNING", {})),
+                     (f"regions/{c.REGION_NAME}.toml", getattr(c, "REGION_TUNING", {}))):
+        for k, v in t.items():
+            if k not in keys:
+                what = f"[tuning.{k}] ({where}): the engine reads no such table" if isinstance(v, dict) else \
+                    f"[tuning] {k} ({where}): the engine reads no such key"
+                m = near(k, keys)
+                out.append(what + (f": did you mean {m[0]}?" if m else f" (it reads {', '.join(sorted(keys))})"))
+            elif keys[k] and isinstance(v, dict):
+                for s in v:
+                    if s not in keys[k]:
+                        m = near(s, keys[k])
+                        out.append(f"[tuning.{k}] {s} ({where}): not a key of the table" + (
+                            f": did you mean {m[0]}?" if m else "") + f" (its keys: {', '.join(sorted(keys[k]))})")
+    return out
+
+
 def course_report(c=C):
     """Gaps in course.toml."""
     p = []
@@ -142,6 +189,7 @@ def course_report(c=C):
         p += [f"regions/{c.REGION_NAME}.toml (or the course.toml table): {x}"
               for x in region_spec.problems(c.REGION, scaffold=False)]
     p += _leaf_problems(c)
+    p += tuning_problems(c)
     for kind in ("lidar", "imagery", "backdrop"):
         if not c.DATA_SOURCES.get(kind):
             p.append(f"[sources.{kind}]: missing")
@@ -155,6 +203,9 @@ def course_report(c=C):
     if cls is not None and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", cls + "Setup"):
         p.append(f"[course] unity_script {c.UNITY_SCRIPT!r}: class {cls}Setup is not a C# name (letters, digits and _, "
                  "not starting with a digit)")
+    if getattr(c, "FETCH_CORE", None) and getattr(c, "DEM_RES", None) is not None:  # build_rasters stops on these late
+        p += C.grid_problems(c.FETCH_CORE, c.DEM_RES)
+        p += C.grid_problems(c.TEST_CORE, None, "test_profile") if getattr(c, "TEST_CORE", None) else []
     core, ter = getattr(c, "CORE", None), getattr(c, "TERRAIN", None)
     if core and ter and not (ter["xmin"] <= core["xmin"] and core["xmax"] <= ter["xmax"]
                              and ter["ymin"] <= core["ymin"] and core["ymax"] <= ter["ymax"]):
@@ -267,6 +318,7 @@ def feature_files_report(c=C):
     put every feature near the grid origin, and the build then had no golf labels on the course."""
     from pyproj import CRS
     from pyproj.exceptions import CRSError
+    from shapely.errors import ShapelyError
     from shapely.geometry import shape
     frame = CRS(c.CRS)
     ext = [dict(c.TERRAIN)] + ([dict(c.FETCH_CORE)] if getattr(c, "FETCH_CORE", None) else [])
@@ -278,10 +330,31 @@ def feature_files_report(c=C):
     for f in files:
         name = f"courses/{Path(c.COURSE_DIR).name}/{f.relative_to(c.COURSE_DIR).as_posix()}"
         try:
-            fc = json.load(open(f))
-            b = [shape(x["geometry"]).bounds for x in fc.get("features", []) if x.get("geometry")]
-        except (ValueError, KeyError, TypeError, AttributeError) as e:
-            out.append(f"{name}: not a GeoJSON feature collection ({e})")
+            with open(f) as fh:
+                fc = json.load(fh)
+        except ValueError as e:  # not JSON, or not UTF-8
+            out.append(f"{name}: not a JSON file ({e}): fix it, or export it again (QGIS: Export > Save Features As, "
+                       "GeoJSON)")
+            continue
+        if not (isinstance(fc, dict) and fc.get("type") == "FeatureCollection"
+                and isinstance(fc.get("features"), list)):
+            kind = fc.get("type") if isinstance(fc, dict) else type(fc).__name__
+            out.append(f"{name}: a {kind or 'JSON object'}, not a FeatureCollection: the build reads a "
+                       "FeatureCollection's features, so wrap it: "
+                       "{\"type\": \"FeatureCollection\", \"features\": [...]}")
+            continue
+        b, bad = [], None
+        for i, x in enumerate(fc["features"]):
+            try:
+                if x.get("geometry"):
+                    b.append(shape(x["geometry"]).bounds)
+            except (ValueError, KeyError, TypeError, AttributeError, ShapelyError) as e:
+                bad = (f"{name}: feature {i + 1}: {e.__class__.__name__}: {str(e).strip()}: fix or redraw it (a "
+                       "GeoJSON geometry type, a line of two or more points, a polygon ring of four or more closing on "
+                       "itself)")
+                break
+        if bad:
+            out.append(bad)
             continue
         named = ((fc.get("crs") or {}).get("properties") or {}).get("name")
         if named:

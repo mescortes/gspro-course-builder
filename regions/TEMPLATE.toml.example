@@ -1,5 +1,5 @@
 # Template for a new region preset: copy it to regions/<name>.toml (lower-case, '_' between words), replace every value,
-# set [course] region = "<name>" in the course.toml, then run the unit tests (tests/test_scaffold.py checks every
+# set [course] region = "<name>" in the course.toml, then run the unit tests (tests/test_robustness.py checks every
 # regions/*.toml against scripts/region_spec.py, the list of what the engine reads) and check_course.py.
 # The values below are placeholders, not a real region. regions/southern_ontario.toml and northern_california.toml are
 # complete worked examples. A course.toml table of the same name overrides a region table key by key.
@@ -33,7 +33,8 @@ backdrop = { kinds = ["broadleaf", "conifer"], share = [0.7, 0.3], crown = [0.35
 
 # The classifier's parameters, and which archetype each of its names becomes. lidar_leaf_off / imagery_leaf_off: the
 # leaf state of the data the rules were tuned on (check_course.py flags a course whose [lidar] / [imagery] leaf_off
-# differs; leave imagery_leaf_off out when the rules do not read the photo).
+# differs). lidar_leaf_off is required and imagery_leaf_off is left out when the rules do not read the photo; both
+# must match [scaffold] lidar_leaf_off / imagery_leaf_off, the region's usual data.
 [trees.leaf_on_woodland]
 lidar_leaf_off = false
 shrub_h = 4.5
@@ -94,6 +95,10 @@ species_tint = { broadleaf = [1.0, 1.0, 0.9], conifer = [0.8, 0.9, 0.88], shrub 
 # against its own dates) and the providers (scripts/sources/; new_course.py searches nrcan_copc and usgs_3dep, and
 # copies any other provider's table for you to fill in). crs is optional: an EPSG code, or a name with {zone} and
 # {hemisphere} where EPSG does not call the zones "UTM" (e.g. "GDA2020 / MGA zone {zone}").
+# The nrcan_copc search also reads lidar.province (the folder under pointclouds_nuagespoints/ of NRCan's bucket, e.g.
+# "QC") and backdrop.url, the 1 m DTM file URL pattern with {province}, {project} and {kind}, e.g.
+#   lidar = { provider = "nrcan_copc", province = "QC" }
+#   backdrop = { provider = "cog_dem", url = "https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/{province}-{project}-1m-{kind}.tif" }
 [scaffold]
 datum = "WGS 84"
 vertical = "EGM2008"

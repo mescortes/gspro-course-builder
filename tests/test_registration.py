@@ -33,3 +33,31 @@ def test_no_sand_blob_is_a_message_not_a_crash(tmp_path, monkeypatch, capsys):
     M.main()
     out = capsys.readouterr().out
     assert "bunkers used: 0" in out and "[tuning.sand]" in out and "OSM buildings -> lidar shift: dx +0.00 m  dy +0.00 m" in out
+
+
+def test_the_new_shift_adds_the_measurement_to_the_shift_the_measured_photo_carries(tmp_path, monkeypatch, capsys):
+    """The offset is measured on the registered photo on disk, but the printed line added it to course.toml's
+    [imagery] shift: with the line pasted and the photo measured again before build_all.py register, the offset was
+    counted twice. The shift the photo carries is read from the two photos' origins (as register_imagery.py writes it)."""
+    raw, reg = tmp_path / "raw.tif", tmp_path / "reg.tif"
+    _tif(raw, np.zeros((8, 8)), 0.16)
+    _tif(reg, np.zeros((8, 8)), 0.16, x0=537000.0 + 0.5, y1=4810064.0 - 0.25)
+    assert M.applied_shift(raw, reg, (9.0, 9.0)) == (0.5, -0.25)
+    assert M.applied_shift(raw, tmp_path / "none.tif", (0.0, -0.25)) == (0.0, -0.25)      # not registered yet
+    core = dict(xmin=0.0, ymin=0.0, xmax=100.0, ymax=100.0)
+    A = np.array([[10.0, 10.0, 0.25, 0.0, 1.3], [80.0, 20.0, 0.25, 0.0, 1.2], [20.0, 80.0, 0.25, 0.0, 1.4]])
+    lines, shift = M.bunker_shift(A, core, M.applied_shift(raw, reg, (0.75, -0.25)))
+    assert shift == (0.75, -0.25) and any("registered photo" in l for l in lines)
+    # course.toml already holds the pasted [0.75, -0.25], the photo still carries [0.50, -0.25]: main says so
+    monkeypatch.setattr(M.C, "CORE", dict(xmin=537000.0, ymin=4810000.0, xmax=537064.0, ymax=4810064.0))
+    for k in ("BUILD", "FEATURES"):
+        monkeypatch.setattr(M.C, k, tmp_path)
+    monkeypatch.setattr(M.C, "IMAGERY_RAW", raw); monkeypatch.setattr(M.C, "IMAGERY", reg)
+    monkeypatch.setattr(M.C, "IMAGERY_SHIFT", (0.75, -0.25))
+    _tif(tmp_path / "dem_final.tif", np.full((256, 256), 300.0), 0.25)
+    _tif(tmp_path / "dsm.tif", np.full((128, 128), 300.0), 0.5)
+    json.dump({"type": "FeatureCollection", "features": []}, open(tmp_path / "auto_core.geojson", "w"))
+    monkeypatch.setattr(M, "osm_geoms", lambda: [])
+    M.main()
+    out = capsys.readouterr().out
+    assert "[0.50, -0.25]" in out and "[0.75, -0.25]" in out and "build_all.py register" in out

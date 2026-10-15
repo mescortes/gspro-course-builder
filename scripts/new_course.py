@@ -22,6 +22,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 from sources.http import UA  # noqa: E402
 
 TILE, MARGIN, TERRAIN = 256.0, 100.0, 2048.0
+# A frame whose metres differ from ground metres by more than this at the course (the grid's scale factor) gives wrong
+# distances and yardages: 0.5 % is 2 yards on a 400-yard hole. A UTM zone is within 0.1 % (0.2-0.3 % in the
+# neighbouring zone); Web Mercator is 38 % off at 43 N.
+MAX_SCALE_ERROR = 0.005
 
 
 def utm_crs(lon, lat, datum, template=None):
@@ -48,22 +52,46 @@ def utm_crs(lon, lat, datum, template=None):
         "[scaffold] crs to an EPSG code or a name with {zone} / {hemisphere} (e.g. \"GDA2020 / MGA zone {zone}\").")
 
 
-def check_frame_crs(crs):
-    """`crs`, or exit: the engine reads every course coordinate as metres east / north."""
-    from pyproj import CRS
+def check_frame_crs(crs, lon=None, lat=None):
+    """`crs` as EPSG:<code>, or exit: the engine reads every course coordinate as metres east / north and names the
+    frame by its EPSG code (the photo request, the feature files' crs). With the course's lon / lat, the grid's metres
+    must also be ground metres there, within MAX_SCALE_ERROR."""
+    from pyproj import CRS, Proj
     from pyproj.exceptions import CRSError
+    where = f"frame CRS {crs} (--crs or the region's [scaffold] crs)"
     try:
         c = CRS(crs)
     except CRSError:
-        sys.exit(f"frame CRS {crs} (--crs or the region's [scaffold] crs): not a CRS pyproj knows (an EPSG code such "
-                 "as EPSG:2958)")
+        sys.exit(f"{where}: not a CRS pyproj knows (an EPSG code such as EPSG:2958)")
+    if c.is_compound:
+        h = c.sub_crs_list[0].to_epsg()
+        sys.exit(f"{where} ({c.name}) is a compound CRS (position and heights): the frame is the horizontal part"
+                 + (f", --crs EPSG:{h}" if h else "") + " (the heights stay as the LiDAR gives them)")
     if not c.is_projected:
-        sys.exit(f"frame CRS {crs} ({c.name}) is not a projected CRS: the course frame is a map grid in metres")
+        sys.exit(f"{where} ({c.name}) is not a projected CRS: the course frame is a map grid in metres")
     if any(a.unit_conversion_factor != 1.0 for a in c.axis_info):
         units = sorted({a.unit_name for a in c.axis_info})
-        sys.exit(f"frame CRS {crs} ({c.name}) is in {', '.join(units)}: the engine reads the frame as metres, so use a "
+        sys.exit(f"{where} ({c.name}) is in {', '.join(units)}: the engine reads the frame as metres, so use a "
                  "metre CRS of the same datum (a UTM zone or the national metre grid) and reproject the LiDAR to it")
-    return crs
+    fix = ("use the course's UTM zone (leave out --crs: new_course.py picks the region datum's zone) or the national "
+           "metre grid the LiDAR is delivered in")
+    method = (c.coordinate_operation.method_name if c.coordinate_operation else "").lower()
+    if "pseudo mercator" in method or ("mercator" in method and "spherical" in method):
+        sys.exit(f"{where} ({c.name}) is Web Mercator, a map-tile projection whose metres are not ground metres "
+                 f"(a metre on the ground is 1.38 of its metres at 43 N): {fix}")
+    code = c.to_epsg()
+    if code is None:
+        sys.exit(f"{where} ({c.name}) has no EPSG code: the engine names the frame EPSG:<code>, so pass the EPSG code "
+                 "of this CRS (--crs EPSG:<code>)")
+    if lon is not None and lat is not None:
+        f = Proj(c).get_factors(lon, lat)
+        k = max((f.meridional_scale, f.parallel_scale), key=lambda s: abs(s - 1))
+        if not math.isfinite(k):
+            sys.exit(f"{where} ({c.name}) does not reach the course at {lon:.4f}, {lat:.4f}: {fix}")
+        if abs(k - 1) > MAX_SCALE_ERROR:
+            sys.exit(f"{where} ({c.name}): a metre on the ground is {k:.4f} of its metres at the course "
+                     f"({abs(k - 1):.1%} off: a 400-yard hole would measure {400 * k:.0f} yards): {fix}")
+    return f"EPSG:{code}"
 
 
 def frame(outline_xy, median_ground):
@@ -321,7 +349,7 @@ def main(argv=None):
     else:
         sys.exit("--osm or --bbox")
     lon = sum(p[0] for p in ll) / len(ll); lat = sum(p[1] for p in ll) / len(ll)
-    crs = check_frame_crs(a.crs or utm_crs(lon, lat, sc["datum"], sc.get("crs")))
+    crs = check_frame_crs(a.crs or utm_crs(lon, lat, sc["datum"], sc.get("crs")), lon, lat)
     from pyproj import Transformer
     tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
     xy = [tr.transform(*p) for p in ll]

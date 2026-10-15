@@ -117,15 +117,23 @@ def test_a_tree_classifier_that_does_not_suit_the_leaf_state_is_reported(name, l
         assert f"[{what}] leaf_off" in x and Course.REGION["trees"]["classifier"] in x and f"regions/{name}.toml" in x
 
 
-def test_each_region_says_which_leaf_state_its_data_and_classifier_have():
-    for p in REGIONS:
-        r = tomllib.load(open(p, "rb"))
-        tr = r["trees"]
-        prm = tr[tr["classifier"]]
-        assert isinstance(prm.get("lidar_leaf_off"), bool), p.stem
-        assert r["scaffold"]["lidar_leaf_off"] == prm["lidar_leaf_off"], p.stem
-        if "imagery_leaf_off" in prm:
-            assert r["scaffold"]["imagery_leaf_off"] == prm["imagery_leaf_off"], p.stem
+def test_a_region_says_which_leaf_state_its_classifier_is_tuned_on():
+    """The classifier's lidar_leaf_off was optional in region_spec but required by a unit test of its own, so a new
+    region without it passed check_course and then failed the unit tests with a bare 'AssertionError: <stem>'. It is
+    required (every classifier reads the LiDAR), and the region's usual data ([scaffold]) must be the leaf state its
+    classifier is tuned on; region_spec checks both, tests/test_robustness.py runs it over every region."""
+    r = region("southern_ontario")
+    del r["trees"]["leaf_off_parkland"]["lidar_leaf_off"]
+    assert any("[trees.leaf_off_parkland] lidar_leaf_off: missing" in x for x in region_spec.problems(r))
+    for key in ("lidar_leaf_off", "imagery_leaf_off"):
+        r = region("southern_ontario")
+        r["scaffold"][key] = False
+        p = [x for x in region_spec.problems(r) if f"[scaffold] {key}" in x]
+        assert len(p) == 1 and "leaf_off_parkland" in p[0] and "leaf-on" in p[0] and "leaf-off" in p[0], p
+    r = region("northern_california")             # its classifier does not read the photo: nothing to compare
+    assert "imagery_leaf_off" not in r["trees"]["leaf_on_woodland"] and region_spec.problems(r) == []
+    merged = {k: v for k, v in region("southern_ontario").items() if k != "scaffold"}    # config.REGION
+    assert region_spec.problems(merged, scaffold=False) == []
 
 
 # ---- frame CRS
@@ -150,12 +158,36 @@ def test_the_course_frame_must_be_a_projected_crs_in_metres():
             N.check_frame_crs(bad)
 
 
-# ---- regions
-@pytest.mark.parametrize("path", REGIONS, ids=[p.stem for p in REGIONS])
-def test_every_region_has_every_key_the_engine_reads(path):
-    assert region_spec.problems(tomllib.load(open(path, "rb"))) == []
+def test_the_frame_crs_is_written_as_the_epsg_code_of_a_ground_metre_grid(monkeypatch):
+    """The engine reads [frame] crs as EPSG:<code> (the photo request, the feature files' crs names): a CRS name, an
+    OGC URN or a PROJ string was accepted, then fetch_data.py imagery stopped with IndexError or ValueError. A compound
+    CRS (with heights) and Web Mercator were accepted too: Web Mercator's metres are 1.38 ground metres at 43 N, so
+    every distance and yardage came out 38 % long."""
+    for given in ("NAD83(CSRS) / UTM zone 17N", "urn:ogc:def:crs:EPSG::2958", "epsg:2958", "EPSG:2958"):
+        assert N.check_frame_crs(given) == "EPSG:2958", given
+    for bad, words in (("EPSG:2958+6647", r"compound.*--crs EPSG:2958"),
+                       ("+proj=tmerc +lon_0=-80 +k=1 +x_0=0 +y_0=0 +ellps=GRS80 +units=m", "no EPSG code"),
+                       ("EPSG:3857", "Web Mercator.*UTM"), ("ESRI:102100", "Web Mercator")):
+        with pytest.raises(SystemExit, match=words):
+            N.check_frame_crs(bad)
+    with pytest.raises(SystemExit, match=r"1\.02\d\d of its metres.*400-yard hole.*410"):   # Statistics Canada Lambert
+        N.check_frame_crs("EPSG:3347", -80.39, 43.36)
+    with pytest.raises(SystemExit, match="Web Mercator"):                                  # whatever the latitude
+        N.check_frame_crs("EPSG:3857", 103.8, 1.3)
+    assert N.check_frame_crs("EPSG:2958", -80.39, 43.36) == "EPSG:2958"
+    assert N.check_frame_crs("EPSG:2959", -80.39, 43.36) == "EPSG:2959"     # the neighbouring UTM zone: 0.2 % long
+    assert N.check_frame_crs("EPSG:3310", -122.57, 38.77) == "EPSG:3310"    # California Albers: 0.13 %
+    with pytest.raises(SystemExit, match=r"EPSG:2958.*1\.1685 of its metres.*467 yards"):   # Ontario's zone in California
+        N.check_frame_crs("EPSG:2958", -122.57, 38.77)
+    import pyproj
+    class NoFactors:
+        meridional_scale = parallel_scale = float("nan")
+    monkeypatch.setattr(pyproj.Proj, "get_factors", lambda self, lon, lat: NoFactors())
+    with pytest.raises(SystemExit, match="does not reach the course"):
+        N.check_frame_crs("EPSG:2958", -80.39, 43.36)
 
 
+# ---- regions (tests/test_robustness.py runs region_spec.problems over every regions/*.toml)
 def test_the_region_check_knows_the_engines_classifiers():
     import detect_trees
     assert set(region_spec.CLASSIFIERS) == set(detect_trees.CLASSIFIERS)
@@ -196,6 +228,26 @@ def test_new_course_names_an_unknown_region_and_an_incomplete_scaffold(tmp_path,
     (tmp_path / "regions/plains.toml").write_text('[scaffold]\ndatum = "WGS 84"\n')
     with pytest.raises(SystemExit, match="lidar_leaf_off"):
         N.load_region("plains")
+
+
+def test_the_scaffold_keys_of_a_searched_provider_are_checked(tmp_path, monkeypatch):
+    """A new Canadian region written as lidar = { provider = "nrcan_copc" } passed load_region, then new_course.py
+    stopped with a KeyError traceback: the NRCan search reads [scaffold] lidar province and backdrop url."""
+    sc = region("southern_ontario")["scaffold"]
+    assert region_spec.scaffold_problems({"scaffold": sc}) == []
+    bare = dict(sc, lidar={"provider": "nrcan_copc"}, backdrop={"provider": "cog_dem"})
+    p = "\n".join(region_spec.scaffold_problems({"scaffold": bare}))
+    assert "[scaffold] lidar: no province" in p and "[scaffold] backdrop: no url" in p and "nrcan_copc" in p
+    typo = dict(sc, backdrop={"provider": "cog_dem", "url": "https://x/{province}-{projet}-1m-dtm.tif"})
+    p = "\n".join(region_spec.scaffold_problems({"scaffold": typo}))
+    assert "{projet}" in p and "{project}" in p and "{kind}" in p, p
+    monkeypatch.setattr(N, "ROOT", tmp_path)
+    (tmp_path / "regions").mkdir()
+    text = (ROOT / "regions/southern_ontario.toml").read_text()
+    (tmp_path / "regions/quebec_test.toml").write_text(text.replace('lidar = { provider = "nrcan_copc", province = "ON" }',
+                                                                    'lidar = { provider = "nrcan_copc" }'))
+    with pytest.raises(SystemExit, match=r"quebec_test.toml.*\[scaffold\] lidar: no province"):
+        N.load_region("quebec_test")
 
 
 # ---- scaffold sources
@@ -260,6 +312,53 @@ def test_osm_par_that_differs_from_the_card_is_reported():
     assert len(p) == 1 and "hole 2" in p[0] and "osm_ref" in p[0]
     from surface_classify import osm_geoms
     assert K.par_problems(K.osm_report(osm_geoms())[0], C.SCORECARD) == []          # Westmount
+
+
+def test_a_dem_grid_the_engine_cannot_build_is_reported_before_the_downloads(tmp_path):
+    """build_rasters stops on a [frame] dem_res other than 0.25 or a core side that is not a whole number of 0.5 m,
+    but only at the rasters step, after the downloads and register: check_course said nothing. Both read
+    config.grid_problems."""
+    class Grid(Card):
+        DEM_RES = 0.5; FETCH_CORE = dict(xmin=0.0, ymin=0.0, xmax=512.0, ymax=512.25)
+        TEST_CORE = dict(xmin=0.0, ymin=0.0, xmax=100.1, ymax=100.0)
+    p = K.course_report(Grid)
+    assert any("[frame] dem_res = 0.5" in x and "0.25" in x for x in p), p
+    assert any("[frame] core ymin..ymax is 512.25 m" in x and "0.5 m" in x for x in p), p
+    assert any("[test_profile] core xmin..xmax is 100.1 m" in x for x in p), p
+    class Fine(Grid):
+        DEM_RES = 0.25; FETCH_CORE = dict(xmin=0.0, ymin=0.0, xmax=512.0, ymax=511.5); TEST_CORE = None
+    assert K.course_report(Fine) == []
+    r = load(tmp_path, '[test_profile]\ncore = { xmin = 0.0, ymin = 0.0, xmax = 10.0, ymax = 10.0 }\n',
+             code="print(C.TEST_CORE, C.FETCH_CORE == C.CORE)")
+    assert r.stdout.split()[-1] == "True" and "'xmax': 10.0" in r.stdout, r.stderr
+    assert C.TEST_CORE == dict(xmin=537340.0, ymin=4810720.0, xmax=537980.0, ymax=4811360.0)   # Westmount
+    assert not [x for x in K.course_report(C) if "dem_res" in x or "core" in x]
+
+
+def test_a_tuning_key_or_table_the_engine_does_not_read_is_named(tmp_path):
+    """config.tuning() returns the engine default for a name the engine does not ask for, so [tuning] trace_path =
+    false (for trace_paths), a [tuning.snad] table or a region's misspelt key left the default in force without a word.
+    The names the engine reads are its config.tuning / tuned calls, read from the scripts themselves."""
+    keys = K.tuning_keys()
+    for k in ("trace_paths", "osm_outline_margin", "pin_slope_limits", "level_tees", "road_half_width", "sand", "native"):
+        assert k in keys, k
+    assert keys["trace_paths"] is None and keys["road_half_width"] == frozenset() and {"L_min", "b_max"} <= keys["sand"]
+    (tmp_path / "x.py").write_text('import config as C\nA = C.tuning("alpha", 1.0)\nB = tuned("beta", dict(x=1.0, y=2.0))\n'
+                                   'D = C.tuning("gamma", {"k": 1})\ndef f(name):\n    return C.tuning(name, {})\n')
+    assert K.tuning_keys(tmp_path) == {"alpha": None, "beta": frozenset({"x", "y"}), "gamma": frozenset({"k"})}
+    class Course(Card):
+        SLUG = "test-club"
+        TUNING = {"trace_path": False, "snad": {"L_min": 60.0}, "sand": {"Lmin": 60.0, "b_max": 20.0},
+                  "road_half_width": {"footway": 1.0}, "zzz_unknown": 1, "osm_outline_margin": 20.0}
+        REGION_TUNING = {"forward_tee_fracs": 0.4}
+    p = [x for x in K.course_report(Course) if "tuning" in x]
+    assert len(p) == 5, p
+    assert "[tuning] trace_path" in p[0] and "courses/test-club/course.toml" in p[0] and "did you mean trace_paths" in p[0]
+    assert "[tuning.snad]" in p[1] and "table" in p[1] and "did you mean sand" in p[1]
+    assert "[tuning.sand] Lmin" in p[2] and "did you mean L_min" in p[2] and "b_max" in p[2]
+    assert "[tuning] zzz_unknown" in p[3] and "trace_paths" in p[3]                        # no close name: the list
+    assert "regions/southern_ontario.toml" in p[4] and "did you mean forward_tee_frac" in p[4]
+    assert C.TUNING == {} and C.REGION_TUNING == {} and not [x for x in K.course_report(C) if "tuning" in x]
 
 
 def test_nines_must_cover_the_playable_holes():
@@ -331,6 +430,34 @@ def test_feature_files_in_lon_lat_or_another_frame_are_reported(tmp_path):
     assert "features/golf.geojson" in p[0] and "lon/lat" in p[0] and "EPSG:2958" in p[0]
     assert "features/overrides/h2.geojson" in p[1] and "6339" in p[1]
     assert "research/layout.geojson" in p[2] and "terrain" in p[2]
+
+
+def test_a_broken_feature_file_or_one_that_is_not_a_collection_is_named(tmp_path):
+    """An unknown geometry type or a one-point line raises shapely's GeometryTypeError / GEOSException, not
+    ValueError, and check_course stopped with a traceback. A file holding a single Feature (or a bare geometry) was
+    skipped without a word, and assemble_features then stopped with KeyError 'features'. The file is also closed."""
+    import warnings
+    class Course(Card):
+        SOURCES = tmp_path / "features"; RESEARCH = tmp_path / "research"; CRS = "EPSG:2958"
+        TERRAIN = FRAME["terrain"]; COURSE_DIR = tmp_path
+    (tmp_path / "features/overrides").mkdir(parents=True); (tmp_path / "research").mkdir()
+    poly = {"type": "Polygon", "coordinates": [[[500000.0, 4800000.0], [500010.0, 4800000.0], [500010.0, 4800010.0],
+                                                [500000.0, 4800000.0]]]}
+    feature = lambda g: {"type": "Feature", "properties": {"golf": "green"}, "geometry": g}
+    files = {"a_circle": {"type": "FeatureCollection", "features": [feature({"type": "Circle", "coordinates": [1, 2]})]},
+             "b_one_point": {"type": "FeatureCollection",
+                             "features": [feature({"type": "LineString", "coordinates": [[500000.0, 4800000.0]]})]},
+             "c_single_feature": feature(poly), "d_bare_geometry": poly}
+    for name, d in files.items():
+        json.dump(d, open(tmp_path / f"features/overrides/{name}.geojson", "w"))
+    (tmp_path / "features/overrides/e_truncated.geojson").write_text('{"type": "FeatureCollection", "feat')
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        p = K.feature_files_report(Course)
+    assert len(p) == 5, p
+    assert all(f"features/overrides/{n}.geojson" in x for n, x in zip(sorted(files) + ["e_truncated"], p)), p
+    assert "circle" in p[0].lower() and "FeatureCollection" in p[2] and "FeatureCollection" in p[3] and "wrap" in p[2]
+    assert not [x for x in w if issubclass(x.category, ResourceWarning)]
 
 
 def test_westmounts_feature_files_are_in_its_frame():

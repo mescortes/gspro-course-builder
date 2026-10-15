@@ -89,10 +89,13 @@ def as_tuples(v):
     return {k: as_tuples(x) for k, x in v.items()} if isinstance(v, dict) else v
 
 
+TUNING, REGION_TUNING = _T.get("tuning", {}), _region.get("tuning", {})  # check_course names keys nothing reads
+
+
 def tuning(key, default):
     """A tuned limit: course.toml [tuning], else the region's [tuning], else the engine default. A TOML list for a tuple
     default comes back as a tuple, a TOML integer for a float default as a float."""
-    v = _T.get("tuning", {}).get(key, _region.get("tuning", {}).get(key, default))
+    v = TUNING.get(key, REGION_TUNING.get(key, default))
     if isinstance(default, tuple) and isinstance(v, list):
         return tuple(v)
     if isinstance(default, float) and isinstance(v, int) and not isinstance(v, bool):
@@ -129,6 +132,7 @@ FETCH_TERRAIN = dict(TERRAIN)  # in both profiles: the backdrop DEM (data/<slug>
 PLAYABLE = _holes(_holes_t.get("playable", "1-18"))
 _tp = _T.get("test_profile", {})
 TEST_HOLES = _holes(_tp.get("holes", PLAYABLE))  # the holes the test profile covers
+TEST_CORE = dict(_tp["core"]) if "core" in _tp else None  # [test_profile] core, in either profile (check_course)
 if PROFILE == "test":  # small regression build ([test_profile] in course.toml), written to build/<slug>-test/
     CORE = dict(_tp.get("core", CORE))
     TERRAIN = dict(_tp.get("terrain", CORE))
@@ -138,6 +142,25 @@ if PROFILE == "test":  # small regression build ([test_profile] in course.toml),
 for _d in (BUILD, FEATURES, OUTPUT):  # git-ignored: absent on a fresh clone
     _d.mkdir(parents=True, exist_ok=True)
 DEM_RES = float(_frame.get("dem_res", 0.25))  # metres
+
+
+def grid_problems(ext, res, table="frame"):
+    """A DEM resolution and a build extent ([frame] or [test_profile] core) the engine cannot build, as messages. The
+    DEM grid must be exactly twice as fine as the 0.5 m DSM / CHM grid: the DEM is averaged 2 x 2 onto it, and
+    surface_classify, vectorize, export_course and measure_registration expand the CHM 2 x 2 back onto the DEM grid. So
+    dem_res is 0.25 and each side of the extent a whole number of 0.5 m. build_rasters stops on them before the LiDAR
+    pass, check_course reports them before anything is fetched. res=None checks the extent only."""
+    out = []
+    if res is not None and res != 0.25:
+        out.append(f"[frame] dem_res = {res:g}, but the engine builds the DEM at 0.25 m only (half the 0.5 m canopy "
+                   "grid): remove dem_res")
+    for a, b in (("xmin", "xmax"), ("ymin", "ymax")):
+        side = ext[b] - ext[a]
+        if abs(side / 0.5 - round(side / 0.5)) > 1e-6:
+            out.append(f"[{table}] core {a}..{b} is {side:g} m: each side of the build extent must be a whole number "
+                       "of 0.5 m (new_course.py writes whole tiles)")
+    return out
+
 
 LIDAR_TILES = sorted((DATA / "lidar").glob("*.laz"))  # the build reads them through lidar_tiles(), which checks tiles.json
 _lidar = _T.get("lidar", {})
