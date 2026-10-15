@@ -1,6 +1,6 @@
 """What a region preset (regions/<name>.toml) must hold: the tables and keys the engine reads, and the script that reads
 each. A missing one used to fail as a bare KeyError at import, part-way through a build (the tree classifier's only
-after every LiDAR tile). check_course.py lists a course's gaps with problems(), tests/test_scaffold.py runs it over
+after every LiDAR tile). check_course.py lists a course's gaps with problems(), tests/test_robustness.py runs it over
 every regions/*.toml, and new_course.py checks the [scaffold] table before it writes a course.
 regions/TEMPLATE.toml.example is a commented template.
 
@@ -24,9 +24,10 @@ SHAPE_KEYS = ("H", "R", "crown", "trunk", "attract", "seg", "infl", "kill", "tro
 FOLIAGE_KEYS = ("src", "hsv", "n", "scale", "twig", "alt")
 NEEDLE_STYLES = ("pine", "spruce")
 # detect_trees.CLASSIFIERS: the parameters each classifier reads from [trees.<classifier>] and the names it gives
-# (its [trees.<classifier>] names maps each to an archetype). Optional there: lidar_leaf_off / imagery_leaf_off, the
-# leaf state of the data the rules were tuned on (check_course compares them with the course's [lidar] / [imagery]
-# leaf_off).
+# (its [trees.<classifier>] names maps each to an archetype; tests/test_robustness.py runs each classifier to check
+# the lists). Each [trees.<classifier>] also says the leaf state of the data its rules were tuned on: lidar_leaf_off
+# (required: every classifier reads the LiDAR) and imagery_leaf_off (only for rules that read the photo). check_course
+# compares them with the course's [lidar] / [imagery] leaf_off, problems() with the region's [scaffold] ones.
 CLASSIFIERS = {
     "leaf_off_parkland": (("shrub_h", "conifer_pen", "conifer_green", "pine_base", "pine_tall", "oak_pct", "oak_min_h",
                            "oak_default"), ("shrub", "pine", "conifer", "broad", "other")),
@@ -131,6 +132,16 @@ def problems(region, scaffold=True):
             out.append(f"[trees.{name}]: missing (the classifier's parameters and names)")
         else:
             out += [f"[trees.{name}] {k}: missing" for k in params if k not in prm]
+            if "lidar_leaf_off" not in prm:
+                out.append(f"[trees.{name}] lidar_leaf_off: missing (true or false: the leaf state of the LiDAR its "
+                           "rules were tuned on; check_course compares it with each course's [lidar] leaf_off)")
+            sc = region.get("scaffold") if scaffold and isinstance(region.get("scaffold"), dict) else {}
+            state = lambda off: "leaf-off" if off else "leaf-on"
+            for k in ("lidar_leaf_off", "imagery_leaf_off"):
+                if isinstance(prm.get(k), bool) and isinstance(sc.get(k), bool) and prm[k] != sc[k]:
+                    out.append(f"[scaffold] {k} = {str(sc[k]).lower()} ({state(sc[k])} data), but the region's tree "
+                               f"classifier {name} is tuned on {state(prm[k])} data ([trees.{name}] {k}): fix the one "
+                               "that is wrong, or give the region a classifier for its data")
             names = prm.get("names", {})
             out += [f"[trees.{name}] names: no {k}" for k in roles if k not in names]
             out += [f"[trees.{name}] names: {k} = {v!r} is not an archetype ([trees] archetypes)"

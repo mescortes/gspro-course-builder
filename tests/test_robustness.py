@@ -14,24 +14,52 @@ REGIONS = sorted((ROOT / "regions").glob("*.toml"))
 
 @pytest.mark.parametrize("path", REGIONS, ids=[p.stem for p in REGIONS])
 def test_every_region_has_what_the_scripts_read(path):
-    """A missing table or key failed as a bare KeyError deep in a build (the classifier only after every LiDAR tile)."""
-    import detect_trees
-    r = tomllib.load(open(path, "rb"))
-    tr = r["trees"]
-    for k in ("archetypes", "bark", "backdrop", "shapes", "classifier"):
-        assert k in tr, k
-    assert tr["classifier"] in detect_trees.CLASSIFIERS and tr["classifier"] in tr
-    arch = set(tr["archetypes"])
-    assert arch <= set(tr["shapes"]) and arch <= set(r["foliage"]) and arch <= set(tr["bark"])
-    assert set(tr[tr["classifier"]]["names"].values()) <= arch
-    assert set(tr["backdrop"]["kinds"]) <= arch and len(tr["backdrop"]["kinds"]) == len(tr["backdrop"]["share"])
-    for a in arch:
-        assert r["foliage"][a]["src"] or tr.get("needles", {}).get(a) in ("pine", "spruce"), f"{a}: no sprite and no needle style"
-    for k in ("wall_palette", "roof_palette", "parking_stall", "suv_share"):
-        assert k in r["buildings"], k
-    for k in ("summer_grade", "summer_green", "ndvi"):
-        assert k in r["backdrop"], k
-    assert {"deeprough", "native"} <= set(r["materials"]) and "3dg" in r["grass"] and "viewer" in r["grass"]
+    """A missing table or key failed as a bare KeyError deep in a build (the classifier only after every LiDAR tile).
+    The check is scripts/region_spec.py, the one check_course.py runs: a second list here could pass a region that
+    check_course rejects, or fail one it passes with a bare AssertionError."""
+    import region_spec
+    with open(path, "rb") as f:
+        p = region_spec.problems(tomllib.load(f))
+    assert not p, f"regions/{path.name}: " + "; ".join(p)
+
+
+def _classifier_reads(fn, prm, P, nd):
+    """(parameter keys, archetype roles) the classifier `fn` reads from its [trees.<classifier>] table `prm`."""
+    keys, roles = set(), set()
+    class Reads(dict):
+        def __init__(self, d, log):
+            super().__init__(d); self.log = log
+        def __getitem__(self, k):
+            self.log.add(k); return super().__getitem__(k)
+        def get(self, k, default=None):
+            self.log.add(k); return super().get(k, default)
+    fn(P, nd, Reads(dict(prm, names=Reads(prm["names"], roles)), keys))
+    return keys - {"names"}, roles
+
+
+def test_the_region_check_lists_every_parameter_each_classifier_reads():
+    """region_spec.CLASSIFIERS lists each classifier's parameters by hand: a parameter detect_trees started reading
+    passed check_course and then failed as a KeyError after the LiDAR pass. Each classifier is run on a table of
+    synthetic trees (and on none) with a region's parameters, and every key it reads must be listed."""
+    import detect_trees, region_spec
+    rng = np.random.default_rng(0)
+    n = 400
+    h = rng.uniform(1.0, 35.0, n)
+    P = {"height": h, "crown_r": rng.uniform(0.5, 10.0, n), "crown_base": h * rng.uniform(0.0, 0.8, n),
+         "sharpness": rng.uniform(0.0, 5.0, n), "penetration": rng.uniform(0.0, 1.0, n)}
+    nd = rng.uniform(-1.0, 1.0, n)
+    tables = [(P, nd), ({k: v[:0] for k, v in P.items()}, nd[:0])]
+    regions = [tomllib.load(open(p, "rb")) for p in REGIONS + [ROOT / "regions/TEMPLATE.toml.example"]]
+    for name, fn in detect_trees.CLASSIFIERS.items():
+        prm = next((r["trees"][name] for r in regions if r["trees"]["classifier"] == name), None)
+        assert prm is not None, f"no regions/*.toml uses classifier {name}: its parameters cannot be checked"
+        params, roles = region_spec.CLASSIFIERS[name]
+        keys, names = set(), set()
+        for t in tables:
+            k, r = _classifier_reads(fn, prm, *t)
+            keys |= k; names |= r
+        assert keys <= set(params), f"{name} reads {sorted(keys - set(params))}: add them to region_spec.CLASSIFIERS"
+        assert names <= set(roles), f"{name} names {sorted(names - set(roles))}: add them to region_spec.CLASSIFIERS"
 
 
 def test_needle_cards_follow_the_regions_needle_style(monkeypatch):

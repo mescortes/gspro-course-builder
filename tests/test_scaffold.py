@@ -117,15 +117,23 @@ def test_a_tree_classifier_that_does_not_suit_the_leaf_state_is_reported(name, l
         assert f"[{what}] leaf_off" in x and Course.REGION["trees"]["classifier"] in x and f"regions/{name}.toml" in x
 
 
-def test_each_region_says_which_leaf_state_its_data_and_classifier_have():
-    for p in REGIONS:
-        r = tomllib.load(open(p, "rb"))
-        tr = r["trees"]
-        prm = tr[tr["classifier"]]
-        assert isinstance(prm.get("lidar_leaf_off"), bool), p.stem
-        assert r["scaffold"]["lidar_leaf_off"] == prm["lidar_leaf_off"], p.stem
-        if "imagery_leaf_off" in prm:
-            assert r["scaffold"]["imagery_leaf_off"] == prm["imagery_leaf_off"], p.stem
+def test_a_region_says_which_leaf_state_its_classifier_is_tuned_on():
+    """The classifier's lidar_leaf_off was optional in region_spec but required by a unit test of its own, so a new
+    region without it passed check_course and then failed the unit tests with a bare 'AssertionError: <stem>'. It is
+    required (every classifier reads the LiDAR), and the region's usual data ([scaffold]) must be the leaf state its
+    classifier is tuned on; region_spec checks both, tests/test_robustness.py runs it over every region."""
+    r = region("southern_ontario")
+    del r["trees"]["leaf_off_parkland"]["lidar_leaf_off"]
+    assert any("[trees.leaf_off_parkland] lidar_leaf_off: missing" in x for x in region_spec.problems(r))
+    for key in ("lidar_leaf_off", "imagery_leaf_off"):
+        r = region("southern_ontario")
+        r["scaffold"][key] = False
+        p = [x for x in region_spec.problems(r) if f"[scaffold] {key}" in x]
+        assert len(p) == 1 and "leaf_off_parkland" in p[0] and "leaf-on" in p[0] and "leaf-off" in p[0], p
+    r = region("northern_california")             # its classifier does not read the photo: nothing to compare
+    assert "imagery_leaf_off" not in r["trees"]["leaf_on_woodland"] and region_spec.problems(r) == []
+    merged = {k: v for k, v in region("southern_ontario").items() if k != "scaffold"}    # config.REGION
+    assert region_spec.problems(merged, scaffold=False) == []
 
 
 # ---- frame CRS
@@ -171,12 +179,7 @@ def test_the_frame_crs_is_written_as_the_epsg_code_of_a_ground_metre_grid():
     assert N.check_frame_crs("EPSG:3310", -122.57, 38.77) == "EPSG:3310"    # California Albers: 0.13 %
 
 
-# ---- regions
-@pytest.mark.parametrize("path", REGIONS, ids=[p.stem for p in REGIONS])
-def test_every_region_has_every_key_the_engine_reads(path):
-    assert region_spec.problems(tomllib.load(open(path, "rb"))) == []
-
-
+# ---- regions (tests/test_robustness.py runs region_spec.problems over every regions/*.toml)
 def test_the_region_check_knows_the_engines_classifiers():
     import detect_trees
     assert set(region_spec.CLASSIFIERS) == set(detect_trees.CLASSIFIERS)
