@@ -1,8 +1,9 @@
 # Template for a new region preset: copy it to regions/<name>.toml (lower-case, '_' between words), replace every value,
 # set [course] region = "<name>" in the course.toml, then run the unit tests (tests/test_scaffold.py checks every
 # regions/*.toml against scripts/region_spec.py, the list of what the engine reads) and check_course.py.
-# The values below are placeholders, not a real region. regions/southern_ontario.toml and northern_california.toml are
-# complete worked examples. A course.toml table of the same name overrides a region table key by key.
+# The values below are placeholders, not a real region. regions/southern_ontario.toml, northern_california.toml and
+# southern_california.toml are complete worked examples. A course.toml table of the same name overrides a region
+# table key by key.
 
 [region]
 name = "Example region"
@@ -22,6 +23,7 @@ bunker = [200, 184, 150]
 # classifier: one of detect_trees.CLASSIFIERS (scripts/region_spec.py lists each one's parameters):
 #   leaf_off_parkland  leaf-off LiDAR and photo: evergreens stop the pulses and are the only green crowns
 #   leaf_on_woodland   leaf-on LiDAR: crown form and size decide
+#   leaf_on_suburban_socal  leaf-on LiDAR and a summer photo: z-scores of crown form and crown colour over the site
 # needles: archetypes drawn as procedural needle cards ("pine" or "spruce" style; their foliage src is "").
 # backdrop: billboard species of the 5 km backdrop, their shares, crown radius = clip(a * height + b, lo, hi).
 [trees]

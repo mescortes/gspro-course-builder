@@ -273,6 +273,8 @@ def assign_archetypes(feats):
         return
     K = ("height", "crown_r", "crown_base", "sharpness", "penetration")
     P = {k: np.array([f["properties"][k] for f in feats], float) for k in K}
+    for k in ("L", "A", "B"):   # crown colour in the photo (CIELAB)
+        P[k] = np.array([f["properties"].get(k, np.nan) for f in feats], float)
     nd = np.array([f["properties"].get("ndvi", np.nan) for f in feats], float)
     nd = np.where(np.isfinite(nd), nd, -1.0)
     tr = C.REGION["trees"]
@@ -342,7 +344,49 @@ def leaf_on_woodland(P, nd, prm):
     return out
 
 
-CLASSIFIERS = {"leaf_off_parkland": leaf_off_parkland, "leaf_on_woodland": leaf_on_woodland}
+def leaf_on_suburban_socal(P, nd, prm):
+    """Leaf-on suburban parkland (Southern California, the rule of the MountainGate build): archetype names per tree,
+    from robust z-scores (median, 1.4826 x MAD over the trees taller than z_min_h m) of the crown structure (LiDAR)
+    and the crown colour (summer photo, CIELAB):
+      shrub       under shrub_h m
+      eucalyptus  very tall (over euc_min_h m), narrow (crown radius / height under euc_max_ratio) and open
+                  (penetration over euc_min_pen)
+      sycamore    a light, yellow-green crown: z(L) + 0.7 z(a*) + 0.3 z(b*) over syc_min_z, taller than syc_min_h m
+      pine        (Aleppo pine) open, peaked, high crown base: z(sharpness) + z(penetration) + 0.5 z(crown base)
+                  - 0.5 z(radius / height) beats the oak score by more than pine_margin
+      oak         (coast live oak) the rest: dense, broad, low crowns, -z(penetration) + z(radius / height)
+                  - 0.5 z(crown base)"""
+    names = prm["names"]
+    h, pen = P["height"], P["penetration"]
+    ratio = P["crown_r"] / np.maximum(h, 1)
+    ref = h > prm["z_min_h"]
+    ref = ref if ref.any() else np.ones(len(h), bool)   # no tall tree: the site's trees as they are
+    def z(v):
+        w = v[ref][np.isfinite(v[ref])]
+        if not w.size:
+            return np.full(len(v), np.nan)
+        med = np.median(w); mad = np.median(np.abs(w - med)) * 1.4826 + 1e-6
+        return (v - med) / mad
+    pine = z(P["sharpness"]) + z(pen) + 0.5 * z(P["crown_base"]) - 0.5 * z(ratio)
+    oak = -z(pen) + z(ratio) - 0.5 * z(P["crown_base"])
+    syc = z(P["L"]) + 0.7 * z(P["A"]) + 0.3 * z(P["B"])   # NaN without a crown colour: never a sycamore
+    out = []
+    for i in range(len(h)):
+        if h[i] < prm["shrub_h"]:
+            out.append(names["shrub"])
+        elif h[i] > prm["euc_min_h"] and ratio[i] < prm["euc_max_ratio"] and pen[i] > prm["euc_min_pen"]:
+            out.append(names["eucalyptus"])
+        elif syc[i] > prm["syc_min_z"] and h[i] > prm["syc_min_h"]:
+            out.append(names["sycamore"])
+        elif pine[i] > oak[i] + prm["pine_margin"]:
+            out.append(names["pine"])
+        else:
+            out.append(names["oak"])
+    return out
+
+
+CLASSIFIERS = {"leaf_off_parkland": leaf_off_parkland, "leaf_on_woodland": leaf_on_woodland,
+               "leaf_on_suburban_socal": leaf_on_suburban_socal}
 
 
 if __name__ == "__main__":

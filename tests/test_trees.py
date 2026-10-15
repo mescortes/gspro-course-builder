@@ -120,6 +120,57 @@ def test_leaf_on_woodland_rules_separate_oaks_and_pines():
     assert got[:30].count("valley_oak") >= 28 and got[30:60].count("live_oak") >= 28
     assert got[60:70].count("gray_pine") >= 9 and got[70] == "shrub"
     assert "leaf_on_woodland" in D.CLASSIFIERS
+
+
+def _mountaingate(P):
+    """The MountainGate build's species rule (detect_trees.assign_archetypes at git b694bd4), as it was."""
+    big = P["height"] > 6
+    def z(v):
+        med = np.median(v[big]); mad = np.median(np.abs(v[big] - med)) * 1.4826 + 1e-6
+        return (v - med) / mad
+    ratio = P["crown_r"] / np.maximum(P["height"], 1)
+    pine = z(P["sharpness"]) + z(P["penetration"]) + 0.5 * z(P["crown_base"]) - 0.5 * z(ratio)
+    oak = -z(P["penetration"]) + z(ratio) - 0.5 * z(P["crown_base"])
+    syc = z(P["L"]) + 0.7 * z(P["A"]) + 0.3 * z(P["B"])
+    out = []
+    for i in range(len(P["height"])):
+        h = P["height"][i]
+        if h < 4.5:
+            out.append("shrub")
+        elif h > 19 and ratio[i] < 0.3 and P["penetration"][i] > 0.3:
+            out.append("eucalyptus")
+        elif syc[i] > 1.6 and h > 6:
+            out.append("sycamore")
+        elif pine[i] > oak[i] + 0.3:
+            out.append("pine")
+        else:
+            out.append("oak")
+    return out
+
+
+def test_southern_california_sorts_trees_as_mountaingate_did():
+    """regions/southern_california.toml's classifier is MountainGate's z-score rule (crown structure from the LiDAR,
+    crown colour from the photo), its thresholds in [trees.leaf_on_suburban_socal]: the same trees get the same
+    species, under the region's names."""
+    import tomllib
+    prm = tomllib.load(open(ROOT / "regions/southern_california.toml", "rb"))["trees"]["leaf_on_suburban_socal"]
+    rng = np.random.default_rng(11)
+    n = 800
+    h = rng.uniform(2, 28, n)
+    P = dict(height=h, crown_r=h * rng.uniform(0.15, 0.6, n), crown_base=h * rng.uniform(0.1, 0.6, n),
+             sharpness=rng.normal(0.5, 0.3, n), penetration=rng.uniform(0.05, 0.6, n), L=rng.normal(40, 6, n),
+             A=rng.normal(-12, 3, n), B=rng.normal(20, 4, n))
+    got = D.leaf_on_suburban_socal(P, np.full(n, -1.0), prm)
+    assert got == [prm["names"][a] for a in _mountaingate(P)]
+    assert {a: got.count(a) > 10 for a in prm["names"].values()} == {a: True for a in prm["names"].values()}
+    # no tree over z_min_h (a course of young plantings): the z-scores are taken over every tree, not over none
+    small = {k: v[h < 6] for k, v in P.items()}
+    assert len(D.leaf_on_suburban_socal(small, np.full(len(small["height"]), -1.0), prm)) == len(small["height"])
+    # no crown colour (NaN): never a sycamore
+    nocol = dict(P, L=np.full(n, np.nan))
+    assert "sycamore" not in D.leaf_on_suburban_socal(nocol, np.full(n, -1.0), prm)
+
+
 def test_trees_in_a_cleared_area_are_dropped():
     """Whistle Bear: a ~70 x 65 m conifer grove the 2017 LiDAR has was stripped between 2022 and 2025. A reviewed
     clearance polygon drops every tree inside it; points still drop trees within the radius."""

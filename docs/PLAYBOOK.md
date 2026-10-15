@@ -84,6 +84,12 @@ and scaffold defaults (datum, providers, photo service). Use an existing one if 
 otherwise copy the closest and edit it (`regions/TEMPLATE.toml.example` lists the keys; `check_course.py` and
 `tests/test_robustness.py` validate a region).
 
+| Region | Trees (classifier) | Data |
+|---|---|---|
+| `southern_ontario` | maple, oak, pine, spruce, shrub (`leaf_off_parkland`) | NRCan LiDAR, Ontario SWOOP photo, leaf-off |
+| `northern_california` | valley oak, live oak, gray pine, shrub (`leaf_on_woodland`) | USGS 3DEP, NAIP, leaf-on |
+| `southern_california` | coast live oak, Aleppo pine, sycamore, eucalyptus, shrub (`leaf_on_suburban_socal`, which also reads the crown colour of a summer photo) | USGS 3DEP, NAIP, leaf-on. No palm model yet: palms land in one of the five |
+
 Fill in `course.toml` by hand from the research:
 
 * `[course]`: name, short name, model name.
