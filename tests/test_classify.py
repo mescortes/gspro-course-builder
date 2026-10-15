@@ -134,3 +134,31 @@ def test_road_widths_take_course_toml_tuning(monkeypatch):
     assert "track" not in w and w["busway"] == 4.0 and w["primary"] == S.ROAD_HALF_WIDTH["primary"]
 
 
+def _native_features(cells):
+    """A (30, 30) feature stack with one 10 x 10 block per (A4, B4, L4, chmmax) colour, side by side."""
+    names = ["A4", "B4", "L4", "chmmax"]
+    X = np.zeros((30, 30, 4), np.float32); X[..., 0] = -10; X[..., 2] = 70   # green turf around
+    for i, v in enumerate(cells):
+        X[10:20, i * 10:i * 10 + 10] = v
+    return X, names
+
+
+def test_native_seed_colours_are_the_old_rule_by_default_and_tunable(monkeypatch):
+    """The reddish-brown mulch / dry native rule was literal constants tuned on one photo."""
+    X, names = _native_features([(5, 13, 45, 0.5), (2, 13, 45, 0.5), (5, 13, 45, 2.0)])   # mulch; paler; under a shrub
+    lab = np.full((30, 30), CID["rough"], np.uint8)
+    out = S.add_native_seeds(lab.copy(), X, names)
+    assert (out[12:18, 2:8] == CID["native"]).all() and not (out[:, 10:] == CID["native"]).any()
+    monkeypatch.setattr(S.C, "tuning", lambda k, d: {"a_min": 1.5} if k == "native" else d)
+    monkeypatch.setattr(S, "NATIVE", S.tuned("native", S.NATIVE))
+    out = S.add_native_seeds(lab.copy(), X, names)
+    assert (out[12:18, 12:18] == CID["native"]).all() and not (out[:, 20:] == CID["native"]).any()
+
+
+def test_a_tuned_rule_names_an_unknown_key(monkeypatch):
+    monkeypatch.setattr(S.C, "tuning", lambda k, d: {"bmin": 4.0} if k == "sand" else d)
+    with pytest.raises(SystemExit, match=r"\[tuning\.sand\].*bmin.*b_min"):
+        S.tuned("sand", {"b_min": 8.5})
+    monkeypatch.setattr(S.C, "tuning", lambda k, d: 4.0 if k == "sand" else d)
+    with pytest.raises(SystemExit, match="table"):
+        S.tuned("sand", {"b_min": 8.5})

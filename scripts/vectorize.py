@@ -16,7 +16,7 @@ from shapely import make_valid
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
-from surface_classify import CLASSES, CID, osm_geoms, grid, ROAD_HALF_WIDTH, is_water
+from surface_classify import CLASSES, CID, osm_geoms, grid, ROAD_HALF_WIDTH, is_water, tuned
 
 RES = C.DEM_RES
 # OSM/override water outranks everything (dark water is easily mistaken for green by the classifier)
@@ -28,6 +28,13 @@ FORWARD_TEE_FRAC = C.tuning("forward_tee_frac", 0.45)   # tee pads past this fra
 BUNKER_CLEARANCE = C.tuning("bunker_clearance", (1.0, 10.0))  # unmapped bunkers: m clear of roads / of buildings
 MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 150, "cartpath": 6, "native": 25, "road": 25,
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
+# Photo colour rules (CIELAB of the photo, NDVI with a NIR band), tuned on Westmount's SWOOP 2025 photo. White silica
+# sand (b* ~4-6), another camera or another season needs other values: course.toml [tuning.sand] (sunlit sand),
+# [tuning.shadow_sand] (sand in shade, NIR photos only) and [tuning.turf] (clearly green turf, trimmed off bunkers)
+# override any of these keys. measure_registration.py reads the same sand rule.
+SAND = tuned("sand", dict(L_min=66.0, a_min=-12.0, b_min=8.5, b_max=26.0, ndvi_max=0.12))
+SHADOW_SAND = tuned("shadow_sand", dict(ndvi_max=0.02, L_min=25.0, a_min=-8.0, b_min=2.0))
+TURF = tuned("turf", dict(a_max=-14.0, ndvi_min=0.25))
 
 
 def under_canopy_labels(lab, canopy, leaf_off_photo):
@@ -91,15 +98,24 @@ def sand_mask(L, a, b, ndvi=None, green=None, parts=False):
     which also catches sand in the branch shadows of a leaf-off photo (NDVI is a band ratio, shadows barely move it).
     Shadow sand is only kept where it connects to sunlit sand (hysteresis): alone, the shadow rule also takes bare soil,
     shaded roofs and pavement (build 4: 61 off-course 'bunkers'). Dormant greens are pale too, but NDVI ~0.05-0.14: kept
-    out by the NDVI cut and the mapped-green mask. parts=True returns (sunlit, shadow) for a hysteresis over a mosaic."""
-    strong = (L > 66) & (a > -12) & (b > 8.5) & (b < 26)
+    out by the NDVI cut and the mapped-green mask. parts=True returns (sunlit, shadow) for a hysteresis over a mosaic.
+    Thresholds: SAND and SHADOW_SAND ([tuning.sand], [tuning.shadow_sand])."""
+    s, w = SAND, SHADOW_SAND
+    strong = (L > s["L_min"]) & (a > s["a_min"]) & (b > s["b_min"]) & (b < s["b_max"])
     weak = np.zeros_like(strong)
     if ndvi is not None:
-        strong &= ndvi < 0.12
-        weak = (ndvi < 0.02) & (L > 25) & (a > -8) & (b > 2)
+        strong &= ndvi < s["ndvi_max"]
+        weak = (ndvi < w["ndvi_max"]) & (L > w["L_min"]) & (a > w["a_min"]) & (b > w["b_min"])
     if green is not None:
         strong &= ~green; weak &= ~green
     return (strong, weak) if parts else sand_hysteresis(strong, weak)
+
+
+def turf_mask(a, ndvi=None):
+    """Clearly green turf (bunker grass faces) or tree crowns in the photo: sand sits near a* -3. In a spring photo turf
+    is rarely that green, but live turf is NDVI > 0.25 and sand ~0. Thresholds: TURF ([tuning.turf])."""
+    m = a < TURF["a_max"]
+    return m | (ndvi > TURF["ndvi_min"]) if ndvi is not None else m
 
 
 def sand_hysteresis(strong, weak):
@@ -258,9 +274,7 @@ def main():
         ndvi = (nir - rgb[0]) / (nir + rgb[0] + 1e-3) if nir is not None else None
         sand[r0:r1], shade_sand[r0:r1] = sand_mask(Lab[..., 0], Lab[..., 1], Lab[..., 2], ndvi,
                                                    osm_green[r0:r1] if ndvi is not None else None, parts=True)
-        grass[r0:r1] = Lab[..., 1] < -14  # clearly green: turf (bunker grass faces) or tree crowns; sand sits near a* -3
-        if ndvi is not None:  # spring photo: turf is rarely that green, but live turf is NDVI > 0.25 and sand ~0
-            grass[r0:r1] |= ndvi > 0.25
+        grass[r0:r1] = turf_mask(Lab[..., 1], ndvi)
     del Lab, osm_green
     sand = sand_hysteresis(sand, shade_sand); del shade_sand
     osm_bunk = burn_mask(osm(lambda t: t.get("golf") == "bunker"))

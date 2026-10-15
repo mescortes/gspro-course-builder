@@ -15,6 +15,7 @@ from skimage.color import rgb2lab
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
 from surface_classify import grid, read_imagery_window, osm_geoms
+from vectorize import sand_mask
 
 RES = C.DEM_RES
 S = 24  # max shift in px (6 m)
@@ -50,7 +51,7 @@ def main():
             continue
         rgb = read_imagery_window(T, r0 - S, r1 + S, c0 - S, c1 + S)
         Lab = rgb2lab(np.moveaxis(rgb, 0, -1))
-        sand = (Lab[..., 0] > 66) & (Lab[..., 1] > -12) & (Lab[..., 2] > 8.5) & (Lab[..., 2] < 26)
+        sand, _ = sand_mask(Lab[..., 0], Lab[..., 1], Lab[..., 2], parts=True)  # sunlit sand ([tuning.sand])
         hol = hollow[r0 - S:r1 + S, c0 - S:c1 + S]
         win = np.zeros_like(sand); win[S:-S, S:-S] = True
         if sand[win].sum() < 200 or hol[win].sum() < 200:
@@ -60,8 +61,12 @@ def main():
             pass
         c = g.centroid
         out.append((c.x, c.y, dx * RES, -dy * RES, sc / max(s0, 1)))
-    A = np.array(out)
+    A = np.array(out).reshape(-1, 5)
     print(f"bunkers used: {len(A)}")
+    if not len(A):
+        print(f"no bunker over 25 m2 in auto_core.geojson shows 200 px of photo sand over a LiDAR hollow: the photo "
+              f"shift cannot be measured from bunkers. White or grey sand may fail the sand colour rule: set "
+              f"[tuning.sand] in courses/{C.SLUG}/course.toml (vectorize.py SAND)")
     def stats(sel, name):
         if sel.sum() < 3:
             return

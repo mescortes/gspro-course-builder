@@ -27,6 +27,19 @@ def _tuning_files():
     return f"courses/{C.SLUG}/course.toml" + (f" or regions/{C.REGION_NAME}.toml" if C.REGION_NAME else "")
 
 
+def tuned(name, default):
+    """A table of thresholds: the engine defaults, with the keys a course.toml [tuning.<name>] table (else the region's)
+    sets over them. An unknown key stops the build, so a typo cannot leave the default in force silently."""
+    v = C.tuning(name, {})
+    where = _tuning_files()
+    if not isinstance(v, dict):
+        sys.exit(f"[tuning.{name}] in {where} must be a table of {', '.join(default)}, not {v!r}")
+    bad = sorted(set(v) - set(default))
+    if bad:
+        sys.exit(f"[tuning.{name}] in {where}: unknown key {', '.join(bad)} (the keys are {', '.join(default)})")
+    return {k: float(v.get(k, d)) for k, d in default.items()}
+
+
 def is_water(t):
     """OSM tags of a pond, lake or creek: natural=water, or a golf water hazard (golf=lateral_water_hazard is often
     mapped without natural=water). check_course counts the same features."""
@@ -235,13 +248,19 @@ def osm_label_raster(W, H, T, chm):
     return lab, G
 
 
+# Native / mulch seed colour (1 m-smoothed CIELAB of the photo, NDVI with a NIR band; canopy height in m), tuned on
+# Westmount's SWOOP 2025 photo: course.toml [tuning.native] sets the keys another photo or another soil needs.
+NATIVE = tuned("native", dict(a_min=3.0, b_min=11.0, L_max=55.0, chm_max=1.2, ndvi_max=0.18))
+
+
 def add_native_seeds(lab, X, names):
     """Brown/dry native & mulch areas are not mapped in OSM: seed them from colour (reddish-brown, low canopy)."""
     f = {n: X[..., i] for i, n in enumerate(names)}
-    seed = (f["A4"] > 3.0) & (f["B4"] > 11.0) & (f["L4"] < 55) & (f["chmmax"] < 1.2) & \
+    r = NATIVE
+    seed = (f["A4"] > r["a_min"]) & (f["B4"] > r["b_min"]) & (f["L4"] < r["L_max"]) & (f["chmmax"] < r["chm_max"]) & \
            np.isin(lab, [CID["unknown"], CID["rough"]])
     if "NDVI4" in f:  # spring photo: dormant turf is brown too, but still far greener in NIR than mulch or bare soil
-        seed &= f["NDVI4"] < 0.18
+        seed &= f["NDVI4"] < r["ndvi_max"]
     seed = ndimage.binary_opening(seed, iterations=2)
     lab[seed] = CID["native"]
     return lab
