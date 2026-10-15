@@ -127,3 +127,50 @@ def test_trees_in_a_cleared_area_are_dropped():
              for i, c in enumerate([(10.0, 10.0), (60.0, 40.0), (75.0, 40.0), (200.0, 200.0)])]
     kept = D.drop_cleared(feats, [(200.4, 200.0)], radius=1.5, areas=[box(0, 0, 70, 65)])
     assert [f["properties"]["id"] for f in kept] == [2]
+
+
+def _one_crown_tile(tmp_path, monkeypatch, veg_cls):
+    """One 4 m crown (label 1, 0.5 m grid) on flat ground (DEM 0): ground returns (class 2) every 0.5 m, and 400
+    returns 3-12 m up inside the crown with the classes `veg_cls` (cycled)."""
+    import laspy, rasterio
+    from rasterio.transform import from_origin
+    x0, y1 = 537000.0, 4810040.0
+    monkeypatch.setattr(D.C, "CORE", dict(xmin=x0, ymin=y1 - 40, xmax=x0 + 40, ymax=y1))
+    monkeypatch.setattr(D.C, "BUILD", tmp_path)
+    with rasterio.open(tmp_path / "dem.tif", "w", driver="GTiff", width=160, height=160, count=1, dtype="float32",
+                       crs="EPSG:2958", transform=from_origin(x0, y1, 0.25, 0.25)) as d:
+        d.write(np.zeros((1, 160, 160), np.float32))
+    yy, xx = np.mgrid[:80, :80]
+    lab = (np.hypot(yy - 40, xx - 40) * RES < 4.0).astype(np.int32)
+    rng = np.random.default_rng(3)
+    gx, gy = (a.ravel() for a in np.meshgrid(np.arange(x0 + 0.1, x0 + 40, 0.5), np.arange(y1 - 39.9, y1, 0.5)))
+    r, t = 3.0 * np.sqrt(rng.random(400)), rng.uniform(0, 2 * np.pi, 400)
+    las = laspy.LasData(laspy.LasHeader(point_format=1, version="1.2"))
+    las.x = np.r_[gx, x0 + 20.25 + r * np.cos(t)]; las.y = np.r_[gy, y1 - 20.25 + r * np.sin(t)]
+    las.z = np.r_[np.zeros(len(gx)), rng.uniform(3.0, 12.0, 400)]
+    las.classification = np.r_[np.full(len(gx), 2), np.resize(veg_cls, 400)].astype(np.uint8)
+    las.write(tmp_path / "t.las")
+    monkeypatch.setattr(D.C, "LIDAR_TILES", [tmp_path / "t.las"])
+    return lab, from_origin(x0, y1, RES, RES)
+
+
+def test_vegetation_classes_3_to_5_are_tree_returns(tmp_path, monkeypatch):
+    """LiDAR that classifies its vegetation 3 / 4 / 5 (low / medium / high vegetation: Spain PNOA, Denmark, many 3DEP
+    QL1 projects) rather than 1 crashed detect_trees (no class-1 returns), or with a few stray class-1 returns gave
+    every crown penetration ~1 and the default crown base."""
+    lab, T = _one_crown_tile(tmp_path, monkeypatch, [1])
+    base1, pen1 = D.crown_base(lab, T, 1)
+    assert 3.4 < base1[0] < 4.2 and 0.2 < pen1[0] < 0.5
+    lab, T = _one_crown_tile(tmp_path, monkeypatch, [3, 4, 5])
+    base, pen = D.crown_base(lab, T, 1)
+    assert base.tolist() == base1.tolist() and pen.tolist() == pen1.tolist()
+
+
+def test_no_vegetation_returns_is_a_warning_not_a_crash(tmp_path, monkeypatch, capsys):
+    """A tile whose trees are in a class the engine does not read (here 6): crown bases fall back to the default, and
+    the warning names the classes found and the setting."""
+    lab, T = _one_crown_tile(tmp_path, monkeypatch, [6])
+    base, pen = D.crown_base(lab, T, 1)
+    assert np.isnan(base).all() and pen[0] == 1.0
+    out = capsys.readouterr().out
+    assert "lidar_vegetation_classes" in out and "6: 400" in out

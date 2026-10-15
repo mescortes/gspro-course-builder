@@ -155,6 +155,42 @@ def test_native_seed_colours_are_the_old_rule_by_default_and_tunable(monkeypatch
     assert (out[12:18, 12:18] == CID["native"]).all() and not (out[:, 20:] == CID["native"]).any()
 
 
+def test_course_toml_tuning_tables_reach_the_rules(tmp_path):
+    """The TOML shapes a newcomer writes ([tuning.sand] tables, a list of classes) arrive through config.tuning."""
+    import shutil, subprocess
+    (tmp_path / "scripts").mkdir()
+    for f in ("config.py", "surface_classify.py", "vectorize.py", "detect_trees.py"):
+        shutil.copy(ROOT / "scripts" / f, tmp_path / "scripts" / f)
+    (tmp_path / "courses/alpha").mkdir(parents=True)
+    (tmp_path / "courses/alpha/course.toml").write_text("""
+[course]
+name = "Alpha"
+[frame]
+crs = "EPSG:2958"
+origin = [500000.0, 4800000.0]
+base_h = 300.0
+core = { xmin = 499000.0, ymin = 4799000.0, xmax = 501000.0, ymax = 4801000.0 }
+terrain = { xmin = 499000.0, ymin = 4799000.0, xmax = 501000.0, ymax = 4801000.0 }
+[tuning]
+lidar_vegetation_classes = [0, 1, 3, 4, 5]
+road_half_width = { track = 0, primary = 8 }
+[tuning.sand]
+b_min = 4
+[tuning.turf]
+a_max = -10.0
+""")
+    code = ("import sys; sys.path.insert(0, 'scripts'); import vectorize as V, surface_classify as S, detect_trees as D; "
+            "print(V.SAND['b_min'], V.SAND['L_min'], V.TURF['a_max'], 'track' in S.ROAD_HALF_WIDTH, "
+            "S.ROAD_HALF_WIDTH['primary'], D.VEG_CLASSES)")
+    env = {k: v for k, v in os.environ.items() if k not in ("COURSE", "MG_PROFILE")}
+    r = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, env=env, capture_output=True, text=True)
+    assert r.stdout.split() == ["4.0", "66.0", "-10.0", "False", "8.0", "(0,", "1,", "3,", "4,", "5)"], r.stderr
+    (tmp_path / "courses/alpha/course.toml").write_text(
+        (tmp_path / "courses/alpha/course.toml").read_text().replace("b_min = 4", "bmin = 4"))
+    r = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, env=env, capture_output=True, text=True)
+    assert r.returncode != 0 and "[tuning.sand] in courses/alpha/course.toml: unknown key bmin" in r.stderr
+
+
 def test_a_tuned_rule_names_an_unknown_key(monkeypatch):
     monkeypatch.setattr(S.C, "tuning", lambda k, d: {"bmin": 4.0} if k == "sand" else d)
     with pytest.raises(SystemExit, match=r"\[tuning\.sand\].*bmin.*b_min"):
