@@ -125,3 +125,19 @@ def test_unmapped_bunker_is_not_pavement_or_a_bed_by_a_building():
     assert not V.bunker_ok(box(85, 45, 95, 55), osm_bunk, course, yes, **kw)      # 5 m from the wall
     assert V.bunker_ok(box(140, 45, 150, 55), osm_bunk, course, yes, **kw)        # open ground
     assert V.bunker_ok(box(11, 11, 19, 19), osm_bunk, course, yes, paved=box(0, 0, 50, 50), buildings=building)
+
+
+def test_a_green_holding_two_holes_ends_is_split_between_them():
+    """Brambles: the classifier joined the 3 and 14 greens (side by side on a ridge) into one polygon, and the whole of
+    it went to hole 14 (the last line whose end it holds); hole 3 had no green. Each hole gets the part on its side."""
+    from shapely.geometry import Point, LineString
+    a, b = Point(0, 0).buffer(15), Point(40, 0).buffer(15)
+    joined = a.union(b).union(LineString([(0, 0), (40, 0)]).buffer(3))
+    single = Point(200, 0).buffer(12)
+    ends = {3: Point(0, 0), 14: Point(40, 0), 7: Point(200, 0)}
+    out = V.split_shared_greens([joined, single], ends, pins=[])
+    got = sorted((h, round(p.area)) for p, h in out)
+    assert [h for h, _ in got] == [3, 7, 14]
+    part3 = next(p for p, h in out if h == 3)
+    assert part3.contains(Point(0, 0)) and not part3.contains(Point(30, 0)) and part3.area > 0.9 * a.area
+    assert next(p for p, h in out if h == 7).equals(single)
