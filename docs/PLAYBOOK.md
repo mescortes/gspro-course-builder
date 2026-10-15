@@ -82,7 +82,9 @@ It writes `courses/<slug>/course.toml`: the frame (UTM CRS from the region's dat
 CORE = outline + 100 m in 256 m tiles, the 2048 m GSPro terrain square) and the likely `[sources]`. `--crs EPSG:<code>`
 sets another frame, such as the national metre grid the LiDAR is delivered in. It is written as its EPSG code. A
 compound CRS, Web Mercator, or a grid whose metres are more than 0.5 % off ground metres at the course is refused
-(`new_course.py` MAX_SCALE_ERROR: yardages would be off by as much).
+(`new_course.py` MAX_SCALE_ERROR: yardages would be off by as much). With `nrcan_copc`
+the frame must be a UTM zone (NRCan names its tiles by zone): near a zone boundary, `--crs` the neighbouring zone's EPSG
+code if the project is delivered in that zone.
 
 **A region** (`regions/<name>.toml`) holds what is true of a whole area: tree archetypes and the rules that sort LiDAR
 crowns into them, foliage cards, 3D grass, the turf colour target, building palettes, backdrop vegetation, viewer sky,
@@ -145,6 +147,18 @@ allow it in course.toml. These keys only accept or refuse a fetch, so changing o
 | `[sources.lidar] missing_ok` (`nrcan_copc`) | none | tiles that no project folder has, as `[[E/100 m, N/100 m], ...]` |
 | `[sources.imagery] max_empty` | 0.01 | share of the course photo that the service leaves black |
 | `[sources.backdrop] max_missing` | 0.01 | share of the backdrop square with no DTM (filled from the heights around it) |
+
+**LiDAR in another CRS.** Tiles need not be in the course frame (`[frame] crs`): a project in State Plane feet (many
+California 3DEP projects, e.g. NAD83(2011) / California zone 2 (ftUS) + NAVD88 height (ftUS)) or in the neighbouring
+UTM zone is reprojected as it is read, heights converted to metres. check_course's data section lists which tiles are
+reprojected and from what. The engine converts height units, not vertical datums: heights on another datum than the
+region's `[scaffold] vertical` are read as they are and flagged (`!!`). A tile whose header names no CRS is read as the
+frame, as is one whose CRS record cannot be read (flagged `!!`); for those, or for tiles whose header names a wrong
+CRS, give the project's CRS in course.toml:
+
+| Setting | What it does |
+|---|---|
+| `[lidar] crs = "EPSG:6418+6360"` | The tiles' CRS (horizontal + vertical), in place of what their headers say. Optional. |
 
 **Checkpoint:** check_course's data section shows LiDAR covering CORE, the photo 0 % empty, the backdrop DTM present.
 

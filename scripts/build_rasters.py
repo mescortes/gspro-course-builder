@@ -1,7 +1,9 @@
 """Build terrain rasters from the USGS 2025 LiDAR point cloud, tile by tile.
 
 Pass 1 streams every LAZ file once: ground returns are bucketed into processing tiles (C.TILE m + margin);
-first returns update a global 0.5 m DSM (max z); ground hits update global count / intensity grids.
+first returns update a global 0.5 m DSM (max z); ground hits update global count / intensity grids. Tiles in another
+CRS than the frame (State Plane feet, another UTM zone, heights in feet) are reprojected as they are read
+(config.lidar_tile_frame).
 Pass 2 triangulates each tile's ground returns (TIN) and writes the tile interior into the global DEM.
 
 Outputs (GeoTIFF, EPSG:32611) in build/:
@@ -74,25 +76,23 @@ def pass1(ext, res):
     buckets = {k: [] for k, _ in tl}
     nx = int(np.ceil((ext["xmax"] - ext["xmin"]) / C.TILE))
     used = 0
-    bad = C.lidar_crs_problems(C.lidar_tiles())  # points are read as course-CRS metres: a tile in another CRS stops here
-    if bad:
-        sys.exit("LiDAR tiles not in the course frame:\n  " + "\n  ".join(bad))
-    for f in C.lidar_tiles():
+    # each tile's points in the frame: a tile in another CRS (State Plane feet, another UTM zone) is reprojected as it
+    # is read, a tile in the frame is read as it is; one that cannot be brought into the frame stops here
+    for f, fr in C.lidar_readers():
         with laspy.open(f) as r:
             h = r.header
-            if h.maxs[0] < ext["xmin"] - MARGIN or h.mins[0] > ext["xmax"] + MARGIN or \
-               h.maxs[1] < ext["ymin"] - MARGIN or h.mins[1] > ext["ymax"] + MARGIN:
+            x0, y0, x1, y1 = fr["bounds"]  # the header box, in the frame
+            if x1 < ext["xmin"] - MARGIN or x0 > ext["xmax"] + MARGIN or \
+               y1 < ext["ymin"] - MARGIN or y0 > ext["ymax"] + MARGIN:
                 continue
             used += 1
             t0 = time.time(); n_in = 0
             for ch in r.chunk_iterator(5_000_000):
-                x = ch.x.array * h.scales[0] + h.offsets[0]
-                y = ch.y.array * h.scales[1] + h.offsets[1]
+                x, y, z = C.lidar_xyz(h, ch, fr["transform"])
                 m = (x >= ext["xmin"] - MARGIN) & (x <= ext["xmax"] + MARGIN) & (y >= ext["ymin"] - MARGIN) & (y <= ext["ymax"] + MARGIN)
                 if not m.any():
                     continue
-                x, y = x[m], y[m]
-                z = (ch.z.array * h.scales[2] + h.offsets[2])[m]
+                x, y, z = x[m], y[m], z[m]
                 cls = np.asarray(ch.classification)[m]
                 rn = np.asarray(ch.return_number)[m]
                 inten = np.asarray(ch.intensity)[m].astype(np.float32)

@@ -479,19 +479,15 @@ def _las(path, crs=None, x=(537000.0, 537001.0), y=(4810000.0, 4810001.0)):
 
 def test_lidar_tiles_in_another_crs_are_named(tmp_path, monkeypatch):
     """3DEP tiles in State Plane feet, or a project in the neighbouring UTM zone, failed as 'no LiDAR tile covers ...',
-    which reads as a download gap."""
+    which reads as a download gap. They are reprojected as they are read (tests/test_lidar_crs.py), and check_course
+    names them with the CRS they come from."""
     monkeypatch.setattr(C, "CRS", "EPSG:2958")
     ok = _las(tmp_path / "ok.las", "EPSG:2958"); bare = _las(tmp_path / "bare.las")
     feet = _las(tmp_path / "feet.las", "EPSG:2227", x=(6000000.0, 6000001.0), y=(2000000.0, 2000001.0))
-    assert C.lidar_crs_problems([ok, bare]) == []
-    p = C.lidar_crs_problems([ok, feet])
-    assert len(p) == 1 and "feet.las" in p[0] and "California zone 3" in p[0] and "EPSG:2958" in p[0] and "[frame] crs" in p[0]
-    import build_rasters as R
-    monkeypatch.setattr(R.C, "LIDAR_TILES", [ok, feet])
-    with pytest.raises(SystemExit, match="feet.las"):
-        R.pass1(dict(xmin=537000.0, ymin=4810000.0, xmax=537256.0, ymax=4810256.0), 1.0)
+    assert C.lidar_crs_problems([ok, bare, feet]) == []
     monkeypatch.setattr(C, "LIDAR_TILES", [ok, feet])
-    assert any(x.startswith("!!") and "feet.las" in x for x in K.lidar_crs_report())
+    r = K.lidar_crs_report()
+    assert any("feet.las" in x and "California zone 3" in x and "reprojected to EPSG:2958" in x for x in r), r
 
 
 def test_a_photo_in_another_crs_is_named(tmp_path):
