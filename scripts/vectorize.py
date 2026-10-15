@@ -368,14 +368,14 @@ def split_shared_fairways(fairways, lines, min_part=None, step=2.0, min_run=None
     shared_fairway_min_part) takes none, and nor does a line that only crosses the polygon. When only one of the lines
     through it runs along it, the whole polygon is that line's hole (the nearest-line rule could give it to a line
     crossing its middle). None: at most one line runs through the polygon, or none runs along it; it is assigned as
-    before, to the nearest line. lines: {course hole: LineString}."""
+    before, to the nearest line. lines: {course hole: LineString}; hole 99 (no course hole) takes no part."""
     from shapely.geometry import MultiPoint
     from shapely.ops import voronoi_diagram
     from shapely import STRtree, segmentize
     min_part = SHARED_FAIRWAY_MIN_PART if min_part is None else min_part
     out = []
     for p in fairways:
-        through = [h for h, l in sorted(lines.items()) if l.intersects(p) and l.intersection(p).length > 0]
+        through = [h for h, l in sorted(lines.items()) if h != 99 and l.intersects(p) and l.intersection(p).length > 0]
         cand = {h: lines[h] for h in through if runs_along(lines[h], p, min_run, reach)}
         near = p.buffer(step)
         parts = {}
@@ -838,7 +838,7 @@ def main():
             return nearest_line(p, 40, "start")
         return nearest_line(p, 45)
     # a fairway several lines of play run through is split between their corridors (the rest: nearest line)
-    fairway_hole = split_shared_fairways(polys_of(final["fairway"]), {r: l for r, l in holes.items() if r != 99})
+    fairway_hole = split_shared_fairways(polys_of(final["fairway"]), holes)
     feats = []
     for n, g in final.items():
         for p, h in (green_hole if n == "green" else fairway_hole if n == "fairway" else [(q, None) for q in polys_of(g)]):

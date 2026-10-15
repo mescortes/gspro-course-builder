@@ -161,6 +161,10 @@ def test_a_fairway_shared_by_several_holes_is_split_between_their_corridors():
     assert all(p.distance(Point(0, 150)) < 1e-9 for p, h in out if h == 13)
     (o,) = [p for p, h in out if h is None]
     assert o is own, "a fairway one line runs through is left whole, for the nearest-line assignment"
+    # a line that is no course hole (course_hole 99: a practice hole, another course's) takes no part (vectorize.main
+    # passes every line of play)
+    out = V.split_shared_fairways([shared], {**lines, 99: LineString([(30, 0), (30, 300)])})
+    assert {h for _, h in out} == {13, 14}
 
 
 def test_a_shared_fairway_split_leaves_no_shards():
