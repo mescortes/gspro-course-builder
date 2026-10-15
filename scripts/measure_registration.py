@@ -15,11 +15,10 @@ from skimage.color import rgb2lab
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
 from surface_classify import grid, read_imagery_window, osm_geoms
+from vectorize import sand_mask
 
 RES = C.DEM_RES
 S = 24  # max shift in px (6 m)
-# bunker sand in the photo: L* above, a* above, b* between (Lab); white or grey sand needs other limits
-SAND_L, SAND_A, SAND_B0, SAND_B1 = C.tuning("registration_sand", (66.0, -12.0, 8.5, 26.0))
 MIN_BUNKERS = 3  # fewer give no robust median
 
 
@@ -43,8 +42,8 @@ def bunker_shift(A, core, shift):
     than MIN_BUNKERS bunkers used to crash (IndexError) instead of saying so."""
     if len(A) < MIN_BUNKERS:
         return [f"!! {len(A)} bunker(s) pass the sand and hollow tests, {MIN_BUNKERS} are needed for a photo shift: if "
-                "the sand is not the usual tan (white, grey), set course.toml [tuning] registration_sand = [L* min, "
-                "a* min, b* min, b* max]; otherwise measure a few photo features against the LiDAR by hand (the OSM "
+                "the sand is not the usual tan (white, grey), set course.toml [tuning.sand] (the bunker sand colour rule, "
+                "vectorize.py SAND: L_min, a_min, b_min, b_max); otherwise measure a few photo features against the LiDAR by hand (the OSM "
                 "building line below is OSM's offset, not the photo's)"], None
     lines = []
     def stats(sel, name):
@@ -81,7 +80,7 @@ def main():
             continue
         rgb = read_imagery_window(T, r0 - S, r1 + S, c0 - S, c1 + S)
         Lab = rgb2lab(np.moveaxis(rgb, 0, -1))
-        sand = (Lab[..., 0] > SAND_L) & (Lab[..., 1] > SAND_A) & (Lab[..., 2] > SAND_B0) & (Lab[..., 2] < SAND_B1)
+        sand, _ = sand_mask(Lab[..., 0], Lab[..., 1], Lab[..., 2], parts=True)  # sunlit sand ([tuning.sand])
         hol = hollow[r0 - S:r1 + S, c0 - S:c1 + S]
         win = np.zeros_like(sand); win[S:-S, S:-S] = True
         if sand[win].sum() < 200 or hol[win].sum() < 200:

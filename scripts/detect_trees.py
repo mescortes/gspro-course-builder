@@ -21,6 +21,10 @@ import config as C
 from surface_classify import osm_geoms
 
 MIN_H = 2.5
+# ASPRS classes of the tree returns: 1 (unclassified: the Ontario and USGS QL2 tiles leave vegetation there) and 3-5
+# (low / medium / high vegetation: Spain PNOA, Denmark, many 3DEP QL1 projects). Ground is 2; buildings, noise, water,
+# bridges and overlap stay out. course.toml [tuning] lidar_vegetation_classes for a programme that uses others (0).
+VEG_CLASSES = C.tuning("lidar_vegetation_classes", (1, 3, 4, 5))
 
 
 def smooth_chm(chm, r, leaf_off=None):
@@ -180,12 +184,15 @@ def main(out=None):
 
 
 def crown_base(lab, T, n):
+    """Per crown: the crown base (8th percentile of the vegetation returns over 0.8 m above the DEM; NaN with fewer than
+    8) and the penetration (the share of its ground and vegetation returns that reach the ground)."""
     dem = rasterio.open(C.BUILD / "dem.tif")
     demA = dem.read(1); TD = dem.transform
     e = C.CORE
     hag_all = [[] for _ in range(n + 1)]
     out = np.full(n, np.nan)
     sums = []; gcount = []; acount = []
+    seen = np.zeros(256, np.int64)  # returns per class inside CORE, for the warning below
     for f in C.lidar_tiles():
         with laspy.open(f) as rr:
             h = rr.header
@@ -193,7 +200,8 @@ def crown_base(lab, T, n):
                 x = ch.x.array * h.scales[0] + h.offsets[0]; y = ch.y.array * h.scales[1] + h.offsets[1]
                 m = (x > e["xmin"]) & (x < e["xmax"]) & (y > e["ymin"]) & (y < e["ymax"])
                 cls = np.asarray(ch.classification)
-                m &= (cls == 1) | (cls == 2)
+                seen += np.bincount(cls[m], minlength=256)[:256]
+                m &= (cls == 2) | np.isin(cls, VEG_CLASSES)
                 if not m.any():
                     continue
                 isg = (cls[m] == 2)
@@ -209,10 +217,16 @@ def crown_base(lab, T, n):
                 acount.append(np.bincount(L, minlength=n + 1))
                 sel = (L > 0) & (hag > 0.8) & ~g_
                 sums.append(np.c_[L[sel], hag[sel]])
-    S = np.concatenate(sums)
+    S = np.concatenate(sums) if sums else np.zeros((0, 2))
+    if n and not len(S):
+        found = ", ".join(f"{c}: {k}" for c, k in enumerate(seen) if k)
+        print(f"warning: no return of the LiDAR vegetation classes {tuple(VEG_CLASSES)} in any of the {n} crowns: every "
+              f"crown base is the default (0.35 x height) and the archetypes rest on the canopy shape alone. Returns per "
+              f"class inside CORE: {found or 'none'}. Set [tuning] lidar_vegetation_classes in "
+              f"courses/{C.SLUG}/course.toml to the classes that hold the trees.", flush=True)
     S = S[np.argsort(S[:, 0])]
     ids = S[:, 0].astype(int)
-    bounds = np.flatnonzero(np.r_[True, ids[1:] != ids[:-1], True])
+    bounds = np.flatnonzero(np.r_[True, ids[1:] != ids[:-1], True]) if len(S) else []
     for k in range(len(bounds) - 1):
         a, b = bounds[k], bounds[k + 1]
         i = ids[a]

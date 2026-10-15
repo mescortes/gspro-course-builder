@@ -49,7 +49,7 @@ def test_registration_with_too_few_bunkers_says_so_and_prints_the_shift_to_paste
     import measure_registration as M
     core = dict(xmin=0.0, ymin=0.0, xmax=100.0, ymax=100.0)
     lines, shift = M.bunker_shift(np.zeros((0, 5)), core, (0.0, -0.25))
-    assert shift is None and any("registration_sand" in l and "3" in l for l in lines)
+    assert shift is None and any("[tuning.sand]" in l and "3" in l for l in lines)
     A = np.array([[10.0, 10.0, 0.5, 0.25, 1.3], [80.0, 20.0, 0.5, 0.25, 1.2], [20.0, 80.0, 0.25, 0.5, 1.4],
                   [70.0, 70.0, 0.5, 0.25, 1.1]])
     lines, shift = M.bunker_shift(A, core, (0.0, -0.25))       # the registered photo is measured: shifts add up

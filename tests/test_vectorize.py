@@ -158,3 +158,68 @@ def test_cart_paths_tagged_service_road_are_cart_path_labels(monkeypatch):
     assert lab[row(30), 200] == CID["cartpath"]
     assert lab[row(70), 200] == CID["road"]
     assert lab[row(30) - int(2.0 / 0.25), 200] != CID["road"]    # no 2.5 m road band around the cart path
+
+
+def test_tracks_on_the_course_are_cart_path_and_main_roads_are_road():
+    """highway=primary / trunk / *_link / living_street / track had no road width, so a highway past the course played
+    as rough, and the 'track inside the course is cart path' branch could never run. A pond mapped
+    golf=lateral_water_hazard only was no water surface (nor a water hazard in holes.json)."""
+    from shapely.geometry import LineString, Point, box
+    from shapely.ops import unary_union
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 400, 400)),
+         (2, {"highway": "track"}, LineString([(50, 100), (350, 100)])),            # maintenance track on the course
+         (3, {"highway": "primary"}, LineString([(-200, 450), (600, 450)])),         # the highway past the course
+         (4, {"highway": "trunk_link"}, LineString([(-200, 500), (600, 500)])),
+         (5, {"highway": "living_street"}, LineString([(-200, 550), (600, 550)])),
+         (6, {"highway": "track"}, LineString([(-300, 600), (-100, 600)])),         # a farm track off the course
+         (7, {"golf": "lateral_water_hazard"}, box(200, 200, 250, 240)),
+         (8, {"leisure": "swimming_pool"}, box(300, 300, 310, 320))]
+    vector, tracks, course = V.osm_vectors(G)
+    assert course.equals(box(0, 0, 400, 400))
+    assert len(tracks) == 1 and tracks[0].contains(Point(200, 100)) and abs(tracks[0].area - 300 * 2.8) < 30
+    roads = unary_union(vector["road"])
+    for p in ((0, 450), (0, 500), (0, 550), (-200, 600)):
+        assert roads.contains(Point(p)), p
+    assert not roads.contains(Point(200, 100))
+    primary = next(g for g in vector["road"] if g.contains(Point(0, 450)))
+    assert abs(primary.area - 800 * 2 * V.ROAD_HALF_WIDTH["primary"]) < 1e-6
+    assert sorted(g.area for g in vector["water"]) == [200.0, 2000.0]
+
+
+def _old_sand(L, a, b, ndvi=None):
+    """The sand rule as it was written before [tuning.sand] / [tuning.shadow_sand] (literal constants)."""
+    strong = (L > 66) & (a > -12) & (b > 8.5) & (b < 26)
+    weak = np.zeros_like(strong)
+    if ndvi is not None:
+        strong &= ndvi < 0.12
+        weak = (ndvi < 0.02) & (L > 25) & (a > -8) & (b > 2)
+    return strong, weak
+
+
+def test_sand_and_turf_colour_rules_default_to_the_old_constants():
+    rng = np.random.default_rng(0)
+    L, a, b = rng.uniform(0, 100, 20000), rng.uniform(-30, 30, 20000), rng.uniform(-10, 40, 20000)
+    ndvi = rng.uniform(-0.2, 0.5, 20000)
+    for nd in (None, ndvi):
+        s, w = V.sand_mask(L, a, b, nd, parts=True)
+        s0, w0 = _old_sand(L, a, b, nd)
+        assert (s == s0).all() and (w == w0).all()
+    assert (V.turf_mask(a) == (a < -14)).all()
+    assert (V.turf_mask(a, ndvi) == ((a < -14) | (ndvi > 0.25))).all()
+
+
+def test_white_bunker_sand_is_found_with_tuned_colour_rules(monkeypatch):
+    """White silica sand (sRGB 235, 232, 222: Lab b* ~5) failed the b* > 8.5 rule tuned on one Ontario photo, so
+    unmapped bunkers vanished; [tuning.sand] / [tuning.turf] in course.toml now set the thresholds."""
+    from skimage.color import rgb2lab
+    import surface_classify as S
+    lab = rgb2lab(np.array([[[235, 232, 222], [226, 224, 216], [120, 150, 90]]]) / 255.0)[0]
+    L, a, b = lab[:, 0], lab[:, 1], lab[:, 2]
+    assert not V.sand_mask(L, a, b).any()
+    monkeypatch.setattr(S.C, "tuning", lambda k, d: {"b_min": 3.0} if k == "sand" else
+                        {"a_max": -10.0} if k == "turf" else d)
+    monkeypatch.setattr(V, "SAND", S.tuned("sand", V.SAND))
+    monkeypatch.setattr(V, "TURF", S.tuned("turf", V.TURF))
+    assert V.sand_mask(L, a, b).tolist() == [True, True, False]
+    assert V.SAND["L_min"] == 66.0 and V.TURF == {"a_max": -10.0, "ndvi_min": 0.25}
+    assert V.turf_mask(a).tolist() == [False, False, True]

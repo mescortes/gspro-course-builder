@@ -22,6 +22,50 @@ CLASSES = ["unknown", "green", "fairway", "tee", "bunker", "cartpath", "rough", 
 CID = {n: i for i, n in enumerate(CLASSES)}
 
 
+def _tuning_files():
+    """Where config.tuning() reads a key, for messages."""
+    return f"courses/{C.SLUG}/course.toml" + (f" or regions/{C.REGION_NAME}.toml" if C.REGION_NAME else "")
+
+
+def tuned(name, default):
+    """A table of thresholds: the engine defaults, with the keys a course.toml [tuning.<name>] table (else the region's)
+    sets over them. An unknown key stops the build, so a typo cannot leave the default in force silently."""
+    v = C.tuning(name, {})
+    where = _tuning_files()
+    if not isinstance(v, dict):
+        sys.exit(f"[tuning.{name}] in {where} must be a table of {', '.join(default)}, not {v!r}")
+    bad = sorted(set(v) - set(default))
+    if bad:
+        sys.exit(f"[tuning.{name}] in {where}: unknown key {', '.join(bad)} (the keys are {', '.join(default)})")
+    return {k: float(v.get(k, d)) for k, d in default.items()}
+
+
+def is_water(t):
+    """OSM tags of a pond, lake or creek: natural=water, or a golf water hazard (golf=lateral_water_hazard is often
+    mapped without natural=water). check_course counts the same features."""
+    return t.get("golf") in ("water_hazard", "lateral_water_hazard") or t.get("natural") == "water"
+
+
+# OSM highway classes that are roads, with the half width (m) of the road surface vectorize draws round the centre line
+# (the training labels use at most 2.5 m of it). A service road or a track inside the golf course is a cart path.
+ROAD_HALF_WIDTH_DEFAULT = {
+    "motorway": 7.0, "trunk": 7.0, "primary": 6.5, "secondary": 6.0, "tertiary": 5.0, "residential": 4.0,
+    "unclassified": 3.5, "living_street": 3.0, "service": 3.0, "track": 1.5,
+    "motorway_link": 4.0, "trunk_link": 4.0, "primary_link": 4.0, "secondary_link": 4.0, "tertiary_link": 3.5}
+
+
+def road_half_widths():
+    """ROAD_HALF_WIDTH_DEFAULT with course.toml [tuning.road_half_width] over it: a class can be added or widened, and
+    0 leaves a class out (tracks that are woodland footpaths)."""
+    v = C.tuning("road_half_width", {})
+    if not isinstance(v, dict):
+        sys.exit(f"[tuning.road_half_width] in {_tuning_files()} must be a table of highway class = metres, not {v!r}")
+    return {k: float(x) for k, x in dict(ROAD_HALF_WIDTH_DEFAULT, **v).items() if x > 0}
+
+
+ROAD_HALF_WIDTH = road_half_widths()
+
+
 def grid():
     e = C.CORE; r = C.DEM_RES
     W = int(round((e["xmax"] - e["xmin"]) / r)); H = int(round((e["ymax"] - e["ymin"]) / r))
@@ -72,12 +116,19 @@ def osm_geoms():
     Golf features drawn for a course OSM lacks or maps wrongly (courses/<slug>/features/golf.geojson: OSM tags, UTM
     geometry, tag source=course) join them. course.toml [osm] exclude drops OSM elements, and [osm] outline keeps only
     the golf features (and golf-course outlines) of this course: more than half inside its outline(s) + 30 m.
-    Cached per process and on disk."""
+    Cached per process and on disk, keyed on the source files and on the course.toml settings applied here (a newcomer
+    sets [osm] exclude / outline after check_course reports a neighbour's holes: the next run must see them)."""
     import pickle, os
     traced = C.BUILD / "paths_detected.geojson" if C.tuning("trace_paths", True) else None   # course.toml [tuning]
     src = [C.RESEARCH / "osm_all.json", C.RESEARCH / "osm_golf.json", traced, C.SOURCES / "structures.geojson",
            C.SOURCES / "golf.geojson"]
-    stamp = tuple(int(os.path.getmtime(p)) if p is not None and p.exists() else 0 for p in src)
+    def key(p):  # nanoseconds and size: a file saved twice within one second is seen too
+        if p is None or not p.exists():
+            return 0
+        st = os.stat(p)
+        return st.st_mtime_ns, st.st_size
+    margin = C.tuning("osm_outline_margin", 30.0)
+    stamp = tuple(key(p) for p in src) + (C.CRS, tuple(sorted(C.OSM_EXCLUDE)), tuple(C.OSM_OUTLINE), margin)
     cache = C.BUILD / "osm_geoms.pkl"
     if stamp in _OSM_CACHE:
         return _OSM_CACHE[stamp]
@@ -138,7 +189,7 @@ def osm_geoms():
             g = g.buffer(0)
         out.append((oid, t, g))
     if C.OSM_OUTLINE:
-        out = this_course(out, {oid for _, oid in C.OSM_OUTLINE}, C.tuning("osm_outline_margin", 30.0))
+        out = this_course(out, {oid for _, oid in C.OSM_OUTLINE}, margin)
     if src[4].exists():
         for i, f in enumerate(json.load(open(src[4]))["features"]):
             out.append((7_000_000_000 + i, dict(f["properties"], source="course"), shape(f["geometry"])))
@@ -155,11 +206,12 @@ def osm_geoms():
 
 def osm_label_raster(W, H, T, chm):
     G = osm_geoms()
-    def polys(pred, buf=0.0):
+    def polys(pred, buf=0.0):  # buf: metres, or a function of the tags
         r = []
         for _, t, g in G:
             if pred(t):
-                gg = g.buffer(buf) if buf else g
+                b = buf(t) if callable(buf) else buf
+                gg = g.buffer(b) if b else g
                 if not gg.is_empty and gg.area > 0:
                     r.append(gg)
         return r
@@ -173,12 +225,11 @@ def osm_label_raster(W, H, T, chm):
         lab[m] = cid
     course = polys(lambda t: t.get("leisure") == "golf_course")
     course_m = rasterize([(g, 1) for g in course], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if course else np.ones((H, W), bool)
-    feats = polys(lambda t: t.get("golf") in ("green", "fairway", "tee", "bunker", "water_hazard") or t.get("natural") == "water")
+    feats = polys(lambda t: t.get("golf") in ("green", "fairway", "tee", "bunker") or is_water(t))
     feat_m = rasterize([(g, 1) for g in feats], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if feats else np.zeros((H, W), bool)
     # unlabelled bands where the real edge of a path/road is unknown (OSM gives centre lines only)
     # a golf=cartpath is a cart path whatever its highway tag (Whistle Bear: golf=cartpath + highway=service)
-    road = lambda t: t.get("highway") in ("service", "residential", "tertiary", "secondary", "unclassified",
-                                          "secondary_link", "motorway") and t.get("golf") != "cartpath"
+    road = lambda t: t.get("highway") in ROAD_HALF_WIDTH and t.get("golf") != "cartpath"
     lines = polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway"), 1.8) + \
         polys(road, 6.0)
     line_m = rasterize([(g, 1) for g in lines], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if lines else np.zeros((H, W), bool)
@@ -188,22 +239,28 @@ def osm_label_raster(W, H, T, chm):
     burn(polys(lambda t: t.get("golf") == "tee"), CID["tee"], 0.75)
     burn(polys(lambda t: t.get("golf") == "green"), CID["green"], 0.75)
     burn(polys(lambda t: t.get("golf") == "bunker"), CID["bunker"], 0.5)
-    burn(polys(lambda t: t.get("golf") == "water_hazard" or t.get("natural") == "water"), CID["water"], 1.0)
+    burn(polys(is_water), CID["water"], 1.0)
     burn(polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway"), 0.6), CID["cartpath"], 0)
-    burn(polys(road, 2.5), CID["road"], 0)
+    burn(polys(road, lambda t: min(2.5, ROAD_HALF_WIDTH[t["highway"]])), CID["road"], 0)  # a track: no wider than itself
     burn(polys(lambda t: t.get("amenity") == "parking"), CID["road"], 1.0)
     burn(polys(lambda t: "building" in t), CID["building"], 1.0)
     lab[(chm > 3.0) & ~np.isin(lab, [CID["building"]])] = CID["tree"]
     return lab, G
 
 
+# Native / mulch seed colour (1 m-smoothed CIELAB of the photo, NDVI with a NIR band; canopy height in m), tuned on
+# Westmount's SWOOP 2025 photo: course.toml [tuning.native] sets the keys another photo or another soil needs.
+NATIVE = tuned("native", dict(a_min=3.0, b_min=11.0, L_max=55.0, chm_max=1.2, ndvi_max=0.18))
+
+
 def add_native_seeds(lab, X, names):
     """Brown/dry native & mulch areas are not mapped in OSM: seed them from colour (reddish-brown, low canopy)."""
     f = {n: X[..., i] for i, n in enumerate(names)}
-    seed = (f["A4"] > 3.0) & (f["B4"] > 11.0) & (f["L4"] < 55) & (f["chmmax"] < 1.2) & \
+    r = NATIVE
+    seed = (f["A4"] > r["a_min"]) & (f["B4"] > r["b_min"]) & (f["L4"] < r["L_max"]) & (f["chmmax"] < r["chm_max"]) & \
            np.isin(lab, [CID["unknown"], CID["rough"]])
     if "NDVI4" in f:  # spring photo: dormant turf is brown too, but still far greener in NIR than mulch or bare soil
-        seed &= f["NDVI4"] < 0.18
+        seed &= f["NDVI4"] < r["ndvi_max"]
     seed = ndimage.binary_opening(seed, iterations=2)
     lab[seed] = CID["native"]
     return lab
