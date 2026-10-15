@@ -1,0 +1,14 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "back": [
+   536685.0,
+   4291184.0
+  ],
+  "middle": [
+   536666.6,
+   4291187.5
+  ]
+ },
+ "notes": "Back and Middle tees are on the shared 4th / 15th back-tee deck next to the 14th green (E 536648-536692, N 4291168-4291198), where the 18Birdies points put them (B E 536679.8 N 4291178.2, M E 536665.6 N 4291188.2). The deck is a hole-4 tee pad in the model, so the automatic markers fell on the 15th Front pad (391 yd for both, card 448 / 429). dem_raw shows two level terraces: the upper one at about 304.4 m (E 536676-536689, N 4291180-4291189) and the lower one at about 304.1 m (E 536659-536671). The 18Birdies Back point lies on the 7-9 % bank south of the upper terrace, so Back is pinned on the level upper terrace (plane slope 1.8 %) at 447.9 yd; Middle is pinned on the lower terrace (slope 0.5 %), 1 m from its GPS point, at 429.1 yd (via the aim point E 536478.3 N 4291320.4 to the green centre)."
+}
