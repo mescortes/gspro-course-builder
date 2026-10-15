@@ -27,9 +27,10 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
 1. **Research** (multi-agent, `workflows/course_research.js` with `args: {name, location, slug, root}`): scorecard,
    ratings, tees, hole notes, changes since the LiDAR was flown, and the LiDAR, DEM and imagery sources with their
    dates. An adversarial verifier re-checks every claim.
-2. **Scaffold**: `scripts/new_course.py` writes `courses/<slug>/course.toml` with the frame (UTM CRS, origin, base
-   height, build and terrain extents) and the likely data sources, from the OSM course outline or a bounding box.
-   `scripts/check_course.py` lists what is still missing.
+2. **Scaffold**: `scripts/new_course.py` writes `courses/<slug>/course.toml` with the frame (UTM CRS, or `--crs` for
+   a national grid; origin, base height, build and terrain extents), the likely data sources and the region's usual
+   leaf state (`[lidar]` / `[imagery]` `leaf_off`, to check against the flight and photo dates), from the OSM course
+   outline or a bounding box. `scripts/check_course.py` lists what is still missing.
 3. **Downloads** into `data/<slug>/`: LiDAR tiles, the photo, OSM, textures and the 5 km backdrop DEM, through the
    providers in `scripts/sources/` (`nrcan_copc` for NRCan CanElevation, `usgs_3dep` for USGS 3DEP, `arcgis_imageserver`
    for image services such as Ontario's SWOOP or USDA NAIP, `cog_dem` for 1 m DEM files).
@@ -86,7 +87,7 @@ export COURSE=westmount                                       # the course folde
 .venv/bin/python scripts/fetch_data.py lidar osm imagery
 .venv/bin/python scripts/fetch_textures.py
 .venv/bin/python scripts/fetch_backdrop.py
-BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py    # all steps; `build_all.py <from> <to>` runs a range
+BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py    # all steps; `build_all.py <from> <to>` runs a range (`--list`: the step names)
 .venv/bin/python -m pytest -q tests --ignore=tests/test_course.py   # unit tests (no data or build needed)
 .venv/bin/python -m pytest -q --course $COURSE tests/test_course.py   # the built course
 python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?course=westmount&v=1#h1-tee
@@ -104,7 +105,19 @@ A new course:
 COURSE=<slug> .venv/bin/python scripts/check_course.py
 ```
 
-Then fill in the facts research found (tees, scorecard, stroke index, ratings), fetch, build, and run the QA rounds.
+Then fill in the facts research found (tees, scorecard with `units = "metres"` for a metric card, stroke index,
+ratings), check `[lidar]` and `[imagery]` `leaf_off` against the flight and photo dates, fetch, build, register the
+photo on the LiDAR, and run the QA rounds:
+
+```bash
+COURSE=<slug> .venv/bin/python scripts/build_all.py register mesh     # a first build, up to the mesh
+COURSE=<slug> .venv/bin/python scripts/measure_registration.py        # prints the [imagery] shift line for course.toml
+COURSE=<slug> .venv/bin/python scripts/build_all.py                   # the build on the registered photo
+```
+
+Feature files drawn by hand (`features/`, `research/layout.geojson`) are in the course CRS (`[frame] crs`, metres),
+not lon/lat. A course outside the existing regions needs a region preset: copy `regions/TEMPLATE.toml.example` to
+`regions/<name>.toml` and run the unit tests, which check every region against `scripts/region_spec.py`.
 
 ## Rules for engine changes
 
