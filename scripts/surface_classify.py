@@ -120,6 +120,21 @@ def turf_track(t):
     return t.get("highway") in ("track", "service") and any(t.get(k) in v for k, v in TURF_TRACK.items())
 
 
+def is_trail(t):
+    """OSM tags of a cycle trail drawn as a path, like a footway: highway=cycleway (Deer Ridge: the Walter Bean Grand
+    River Trail, fine gravel, and the Trans-Canada Trail were not modelled at all), unless it is mapped as grass or
+    earth (TURF_TRACK: turf) or the course sizes cycleways as roads ([tuning.road_half_width] cycleway)."""
+    return t.get("highway") == "cycleway" and "cycleway" not in ROAD_HALF_WIDTH and \
+        not any(t.get(k) in v for k, v in TURF_TRACK.items())
+
+
+def is_path(t):
+    """OSM tags of a way vectorize draws as a path (a cart path on the course, concrete road past it): golf=cartpath,
+    golf_cart=yes, highway=path / footway, and cycle trails (is_trail)."""
+    return t.get("golf") == "cartpath" or t.get("golf_cart") == "yes" or t.get("highway") in ("path", "footway") or \
+        is_trail(t)
+
+
 def grid():
     e = C.CORE; r = C.DEM_RES
     W = int(round((e["xmax"] - e["xmin"]) / r)); H = int(round((e["ymax"] - e["ymin"]) / r))
@@ -285,7 +300,7 @@ def osm_label_raster(W, H, T, chm):
     # a golf=cartpath is a cart path whatever its highway tag (Whistle Bear: golf=cartpath + highway=service)
     # and a grass or earth track is grass (turf_track)
     road = lambda t: t.get("highway") in ROAD_HALF_WIDTH and t.get("golf") != "cartpath" and not turf_track(t)
-    lines = polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway"), 1.8) + \
+    lines = polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway") or is_trail(t), 1.8) + \
         polys(road, 6.0)
     line_m = rasterize([(g, 1) for g in lines], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if lines else np.zeros((H, W), bool)
     rough = course_m & ~ndimage.binary_dilation(feat_m, iterations=int(4 / C.DEM_RES)) & ~line_m & (chm < 0.5)
@@ -295,7 +310,8 @@ def osm_label_raster(W, H, T, chm):
     burn(polys(lambda t: t.get("golf") == "green"), CID["green"], 0.75)
     burn(polys(lambda t: t.get("golf") == "bunker"), CID["bunker"], 0.5)
     burn(polys(is_water), CID["water"], 1.0)
-    burn(polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway"), 0.6), CID["cartpath"], 0)
+    burn(polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway") or is_trail(t), 0.6),
+         CID["cartpath"], 0)
     burn(polys(road, lambda t: min(2.5, ROAD_HALF_WIDTH[t["highway"]])), CID["road"], 0)  # a track: no wider than itself
     burn(polys(lambda t: t.get("amenity") == "parking"), CID["road"], 1.0)
     burn(polys(lambda t: "building" in t), CID["building"], 1.0)

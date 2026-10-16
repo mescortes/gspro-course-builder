@@ -668,3 +668,32 @@ def test_a_wetland_hazard_is_a_penalty_area_on_its_own_ground_not_water():
          (3, {"golf": "water_hazard", "natural": "water"}, box(300, 300, 320, 330))]
     vector, _, _ = V.osm_vectors(G)
     assert [g.area for g in vector["water"]] == [600.0]
+
+
+def test_cycle_trails_are_paths_unless_mapped_as_turf(monkeypatch):
+    """Deer Ridge: OSM highway=cycleway trails (the Walter Bean Grand River Trail, fine gravel; the Trans-Canada Trail;
+    asphalt links) were not modelled: neither road nor path, rough on the trail. A cycleway is a path like a footway (a
+    cart path on the course, concrete road past it; the cart-path class in the training labels), except one mapped as
+    grass or earth (TURF_TRACK: turf), or one a course sizes as a road ([tuning.road_half_width] cycleway)."""
+    import rasterio
+    from shapely.geometry import LineString, box
+    import surface_classify as S
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 100, 100)),
+         (2, {"highway": "footway"}, LineString([(10, 10), (90, 10)])),
+         (3, {"highway": "cycleway", "surface": "fine_gravel", "name": "Walter Bean Grand River Trail"},
+          LineString([(10, 30), (90, 30)])),
+         (4, {"highway": "cycleway", "surface": "asphalt"}, LineString([(10, 50), (90, 50)])),
+         (5, {"highway": "cycleway", "surface": "grass"}, LineString([(10, 70), (90, 70)])),
+         (6, {"highway": "cycleway", "surface": "wood", "bridge": "yes"}, LineString([(10, 90), (40, 90)])),
+         (7, {"highway": "residential"}, LineString([(60, 90), (90, 90)]))]
+    ys = lambda lines: sorted(round(g.coords[0][1]) for g in lines)
+    assert ys(V.path_lines(G)) == [10, 30, 50, 90]
+    assert ys(V.path_lines(G, bridges=False)) == [10, 30, 50]
+    T = rasterio.transform.from_origin(0.0, 100.0, 0.25, 0.25)
+    monkeypatch.setattr(S, "osm_geoms", lambda: G)
+    lab, _ = S.osm_label_raster(400, 400, T, np.zeros((400, 400), np.float32))
+    row = lambda y: int((100 - y) / 0.25)
+    assert lab[row(30), 200] == CID["cartpath"] and lab[row(50), 200] == CID["cartpath"]
+    assert lab[row(70), 200] == CID["rough"]
+    monkeypatch.setitem(S.ROAD_HALF_WIDTH, "cycleway", 1.5)
+    assert not S.is_trail(G[2][1]) and ys(V.path_lines(G)) == [10]

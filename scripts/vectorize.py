@@ -17,7 +17,7 @@ from shapely import make_valid
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
 from surface_classify import CLASSES, CID, osm_geoms, grid, ROAD_HALF_WIDTH, is_water, SAND, SHADOW_SAND, TURF, tuned
-from surface_classify import TURF_TRACK, turf_track
+from surface_classify import TURF_TRACK, turf_track, is_path
 
 RES = C.DEM_RES
 # OSM/override water outranks everything (dark water is easily mistaken for green by the classifier)
@@ -561,6 +561,12 @@ def osm_vectors(G):
     return vector, course_tracks, course_area
 
 
+def path_lines(G, bridges=True):
+    """The centre lines of the OSM paths (surface_classify.is_path: cart paths, footpaths, cycle trails); without the
+    bridges (bridge=yes) when `bridges` is False: the path surface stops at a bridge, a structure."""
+    return [g for _, t, g in G if g.geom_type == "LineString" and is_path(t) and (bridges or t.get("bridge") != "yes")]
+
+
 def chaikin(coords, n=2):
     pts = np.asarray(coords)[:-1]
     for _ in range(n):
@@ -665,8 +671,7 @@ def main():
     sand = sand_hysteresis(sand, shade_sand); del shade_sand
     osm_bunk = burn_mask(osm(lambda t: t.get("golf") == "bunker"))
     near = ndimage.binary_dilation(surf["bunker"] | osm_bunk, iterations=int(6 / RES))
-    path_lines0 = [g for _, t, g in G if g.geom_type == "LineString" and
-                   (t.get("golf") == "cartpath" or t.get("golf_cart") == "yes" or t.get("highway") in ("path", "footway"))]
+    path_lines0 = path_lines(G)
     # (the raw classifier "cart path" class is over-predicted course-wide, so only trust it next to a mapped path)
     on_path = burn_mask([g.buffer(1.5) for g in path_lines0]) | ((lab == CID["cartpath"]) & burn_mask([g.buffer(3.0) for g in path_lines0]))
     # second route for darker / shaded sand: a confident classifier bunker inside a mapped bunker (validated below)
@@ -683,11 +688,9 @@ def main():
     surf["bunker"] = ndimage.binary_opening(surf["bunker"] & ~grass, iterations=1)
 
     # 3) cart paths: classifier evidence near mapped OSM paths, plus the OSM centre-line under canopy
-    path_lines = [g for _, t, g in G if g.geom_type == "LineString" and
-                  (t.get("golf") == "cartpath" or t.get("golf_cart") == "yes" or t.get("highway") in ("path", "footway"))
-                  and t.get("bridge") != "yes"]
-    corridor = burn_mask([g.buffer(3.0) for g in path_lines])
-    backbone = burn_mask([g.buffer(1.1, cap_style=1) for g in path_lines])
+    paths = path_lines(G, bridges=False)
+    corridor = burn_mask([g.buffer(3.0) for g in paths])
+    backbone = burn_mask([g.buffer(1.1, cap_style=1) for g in paths])
     surf["cartpath"] = ((lab == CID["cartpath"]) & corridor) | (backbone & canopy)
     # stray classifier "path" pixels away from mapped paths are just worn turf -> rough
     # 4) OSM-authoritative non-golf features

@@ -316,7 +316,9 @@ Engine settings for problems QA finds on many holes (`course.toml [tuning]`, def
 
 Tracks and service ways inside the course mapped `surface=grass / ground / dirt / earth / mud` or
 `tracktype=grade4 / grade5` are turf (mown maintenance routes; the classifier's training labels never call them
-road); other tracks and service roads there are cart paths.
+road); other tracks and service roads there are cart paths. Cycle trails (`highway=cycleway`) are paths like
+footways (cart path on the course, concrete road past it) unless they are mapped as grass or earth (turf); a
+`[tuning.road_half_width] cycleway` entry makes them roads instead.
 
 **Checkpoint:** every hole scores at least 8 of 10 from its verifier; the tests pass or each failure is documented.
 
