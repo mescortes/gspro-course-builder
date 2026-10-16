@@ -34,6 +34,7 @@ SHARED_FAIRWAY_MIN_RUN = C.tuning("shared_fairway_min_run", 80.0)     # m of a l
 SHARED_FAIRWAY_GREEN_REACH = C.tuning("shared_fairway_green_reach", 30.0)  # ... or m from it to the line's green end
 GREEN_OFF_COURSE = C.tuning("green_off_course", 15.0)  # m: a classifier green farther off the course outline is a lawn
 SMALL_OSM_FAIRWAY = C.tuning("small_osm_fairway", 300.0)  # m2: a mapped fairway under this is fairway as mapped
+GREEN_CANOPY_MAX = C.tuning("green_canopy_max", 0.5)  # leaf-off: a green this much under the closed canopy is woodland
 MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 150, "cartpath": 6, "native": 25, "road": 25,
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
 # Photo colour rules SAND, SHADOW_SAND and TURF ([tuning.sand], [tuning.shadow_sand], [tuning.turf]): surface_classify.py
@@ -61,6 +62,20 @@ def under_canopy_labels(lab, canopy, leaf_off_photo):
     near = open_lab[idx[0], idx[1]]
     soft = np.isin(near, [CID["fairway"], CID["native"]])
     return np.where(canopy, np.where(soft, near, CID["rough"]), lab).astype(np.uint8)
+
+
+def drop_greens_under_canopy(green, canopy, share=None):
+    """The green mask without its components (8-connected) lying `share` (GREEN_CANOPY_MAX) or more under `canopy`,
+    the closed canopy of a leaf-off survey. Under bare crowns the classifier's labels stand (under_canopy_labels), and
+    woodland floor in the trees' shadow came out green: four 61-94 m2 greens in Deer Ridge's woods and two on Whistle
+    Bear, each entirely under the closed canopy, while no real green on the four courses has 2 % of it there. A green
+    with an overhanging crown at its edge is kept whole."""
+    share = GREEN_CANOPY_MAX if share is None else share
+    lab, n = ndimage.label(green, structure=np.ones((3, 3)))
+    if not n:
+        return green
+    keep = np.r_[False, ndimage.mean(canopy, lab, np.arange(1, n + 1)) < share]
+    return keep[lab]
 
 
 def is_deck(P, R, tol=0.06, max_slope=0.05, step=0.12, fill=0.2):
@@ -658,13 +673,14 @@ def main():
     tall_cov = ndimage.gaussian_filter((chm_s >= 5.0).astype(np.float32), 3.0 / RES)
     brush = (shrub_cov > 0.55) & (tall_cov < 0.5)
     del chm, p_tree, chm_s, shrub_cov, tall_cov
+    closed = None   # the closed canopy of a leaf-off survey: no green grows under it (drop_greens_under_canopy)
     if C.IMAGERY_LEAF_OFF:
         # litter test on the closed canopy (the leaf-off CHM is full of holes between bare branches)
         from detect_trees import smooth_chm
         c05 = rasterio.open(C.BUILD / "chm.tif").read(1)
-        wide = np.kron(smooth_chm(c05, 0.5) > 2.0, np.ones((2, 2), bool))[:H, :W]
-        lab = under_canopy_labels(lab, ndimage.binary_dilation(wide, iterations=int(2.0 / RES)), True)
-        del c05, wide
+        closed = np.kron(smooth_chm(c05, 0.5) > 2.0, np.ones((2, 2), bool))[:H, :W]
+        lab = under_canopy_labels(lab, ndimage.binary_dilation(closed, iterations=int(2.0 / RES)), True)
+        del c05
     else:
         lab = under_canopy_labels(lab, canopy, False)
 
@@ -754,6 +770,9 @@ def main():
     if keep is not None:
         surf["green"] &= burn_mask([keep])
     surf["green"] = clean(surf["green"], MIN_AREA["green"], fill_holes=1e9, open_px=2)
+    if closed is not None:
+        surf["green"] = drop_greens_under_canopy(surf["green"], closed)
+        del closed
     surf["bunker"] = clean(surf["bunker"], MIN_AREA["bunker"], fill_holes=1e9, open_px=1)
     surf["tee"] = clean(surf["tee"], MIN_AREA["tee"], fill_holes=1e9, open_px=2)
     surf["fairway"] = clean(surf["fairway"], MIN_AREA["fairway"], fill_holes=12, open_px=2, close_px=2)

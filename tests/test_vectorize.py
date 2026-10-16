@@ -719,3 +719,19 @@ def test_small_mapped_fairways_are_kept_as_mapped():
     assert V.keep_part(box(0, 0, 10, 6), "fairway", mapped)                       # ... on a mapped one
     assert not V.keep_part(box(0, 0, 5, 6), "fairway", mapped)                    # 30 m2: a speck
     assert V.keep_part(box(0, 0, 20, 10), "fairway") and not V.keep_part(box(0, 0, 0.5, 1.5), "semirough")
+
+
+def test_a_classifier_green_in_the_woods_is_not_a_green():
+    """Leaf-off photo: the classifier's labels stand under the bare crowns, and woodland floor in the trees' shadow
+    came out green: four 61-94 m2 hole-99 greens in Deer Ridge's woods, two on Whistle Bear (157 and 64 m2), every one
+    of them entirely under the closed canopy, while no real green on the four courses has more than 2 % of it there.
+    A green component lying GREEN_CANOPY_MAX or more under the closed canopy is no green (rough); one with an edge
+    under an overhanging crown is kept whole."""
+    green = np.zeros((60, 60), bool); canopy = np.zeros((60, 60), bool)
+    green[5:15, 5:15] = True; canopy[0:20, 0:20] = True                 # a green patch in the woods
+    green[30:50, 30:50] = True; canopy[30:50, 46:60] = True             # a green, one crown over its edge (20 %)
+    out = V.drop_greens_under_canopy(green, canopy)
+    assert not out[5:15, 5:15].any() and out[30:50, 30:50].all() and out.sum() == 400
+    assert V.GREEN_CANOPY_MAX == 0.5
+    assert V.drop_greens_under_canopy(green, canopy, share=0.1).sum() == 0
+    assert V.drop_greens_under_canopy(np.zeros((4, 4), bool), canopy[:4, :4]).sum() == 0

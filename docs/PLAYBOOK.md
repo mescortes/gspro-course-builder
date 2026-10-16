@@ -313,6 +313,7 @@ Engine settings for problems QA finds on many holes (`course.toml [tuning]`, def
 | Holes in the terrain at tees, steps around greens | `[tuning.level_tees] enabled = false` when the LiDAR shows every tee (§2) |
 | A river or creek in a trench at its upper end, or with levees at its lower end | A water body is flat at its lowest 20 % shoreline. One whose local level (the 20th percentile of the shoreline within 60 m) falls more than `water_step` (0.3 m) is cut across into reaches falling at most that much, each with its own flat WaterPlane at the level of its lower end; `water_step = 0` keeps one level |
 | A reedbed or marsh hazard built as a pond | A golf water hazard mapped `natural=wetland` (no `natural=water`) is no water: its ground is what the photo and the LiDAR show (reeds: deep rough), with no WaterPlane or carved bed, and it stays a penalty area in holes.json and GreenKeeper (`lateral_water` for a lateral hazard). Map open water `natural=water` |
+| Green patches in the woods (leaf-off photo) | `green_canopy_max` (0.5): a classifier green lying this much or more under the closed canopy is woodland floor in the trees' shadow (rough); real greens have at most 2 % there |
 | Lawns, sports fields or a driving range round the course built as greens (hole 99) | `green_off_course` (15 m): a classifier green farther than this outside the course outline (`leisure=golf_course`) is rough; OSM-mapped greens stay wherever they are |
 
 Tracks and service ways inside the course mapped `surface=grass / ground / dirt / earth / mud` or
