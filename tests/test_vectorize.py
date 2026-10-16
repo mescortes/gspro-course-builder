@@ -597,3 +597,53 @@ def test_classifier_greens_are_kept_only_on_the_course_or_a_mapped_green():
     assert keep.contains(Point(615, 12))                                           # the mapped practice green
     assert V.green_keep_area(Polygon(), [practice]) is None
     assert not V.green_keep_area(course, [], margin=5.0).contains(Point(410, 150))
+
+
+def test_a_mapped_forward_tee_off_the_line_goes_to_the_hole_whose_card_it_fits():
+    """Deer Ridge: OSM forward tees 42-46 m beside the golf=hole line (holes 1, 3, 8), and a par 3's forward deck past
+    FORWARD_TEE_FRAC of its line (13), were background (hole 99); so were three par-3 forward tees on Whistle Bear and
+    one on Brambles. A mapped tee no line claims goes to the hole whose line is within FORWARD_TEE_REACH m and whose
+    card it plays (play distance within FORWARD_TEE_CARD_TOL yd of the hole's yardages), if that hole is clearly the
+    nearest such line; a tee that fits no card, or two holes alike, stays background."""
+    from shapely.geometry import LineString, box
+    holes = {1: LineString([(0, 0), (0, 200), (40, 400)]),         # a par 4 with a dogleg
+             2: LineString([(300, 0), (300, 380)]),
+             3: LineString([(0, 1000), (0, 1180)])}                 # a par 3
+    cards = {1: (445, 400, 360, 330), 2: (420, 400, 380), 3: (197, 160, 114)}
+    pad = lambda x, y: box(x - 5, y - 4, x + 5, y + 4)
+    fwd = pad(45, 90)                                                # 45 m beside hole 1's line, 353 yd to play
+    par3 = pad(6, 1082)                                              # 57 % up hole 3's line, 107 yd to play
+    assert V.nearest_line(fwd, holes, 40, "start") == 99 and V.nearest_line(par3, holes, 40, "start") == 99
+    assert V.card_tee_hole(fwd, holes, cards) == 1
+    assert V.card_tee_hole(par3, holes, cards) == 3
+    assert V.card_tee_hole(pad(0, -8), holes, cards) == 1, "behind the back tee, 451 yd: within the card's reach"
+    assert V.card_tee_hole(pad(-250, 100), holes, cards) == 99, "a range tee far from every line"
+    assert V.card_tee_hole(pad(85, 390), holes, cards) == 99, "beside hole 1's green: plays no card of hole 1"
+    twins = {5: LineString([(0, 0), (0, 400)]), 6: LineString([(100, 0), (100, 400)])}
+    assert V.card_tee_hole(pad(50, 80), twins, {5: (360,), 6: (360,)}) == 99, "half way between two holes it plays alike"
+    assert V.card_tee_hole(pad(50, 80), twins, {5: (360,), 6: (250,)}) == 5, "the one whose card it plays"
+    assert V.card_tee_hole(fwd, holes, {2: cards[2]}) == 99, "a hole without a card takes no tee"
+    assert V.card_tee_hole(fwd, holes, cards, reach=40) == 99
+    assert V.nearest_line(pad(2, -10), holes, 40, "start") == 1, "the back tee is still the line's"
+
+
+def test_semirough_takes_the_hole_of_the_fairway_it_rings():
+    """Deer Ridge QA: every semirough polygon was background (hole 99), the rings round the fairways too, though fringe
+    and semirough are to adopt the hole of the green / fairway they surround. A ring takes its fairway's hole; one round
+    the fairways of two holes (a shared fairway split between their corridors) is cut between them, each part to the
+    hole of the fairway it lies by; a ring round a fairway of no hole (a practice ground) stays 99."""
+    from shapely.geometry import Point, box
+    from shapely.ops import unary_union
+    f3, f4 = box(0, 0, 30, 200), box(30, 0, 60, 200)                  # one fairway split between holes 3 and 4
+    f7, f99 = box(200, 0, 230, 150), box(400, 0, 440, 60)
+    ring = lambda f: f.buffer(1.5, join_style=1).difference(f)
+    joined, own, practice = ring(box(0, 0, 60, 200)), ring(f7), ring(f99)
+    out = V.ring_holes([joined, own, practice], [(f3, 3), (f4, 4), (f7, 7), (f99, 99)])
+    assert {h for _, h in out} == {3, 4, 7, 99}
+    assert abs(sum(p.area for p, _ in out) - joined.area - own.area - practice.area) < 1e-6, "the parts tile the rings"
+    assert next(p for p, h in out if h == 7) is own and next(p for p, h in out if h == 99) is practice
+    part3 = unary_union([p for p, h in out if h == 3]); part4 = unary_union([p for p, h in out if h == 4])
+    assert part3.distance(Point(-1, 100)) < 1e-9 and part4.distance(Point(61, 100)) < 1e-9
+    assert abs(part3.area - part4.area) < 1.0 and not part3.intersects(Point(45, 201))
+    assert min(p.area for p, _ in out) >= 0.25 * V.MIN_AREA["semirough"]
+    assert V.ring_holes([ring(box(600, 0, 640, 60))], [(f3, 3)])[0][1] == 99, "no fairway by it"

@@ -332,6 +332,8 @@ def data_report():
                       if short else ""))
     out += ["!! photo: " + x for x in fetch_data.imagery_problems()]
     out += ["!! OSM: " + x for x in fetch_data.osm_problems()]
+    out += [f"!! OSM: {x}, the rest outside the box (an OSM API fallback snapshot): fetch_data.py osm-relations "
+            "completes it" for x in fetch_data.osm_incomplete()]
     return out
 
 

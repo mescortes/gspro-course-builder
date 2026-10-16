@@ -336,8 +336,11 @@ Engine settings for problems QA finds on many holes (`course.toml [tuning]`, def
 | Bare soil in channels, ditches or path cuts kept as unmapped bunkers | `[tuning.bunker_hollow]`: an unmapped bunker must hold `pond` m (0.05) of water on `pond_frac` (0.2) of its area, or lie `face` m (0.35) below the ground around it without being open at both ends like a channel (an outlet: ground less than `open` m (0.2) above the floor next to it, leading out over `outlet` m2 (4); two outlets on opposite sides); `pond_frac = 0` turns the test off |
 | Bunkers spilling onto their grass faces with a coarse photo | `[tuning.bunker_trim]`: with a photo of `photo_res` m (0.3) or coarser, bunkers are cut to their LiDAR pans (`radius` 5 m rim search, `depth` 0.08 m, `lip` 0.5 m); `photo_res = 100` turns it off |
 | A shared fairway split badly between holes | A fairway several lines of play run along is split between their corridors. `shared_fairway_min_part` (150 m2): the smallest part a hole takes; `shared_fairway_min_run` (80 m) and `shared_fairway_green_reach` (30 m): a line runs along a fairway when that much of it lies inside, or its green end is that close (a par 3's green surround); a line that only crosses it (a tee shot over another hole's fairway or green surround) takes none |
+| Mapped forward tees left as background (hole 99) | A tee pad belongs to the line of play within 40 m of it (extended 35 m back), unless it lies past `forward_tee_frac` (0.45) of the line. A mapped tee no line claims goes to the hole whose line is within `forward_tee_reach` (60 m) and whose card it plays (within `forward_tee_card_tol`, 10 yd, of the hole's shortest to longest yardage), when that hole is the nearest by half; a range tee or a pad that plays no card stays hole 99 |
 | Two tee sets on one marker | `tee_marker_gap` (2 m): a set never takes a spot this close to another set's while another pad is free, unless their cards are this close too (two sets with the same yardage share a box); the gap is reported |
+| Deckless forward markers (no deck delivers the card) in rough, by bunkers or on a lake bank | The marker keeps the card distance and takes the best ground within `fairway_marker_offset` (20 m) either side of the back tee's first leg: the hole's fairway, its tee decks, semirough, then rough, never within `fairway_marker_clearance` (5 m) of a bunker, water or a native area; with none the set stays on its pad and the gap is reported |
 | Holes in the terrain at tees, steps around greens | `[tuning.level_tees] enabled = false` when the LiDAR shows every tee (§2) |
+| A river or creek in a trench at its upper end, or with levees at its lower end | A water body is flat at its lowest 20 % shoreline. One whose local level (the 20th percentile of the shoreline within 60 m) falls more than `water_step` (0.3 m) is cut across into reaches falling at most that much, each with its own flat WaterPlane at the level of its lower end; `water_step = 0` keeps one level |
 | Lawns, sports fields or a driving range round the course built as greens (hole 99) | `green_off_course` (15 m): a classifier green farther than this outside the course outline (`leisure=golf_course`) is rough; OSM-mapped greens stay wherever they are |
 
 Tracks and service ways inside the course mapped `surface=grass / ground / dirt / earth / mud` or
@@ -433,7 +436,10 @@ can take an hour on a slow server); first build 0.5-1 h; two QA rounds with rebu
   step outside the sandbox.
 * **Overpass is down or busy** (HTTP 429 / 504, or a "too busy" remark): fetch_data tries the three mirrors for up to
   three rounds, then falls back to the OSM API. A query that every answering mirror says is too big (it timed out or
-  ran out of memory) goes to the OSM API at once.
+  ran out of memory) goes to the OSM API at once. The API gives a relation with only its member ways inside the box,
+  so the fallback fetches each multipolygon that reaches past it whole (`/relation/<id>/full`). A snapshot fetched
+  before it did (check_course: "relation ... of ... member ways") is completed in place by
+  `fetch_data.py osm-relations` (Deer Ridge: the Grand River had 5 of its 47 members and was rough).
 * **An image server is slow or times out**: the downloads are chunked and retried; rerun the step to resume. A service
   error about a parameter (bands, the mosaic rule's where clause) stops the fetch at once and names it: fix
   `[sources.imagery]`.

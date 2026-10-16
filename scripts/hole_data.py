@@ -58,6 +58,9 @@ def hole_lines():
 
 
 FAIRWAY_MARKER_GAP = 6.0  # yd: a pad that misses the card by more than this is not that tee's box
+FAIRWAY_MARKER_OFFSET = C.tuning("fairway_marker_offset", 20.0)       # m: a deckless marker's spot either side of the leg
+FAIRWAY_MARKER_CLEARANCE = C.tuning("fairway_marker_clearance", 5.0)  # m: from bunkers, water and native areas
+MARKER_HAZARDS = ("bunker", "water", "native")
 
 
 def point_at_distance(d_m, aims, green_c, back_tee):
@@ -69,6 +72,53 @@ def point_at_distance(d_m, aims, green_c, back_tee):
     if need <= 0 or L < 1e-6 or need > L + 1.0:
         return None
     return first + leg / L * need
+
+
+def marker_ground(feats, hole, clear=None):
+    """The ground a deckless forward marker of `hole` may stand on (feats: [(polygon, properties)], the surfaces), as a
+    function of a point: its rank, 0 the hole's fairway, 1 its tee decks, 2 semirough or another hole's fairway, 3
+    rough (the worst of the surfaces at the point); None on any other surface (a path, a green or its fringe, deep
+    rough, another hole's tee, no surface) or within `clear` m (FAIRWAY_MARKER_CLEARANCE) of a bunker, water or a
+    native area."""
+    from shapely import STRtree
+    clear = FAIRWAY_MARKER_CLEARANCE if clear is None else clear
+    tree = STRtree([g for g, _ in feats]); props = [p for _, p in feats]
+    def rank(pt):
+        P = Point(pt)
+        if any(props[i]["surface"] in MARKER_HAZARDS for i in tree.query(P, predicate="dwithin", distance=clear)):
+            return None
+        ranks = []
+        for i in tree.query(P, predicate="intersects"):
+            s, h = props[i]["surface"], props[i].get("hole")
+            ranks.append(0 if s == "fairway" and h == hole else 1 if s == "tee" and h == hole else
+                         2 if s in ("semirough", "fairway") else 3 if s == "rough" else None)
+        return None if not ranks or None in ranks else max(ranks)
+    return rank
+
+
+def marker_spots(d_m, aims, green_c, back_tee, ground=None, offset=None, step=0.5):
+    """Spots for a deckless forward marker at a play distance of d_m m, best first ([] when there is none).
+    point_at_distance gives the spot on the back tee's first leg; with `ground` (marker_ground) the spots are the points
+    at the same play distance within `offset` m (FAIRWAY_MARKER_OFFSET) either side of that leg, every `step` m across
+    it, that ground ranks: the best ground first, then the nearest the leg. Without it, the spot on the leg."""
+    base = point_at_distance(d_m, aims, green_c, back_tee)
+    if base is None or ground is None:
+        return [] if base is None else [base]
+    offset = FAIRWAY_MARKER_OFFSET if offset is None else offset
+    centre = np.asarray(aims[0] if len(aims) else green_c, float)[:2]
+    u = base - centre; r = np.linalg.norm(u); u = u / r; n = np.array([-u[1], u[0]])
+    cand = []
+    for k in range(-int(offset / step), int(offset / step) + 1):
+        s = k * step
+        if abs(s) >= r:
+            continue
+        p = base if k == 0 else centre + u * math.sqrt(r * r - s * s) + n * s
+        if abs(play_distance(p, aims, green_c) - d_m) > 0.05:   # past a dogleg's aim point: another distance
+            continue
+        g = ground(p)
+        if g is not None:
+            cand.append((g, abs(s), s, p))
+    return [p for *_, p in sorted(cand, key=lambda c: c[:3])]
 
 
 def play_distance(p, aims, green_c):
@@ -162,19 +212,22 @@ def place_tees(pads, aims, green_c, card, min_sep=None):
     return tees
 
 
-def fairway_markers(tees, aims, green_c, min_sep=None):
-    """In place: no tee pad can deliver a set's card yardage (composite forward tees): its marker goes on the line of play
-    at exactly the card distance, as forward markers on a fairway are - unless that spot is on another set's marker
+def fairway_markers(tees, aims, green_c, min_sep=None, ground=None, offset=None):
+    """In place: no tee pad can deliver a set's card yardage (composite forward tees): its marker goes at exactly the
+    card distance, as forward markers on a fairway are, on the best ground by the back tee's first leg (marker_spots;
+    ground: marker_ground, None for the spot on the leg) - unless every such spot is on another set's marker
     (`clashes`; Brambles hole 7: the Middle card equals the Back deck's length, so the fairway marker sat on the Back
-    marker, clamped there from a longer card); then it stays on its pad and the gap is reported. Sets each tee's
-    "source"."""
+    marker, clamped there from a longer card) or none is on fit ground (a lake across the leg); then it stays on its
+    pad and the gap is reported. Sets each tee's "source"."""
     min_sep = TEE_MARKER_GAP if min_sep is None else min_sep
     for t in tees:
         t["source"] = "pad"
         if t["pad_err"] > FAIRWAY_MARKER_GAP and t["key"] != TEE_KEYS[0]:
-            pos = point_at_distance(t["card"] / YD, aims, green_c, np.asarray(tees[0]["pos"]))
-            if pos is not None and not clashes(pos, t["card"], [o for o in tees if o is not t], min_sep):
-                t["pos"] = pos; t["measured"] = play_distance(pos, aims, green_c) * YD; t["source"] = "fairway_marker"
+            others = [o for o in tees if o is not t]
+            for pos in marker_spots(t["card"] / YD, aims, green_c, np.asarray(tees[0]["pos"]), ground, offset):
+                if not clashes(pos, t["card"], others, min_sep):
+                    t["pos"] = pos; t["measured"] = play_distance(pos, aims, green_c) * YD; t["source"] = "fairway_marker"
+                    break
     return tees
 
 
@@ -240,7 +293,7 @@ def hole_record(h, line, feats, terr, all_feats):
         aims = []
     pads = [g for g, p in hf if p["surface"] == "tee" and g.area > 15]
     tees = place_tees(pads, aims, gc, card)
-    fairway_markers(tees, aims, gc)   # QA overrides below still win
+    fairway_markers(tees, aims, gc, ground=marker_ground(all_feats, h))   # QA overrides below still win
     for t in tees:  # QA-pinned marker positions (e.g. a forward tee that sits in the fairway)
         fixed = meta.get("tees_utm", {}).get(t["key"])
         if fixed:
