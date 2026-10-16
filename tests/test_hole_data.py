@@ -137,3 +137,44 @@ def test_fairway_marker_never_lands_on_another_marker():
     tees = HD.place_tees([back, middle], [], GREEN, [_yd(298.5), _yd(260.0)])
     HD.fairway_markers(tees, [], GREEN)
     assert tees[1]["source"] == "fairway_marker" and abs(tees[1]["measured"] - _yd(260.0)) < 0.5
+
+
+def test_a_deckless_forward_marker_goes_on_mown_ground_away_from_hazards():
+    """Deer Ridge QA: deckless forward markers (Copper) went on the back tee's first leg at the card distance whatever
+    lay there: a lake bank (hole 10), rough (12), beside bunkers (1-3), a pond (6). The marker keeps the card distance
+    and takes the best ground within FAIRWAY_MARKER_OFFSET m of that leg: the hole's fairway, then its tee decks, then
+    semirough, then rough; never a path or a green, nor within FAIRWAY_MARKER_CLEARANCE m of a bunker, water or a
+    native area; the nearest the leg among equals. With no such spot the set stays on its pad, its gap reported."""
+    from shapely.geometry import LineString
+    back = box(-5, 0, 5, 20)                                          # 280-300 m from the green: no 200 m deck
+    area = box(-150, -50, 150, 350)
+    def course(*feats):
+        rough = area.difference(unary_union([g for g, _, _ in feats]))
+        return [(g, {"surface": s, "hole": h}) for g, s, h in feats] + [(rough, {"surface": "rough", "hole": 99})]
+    def marker(feats, offset=None):
+        tees = HD.place_tees([back], [], GREEN, [_yd(290.0), _yd(200.0)])
+        HD.fairway_markers(tees, [], GREEN, ground=None if feats is None else HD.marker_ground(feats, 1),
+                           offset=offset)
+        return tees[1]
+    on_line = np.array([0.0, 100.0])                                  # 200 m out on the leg
+    fw = box(6, 60, 40, 200)                                          # the hole's fairway, right of the leg
+    pond, bunker = box(-60, 70, -15, 130), box(-12, 94, -6, 106)      # the leg passes 6 m from the bunker
+    t = marker(course((fw, "fairway", 1), (pond, "water", 99), (bunker, "bunker", 1)))
+    p = Point(t["pos"])
+    assert t["source"] == "fairway_marker" and abs(t["measured"] - _yd(200.0)) < 0.5
+    assert fw.contains(p) and p.x < 8, "on the fairway, as near the leg as it can be"
+    fw_bunker = box(6, 94, 12, 106)                                   # a bunker on the fairway's near edge
+    t = marker(course((fw.difference(fw_bunker), "fairway", 1), (fw_bunker, "bunker", 1), (pond, "water", 99)))
+    p = Point(t["pos"])
+    assert fw.contains(p) and p.distance(fw_bunker) >= HD.FAIRWAY_MARKER_CLEARANCE - 1e-6
+    path = LineString([(0, 0), (0, 300)]).buffer(1.2)                 # a cart path along the leg, no fairway
+    t = marker(course((path, "cartpath", 98), (box(-30, 90, -2, 110), "semirough", 1)))
+    assert t["source"] == "fairway_marker" and -30 < t["pos"][0] < -2, "semirough beats rough; never the path"
+    t = marker(course())                                              # rough all round: the spot on the leg
+    assert t["source"] == "fairway_marker" and np.allclose(t["pos"], on_line)
+    t = marker(course((box(-40, 60, 40, 140), "water", 99)))          # a lake across the leg
+    assert t["source"] == "pad" and t["pad"] is back
+    t = marker(course((box(-40, 60, 40, 140), "water", 99)), offset=60.0)
+    assert t["source"] == "fairway_marker" and abs(t["pos"][0]) > 45
+    t = marker(None)                                                   # no surfaces: the old rule
+    assert t["source"] == "fairway_marker" and np.allclose(t["pos"], on_line)
