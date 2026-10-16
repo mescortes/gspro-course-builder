@@ -1,0 +1,1247 @@
+{
+ "card": {
+  "holes": [
+   {
+    "hole": 1,
+    "par": 4,
+    "handicap_men": 16,
+    "yards": {
+     "championship": 342,
+     "middle": 323,
+     "forward": 307
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout",
+     "https://course.bluegolf.com/bluegolf/course/course/mountaingateccnorths/detailedscorecard.htm"
+    ]
+   },
+   {
+    "hole": 2,
+    "par": 3,
+    "handicap_men": 10,
+    "yards": {
+     "championship": 189,
+     "middle": 169,
+     "forward": 153
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout"
+    ]
+   },
+   {
+    "hole": 3,
+    "par": 4,
+    "handicap_men": 6,
+    "yards": {
+     "championship": 346,
+     "middle": 323,
+     "forward": 298
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout"
+    ]
+   },
+   {
+    "hole": 4,
+    "par": 4,
+    "handicap_men": 18,
+    "yards": {
+     "championship": 299,
+     "middle": 289,
+     "forward": 266
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout"
+    ]
+   },
+   {
+    "hole": 5,
+    "par": 5,
+    "handicap_men": 8,
+    "yards": {
+     "championship": 516,
+     "middle": 498,
+     "forward": 467
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout"
+    ]
+   },
+   {
+    "hole": 6,
+    "par": 4,
+    "handicap_men": 2,
+    "yards": {
+     "championship": 434,
+     "middle": 408,
+     "forward": 366
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout"
+    ]
+   },
+   {
+    "hole": 7,
+    "par": 3,
+    "handicap_men": 14,
+    "yards": {
+     "championship": 172,
+     "middle": 154,
+     "forward": 131
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout"
+    ]
+   },
+   {
+    "hole": 8,
+    "par": 4,
+    "handicap_men": 4,
+    "yards": {
+     "championship": 438,
+     "middle": 420,
+     "forward": 401
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout"
+    ]
+   },
+   {
+    "hole": 9,
+    "par": 5,
+    "handicap_men": 12,
+    "yards": {
+     "championship": 466,
+     "middle": 453,
+     "forward": 403
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://course.bluegolf.com/bluegolf/course/course/mountaingateccnorths/detailedscorecard.htm"
+    ]
+   },
+   {
+    "hole": 10,
+    "par": 4,
+    "handicap_men": 15,
+    "yards": {
+     "championship": 417,
+     "middle": 391,
+     "forward": 366
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfingrecord.com/golf-scorecard/b43db86f-17fd-5b3a-802a-6f220b45bc88"
+    ]
+   },
+   {
+    "hole": 11,
+    "par": 4,
+    "handicap_men": 1,
+    "yards": {
+     "championship": 400,
+     "middle": 387,
+     "forward": 359
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://course.bluegolf.com/bluegolf/course/course/mountaingateccnorths/detailedscorecard.htm"
+    ]
+   },
+   {
+    "hole": 12,
+    "par": 3,
+    "handicap_men": 13,
+    "yards": {
+     "championship": 174,
+     "middle": 153,
+     "forward": 97
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm"
+    ]
+   },
+   {
+    "hole": 13,
+    "par": 4,
+    "handicap_men": 9,
+    "yards": {
+     "championship": 365,
+     "middle": 356,
+     "forward": 224
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://course.bluegolf.com/bluegolf/course/course/mountaingateccnorths/detailedscorecard.htm"
+    ]
+   },
+   {
+    "hole": 14,
+    "par": 5,
+    "handicap_men": 5,
+    "yards": {
+     "championship": 535,
+     "middle": 513,
+     "forward": 460
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm"
+    ]
+   },
+   {
+    "hole": 15,
+    "par": 4,
+    "handicap_men": 11,
+    "yards": {
+     "championship": 412,
+     "middle": 361,
+     "forward": 326
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm"
+    ]
+   },
+   {
+    "hole": 16,
+    "par": 3,
+    "handicap_men": 17,
+    "yards": {
+     "championship": 202,
+     "middle": 190,
+     "forward": 180
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://course.bluegolf.com/bluegolf/course/course/mountaingateccnorths/detailedscorecard.htm"
+    ]
+   },
+   {
+    "hole": 17,
+    "par": 4,
+    "handicap_men": 7,
+    "yards": {
+     "championship": 450,
+     "middle": 430,
+     "forward": 382
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm"
+    ]
+   },
+   {
+    "hole": 18,
+    "par": 5,
+    "handicap_men": 3,
+    "yards": {
+     "championship": 562,
+     "middle": 540,
+     "forward": 481
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://course.bluegolf.com/bluegolf/course/course/mountaingateccnorths/detailedscorecard.htm"
+    ]
+   }
+  ],
+  "tees": [
+   {
+    "name": "Championship",
+    "colour": "Gold",
+    "gender": "M",
+    "rating": 73.2,
+    "slope": 134,
+    "total_yards": 6719
+   },
+   {
+    "name": "Middle",
+    "colour": "Blue",
+    "gender": "M",
+    "rating": 71.6,
+    "slope": 132,
+    "total_yards": 6358
+   },
+   {
+    "name": "Forward",
+    "colour": "White",
+    "gender": "M",
+    "rating": 68.3,
+    "slope": 123,
+    "total_yards": 5667
+   },
+   {
+    "name": "Championship (Ladies, par 73)",
+    "colour": "Gold",
+    "gender": "F",
+    "rating": 80.4,
+    "slope": 143,
+    "total_yards": 6719
+   },
+   {
+    "name": "Middle (Ladies, par 73)",
+    "colour": "Blue",
+    "gender": "F",
+    "rating": 78.3,
+    "slope": 139,
+    "total_yards": 6358
+   },
+   {
+    "name": "Forward (Ladies, par 73)",
+    "colour": "White",
+    "gender": "F",
+    "rating": 74.7,
+    "slope": 129,
+    "total_yards": 5667
+   }
+  ],
+  "conflicts": [
+   "Two versions of the North/South card exist. Current card, 6719/6358/5667 yd: golfingrecord N/S, offcourse.co, greenskeeper.org, the GolfPass tee table and Golfify. Legacy card, Gold 6766 / Blue 6279 / Player's 6268 / White 5793 / Red 4909: the BlueGolf 'Actual Scorecard', the GolfPass per-hole scorecard and courses.opengolfapi.org. Every legacy-card difference falls on holes 9, 11, 13, 14 (Blue), 16 and 18. The tees above use the current card. The 6719/6358/5667 totals equal the sums of its per-hole yards, and OSM hole geometry agrees with it (see notes).",
+   "Hole 16 (South 7): par 3, 202/190/180 on the current card; par 4, Gold 302 / Blue 287 / White 215 / Red 190 on the legacy card (BlueGolf, GolfPass scorecard, opengolfapi). OSM golf=hole ref 25 is par 3 and measures about 197 yd, which supports par 3.",
+   "Hole 18 (South 9): par 5, 562/540/481 on the current card; par 4, Gold 412 / Blue 375 / White 335 / Red 245 on the legacy card. OSM ref 27 is par 5 and measures about 572 yd, which supports par 5. Both versions keep the South nine at par 36.",
+   "Hole 9 (North 9) championship tee: 466 on the current card (OSM line about 471 yd); 502 on the legacy card (BlueGolf, GolfPass, opengolfapi) and on stymie.golf's Lake/North Gold tee.",
+   "Hole 11 (South 2) championship: 400 current vs 435 legacy. Hole 13 (South 4) championship: 365 current vs 391 legacy. Hole 14 (South 5) middle: 513 current vs 502 legacy (Blue). Hole 10 forward: 366 current vs 389 on the legacy White tee.",
+   "Men's stroke index is the same in every source checked: golfingrecord N/S, GolfPass, BlueGolf, opengolfapi, offcourse, and the greenskeeper per-nine ranks doubled (North = even, South = odd). It is also the same as the North indexes on the Lake/North card and the South indexes on the South/Lake card, so no North/South-specific difference was found.",
+   "Men's course rating/slope for N/S at the same yardages. golfingrecord, GolfPass tee table, offcourse and Golfify give 73.2/134, 71.6/132, 68.3/123. greenskeeper.org gives 73.6/135, 71.4/129, 68.1/121 (likely an older rating). BlueGolf's legacy card gives Gold 73.4/134, Blue 71.1/128, Player's 70.8/127, White 68.9/122, Red 64.7/112. 1golf.eu (only via search snippet, because the page is Cloudflare-blocked) reportedly gives Black 71.8/126 (6719), White 69.8/120 (6358) and women's Red 74/123 (5667).",
+   "Women's rating/slope. golfingrecord, GolfPass and offcourse give 80.4/143, 78.3/139, 74.7/129. greenskeeper gives 80.4/144, 78.1/139, 74.3/131. BlueGolf legacy gives Gold 80.3/145, Blue 77.6/138, Player's 77.3/137, White 74.8/132, Red 69.9/122.",
+   "Women's par: 73 (hole 8 = par 5 for women) per golfingrecord -L tees, greenskeeper and GolfPass (W). BlueGolf legacy gives women's par 74 (holes 8 and 11 = par 5). opengolfapi and the GolfPass scorecard show 72 for all.",
+   "Women's stroke index differs by source. golfingrecord -L: 16,14,2,10,4,8,18,12,6 | 11,1,17,13,5,9,15,7,3. GolfPass (W): 16,14,6,10,2,8,18,12,4 | 11,1,17,13,5,9,15,7,3. greenskeeper (per-nine ranks doubled): 14,16,12,10,4,2,18,8,6 | 11,1,17,13,5,9,15,7,3. BlueGolf: 14,16,12,10,4,2,18,8,6 | 11,1,17,15,5,9,13,7,3.",
+   "Tee colours: Gold/Blue/White for Championship/Middle/Forward per GolfPass and offcourse; BlueGolf legacy also has Player's and Red tees; 1golf.eu reportedly uses Black/White/Red.",
+   "Club phone listed as 310-476-6215 (club site, Golfify) and 310-476-2800 (golftennessee/scgolf). Opening year is given as 1975, 1976 or 1981 depending on source (not scorecard-relevant).",
+   "Authoritative sources I could not reach: USGA NCRDB (ncrdb.usga.org) returned Akamai 'Access Denied' 403; 1golf.eu and golfify.io are behind Cloudflare challenges (403). I did not bypass either. mtngatecc.com publishes no scorecard. No 18Birdies, Hole19 or mScorecard page was found."
+  ],
+  "notes": "I recommend the golfingrecord North/South card (https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6) as the authoritative 18-hole card. offcourse.co and greenskeeper.org give the same yardages and men's indexes. The GolfPass tee table and Golfify give the same totals and ratings. Holes 1-9 are the North nine and holes 10-18 the South nine. Men's par is 36/36 = 72. Front-nine yardages: championship 3202, middle 3037, forward 2792. Back-nine yardages: championship 3517, middle 3321, forward 2875. Full-course totals are 6719 / 6358 / 5667, and these match the rated tee totals.\n\nMen's stroke index: 16,10,6,18,8,2,14,4,12 | 15,1,13,9,5,11,17,7,3. On the 18-hole card the North nine takes the even indexes and the South nine the odd ones. Each nine keeps the same indexes in the Lake/North and South/Lake pairings, so the N/S indexes match the per-nine ranks on those cards.\n\nWomen's par is 73 because hole 8 (North 8, 438/420/401) is par 5 for women. Women's tees use the same yardages as the men's.\n\nTee colours: Championship = Gold, Middle = Blue, Forward = White (GolfPass, offcourse).\n\nCross-check against the project's own OSM data: /Users/daniele/Development/mountain-gate/research/osm_golf.json has 27 golf=hole ways. Refs 1-9 are North, refs 10-18 are Lake, and refs 19-27 are South, so N/S holes 10-18 = OSM refs 19-27. OSM pars match the current card on every N/S hole. OSM centreline lengths in yards are: North 338, 197, 342, 292, 507, 411, 172, 432, 471; South 403, 403, 189, 327, 538, 421, 197, 439, 572. They agree with the current card's championship yardages and contradict the legacy card on South 7 (par 3, about 200 yd) and South 9 (par 5, about 560 yd). The legacy 6766-yd card (BlueGolf 'Actual Scorecard', GolfPass per-hole table, opengolfapi) seems to describe an older South-nine setup and should not be used for GSPro par or tee placement.\n\nRating/slope are from aggregator sites that agree with each other (golfingrecord, GolfPass, offcourse, Golfify). They are not confirmed against the USGA NCRDB, which was unreachable."
+ },
+ "verified_card": {
+  "holes": [
+   {
+    "hole": 1,
+    "par": 4,
+    "handicap_men": 16,
+    "yards": {
+     "championship": 342,
+     "middle": 323,
+     "forward": 307
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://www.golfingrecord.com/golf-scorecard/9519fa56-c308-0fdc-0635-ef71fff3bdc8",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 2,
+    "par": 3,
+    "handicap_men": 10,
+    "yards": {
+     "championship": 189,
+     "middle": 169,
+     "forward": 153
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://www.golfingrecord.com/golf-scorecard/9519fa56-c308-0fdc-0635-ef71fff3bdc8",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 3,
+    "par": 4,
+    "handicap_men": 6,
+    "yards": {
+     "championship": 346,
+     "middle": 323,
+     "forward": 298
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://www.golfingrecord.com/golf-scorecard/9519fa56-c308-0fdc-0635-ef71fff3bdc8",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 4,
+    "par": 4,
+    "handicap_men": 18,
+    "yards": {
+     "championship": 299,
+     "middle": 289,
+     "forward": 266
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://www.golfingrecord.com/golf-scorecard/9519fa56-c308-0fdc-0635-ef71fff3bdc8",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 5,
+    "par": 5,
+    "handicap_men": 8,
+    "yards": {
+     "championship": 516,
+     "middle": 498,
+     "forward": 467
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://www.golfingrecord.com/golf-scorecard/9519fa56-c308-0fdc-0635-ef71fff3bdc8",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 6,
+    "par": 4,
+    "handicap_men": 2,
+    "yards": {
+     "championship": 434,
+     "middle": 408,
+     "forward": 366
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://www.golfingrecord.com/golf-scorecard/9519fa56-c308-0fdc-0635-ef71fff3bdc8",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 7,
+    "par": 3,
+    "handicap_men": 14,
+    "yards": {
+     "championship": 172,
+     "middle": 154,
+     "forward": 131
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://www.golfingrecord.com/golf-scorecard/9519fa56-c308-0fdc-0635-ef71fff3bdc8",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 8,
+    "par": 4,
+    "handicap_men": 4,
+    "yards": {
+     "championship": 438,
+     "middle": 420,
+     "forward": 401
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://www.golfingrecord.com/golf-scorecard/9519fa56-c308-0fdc-0635-ef71fff3bdc8",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 9,
+    "par": 5,
+    "handicap_men": 12,
+    "yards": {
+     "championship": 466,
+     "middle": 453,
+     "forward": 403
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfingrecord.com/golf-scorecard/9519fa56-c308-0fdc-0635-ef71fff3bdc8",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 10,
+    "par": 4,
+    "handicap_men": 15,
+    "yards": {
+     "championship": 417,
+     "middle": 391,
+     "forward": 366
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfingrecord.com/golf-scorecard/b43db86f-17fd-5b3a-802a-6f220b45bc88",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 11,
+    "par": 4,
+    "handicap_men": 1,
+    "yards": {
+     "championship": 400,
+     "middle": 387,
+     "forward": 359
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfingrecord.com/golf-scorecard/b43db86f-17fd-5b3a-802a-6f220b45bc88",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 12,
+    "par": 3,
+    "handicap_men": 13,
+    "yards": {
+     "championship": 174,
+     "middle": 153,
+     "forward": 97
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfingrecord.com/golf-scorecard/b43db86f-17fd-5b3a-802a-6f220b45bc88",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 13,
+    "par": 4,
+    "handicap_men": 9,
+    "yards": {
+     "championship": 365,
+     "middle": 356,
+     "forward": 224
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfingrecord.com/golf-scorecard/b43db86f-17fd-5b3a-802a-6f220b45bc88",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 14,
+    "par": 5,
+    "handicap_men": 5,
+    "yards": {
+     "championship": 535,
+     "middle": 513,
+     "forward": 460
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfingrecord.com/golf-scorecard/b43db86f-17fd-5b3a-802a-6f220b45bc88",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 15,
+    "par": 4,
+    "handicap_men": 11,
+    "yards": {
+     "championship": 412,
+     "middle": 361,
+     "forward": 326
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://www.golfingrecord.com/golf-scorecard/b43db86f-17fd-5b3a-802a-6f220b45bc88",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 16,
+    "par": 3,
+    "handicap_men": 17,
+    "yards": {
+     "championship": 202,
+     "middle": 190,
+     "forward": 180
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfingrecord.com/golf-scorecard/b43db86f-17fd-5b3a-802a-6f220b45bc88",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 17,
+    "par": 4,
+    "handicap_men": 7,
+    "yards": {
+     "championship": 450,
+     "middle": 430,
+     "forward": 382
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club/scorecard-and-layout",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://www.golfingrecord.com/golf-scorecard/b43db86f-17fd-5b3a-802a-6f220b45bc88",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   },
+   {
+    "hole": 18,
+    "par": 5,
+    "handicap_men": 3,
+    "yards": {
+     "championship": 562,
+     "middle": 540,
+     "forward": 481
+    },
+    "source_urls": [
+     "https://www.golfingrecord.com/golf-scorecard/0676e94c-87f7-946d-4e3e-c9ed6f9727b6",
+     "https://offcourse.co/courses/scorecard/mountaingate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://www.golfingrecord.com/golf-scorecard/b43db86f-17fd-5b3a-802a-6f220b45bc88",
+     "https://shotnavi.jp/world/840/31/gc_101.htm"
+    ]
+   }
+  ],
+  "tees": [
+   {
+    "name": "Championship",
+    "colour": "Gold",
+    "gender": "M",
+    "rating": 73.2,
+    "slope": 134,
+    "total_yards": 6719
+   },
+   {
+    "name": "Middle",
+    "colour": "Blue",
+    "gender": "M",
+    "rating": 71.6,
+    "slope": 132,
+    "total_yards": 6358
+   },
+   {
+    "name": "Forward",
+    "colour": "White",
+    "gender": "M",
+    "rating": 68.3,
+    "slope": 123,
+    "total_yards": 5667
+   },
+   {
+    "name": "Championship (Ladies, par 73)",
+    "colour": "Gold",
+    "gender": "F",
+    "rating": 80.4,
+    "slope": 143,
+    "total_yards": 6719
+   },
+   {
+    "name": "Middle (Ladies, par 73)",
+    "colour": "Blue",
+    "gender": "F",
+    "rating": 78.3,
+    "slope": 139,
+    "total_yards": 6358
+   },
+   {
+    "name": "Forward (Ladies, par 73)",
+    "colour": "White",
+    "gender": "F",
+    "rating": 74.7,
+    "slope": 129,
+    "total_yards": 5667
+   }
+  ],
+  "conflicts": [
+   "VERIFICATION RESULT: No per-hole value in the researcher's card was changed. I re-fetched golfingrecord N/S (0676e94c), offcourse.co (all three pairings), the greenskeeper.org per-nine cards, the GolfPass N/S scorecard-and-layout page, opengolfapi N/S, the golfingrecord Lake/North and South/Lake cards, and shotnavi.jp. Par, men's stroke index, and Championship/Middle/Forward yards for all 18 holes match exactly in golfingrecord N/S, offcourse N/S and the greenskeeper North + South nine cards. Shotnavi's 'Back' row equals the Middle tee and its 'Ladies' row equals the Forward tee on every N/S hole; its 'Regular' row is a mixed set. Per-nine sums are 3202/3037/2792 and 3517/3321/2875, totalling 6719/6358/5667.",
+   "SOURCE-CITATION FIX: The researcher cited course.bluegolf.com as a source for holes 1, 9, 11, 13, 16 and 18. That page now returns an AWS WAF CAPTCHA, which I did not bypass, so I could not verify it. By the researcher's own account, BlueGolf's legacy card contradicts the cited values on holes 9 (502), 11 (435), 13 (391), 16 (par 4, 302) and 18 (par 4, 412). I removed BlueGolf from every hole's source_urls. Every BlueGolf figure in this report (legacy ratings, women's par 74, women's SI) is unverified and second-hand.",
+   "SOURCE-CITATION FIX: GolfPass (scorecard-and-layout) and opengolfapi now appear in source_urls only on holes whose par and yardages they actually match. GolfPass matches all three tees on holes 1-8, 15 and 17. Opengolfapi gives one unlabeled yardage row (Championship-like) that matches on holes 1-8, 10, 12, 14, 15 and 17. Both still agree with the men's SI on all 18 holes.",
+   "STROKE INDEX BELONGS TO N/S? Mostly yes, with a caveat. Four pages labelled North/South (golfingrecord N/S, offcourse N/S, the GolfPass N/S men's column and opengolfapi N/S) give the same men's SI: 16,10,6,18,8,2,14,4,12 | 15,1,13,9,5,11,17,7,3. These numbers are also exactly what you get by stitching the North SIs from Lake/North (holes 10-18 there: 16,10,6,18,8,2,14,4,12) to the South SIs from South/Lake (holes 1-9 there: 15,1,13,9,5,11,17,7,3). Doubling the greenskeeper per-nine ranks gives the same result (North men 8,5,3,9,4,1,7,2,6 to evens; South men 8,1,7,5,3,6,9,4,2 to odds). The scheme is self-consistent: North is even in both of its pairings, South is odd in both of its pairings, and only Lake flips. The result is a valid 1-18 allocation. Still, no source shows a North/South-specific allocation that differs from the per-nine one. The front (North) nine carries the EVEN indexes, which is the opposite of the usual odd-on-front default. Aggregators may simply have stitched the nines, and the club card, GHIN and NCRDB could not be checked.",
+   "STROKE INDEX DISSENT (new, not in researcher's report): allsquaregolf.com's 'Mountain Gate Country Club - North' card ranks the men's holes 8,5,1,9,4,2,7,3,6. Greenskeeper gives 8,5,3,9,4,1,7,2,6. On the N/S card AllSquare's ranking would make holes 3/6/8 = 2/4/6 instead of 6/2/4. AllSquare's card also has a 'Players' tee (a legacy-era tee set), and its yardages are in metres (313 m = 342 yd), so it is probably an older card. The researcher's statement that the men's SI is 'the same in every source checked' is therefore not universally true.",
+   "Women's SI: AllSquare's North women's ranks 8,7,1,5,2,4,9,6,3 double to 16,14,2,10,4,8,18,12,6, which matches golfingrecord -L. stymie.golf (Lake/North) has one HCP row whose North part (14,16,12,10,4,2,18,8,6, with North 8 at par 5) matches greenskeeper's women's ranks, so it is women's data and not a men's conflict. Otherwise the researcher's women's-SI conflict is confirmed: golfingrecord -L gives 16,14,2,10,4,8,18,12,6 | 11,1,17,13,5,9,15,7,3. GolfPass (W) gives 16,14,6,10,2,8,18,12,4 | same back nine. Greenskeeper doubled gives 14,16,12,10,4,2,18,8,6 | same back nine. All sources agree on the South (back nine) women's SI.",
+   "Legacy card (6766 yd: GolfPass per-hole table and opengolfapi, plus BlueGolf per the researcher). Correction: the differences are NOT confined to holes 9, 11, 13, 14 (Blue), 16 and 18. The GolfPass legacy White tee also differs from the current Forward tee on holes 10 (389 vs 366), 11 (387 vs 359), 12 (133 vs 97), 13 (356 vs 224), 14 (478 vs 460), 16 (215 vs 180) and 18 (335 vs 481). Legacy Blue differs on 14 (502 vs 513), 16 (287 vs 190) and 18 (375 vs 540). The current Forward tee on holes 10-13 (366, 359, 97, 224) equals the legacy RED tee, so 'Forward' is a composite tee set. GolfPass is also internally inconsistent: its tee table says 6719 yd, but its per-hole sum is 6766.",
+   "Hole 16 (South 7), par 3 vs par 4, and hole 18 (South 9), par 5 vs par 4: the current card (par 3, 202 / par 5, 562) is confirmed. The project's OSM data agrees independently: measured from the mapped tee boxes along the hole lines, hole 16 has tees at about 195/178/161 yd and hole 18 at about 571/535/450 yd. A 302-yd par 4 or a 412-yd par 4 is impossible on that geometry. Opengolfapi credits OSM in its footer, but its scorecard pars (par 4 on both holes) contradict OSM's own par tags (3 and 5), so its scorecard is not OSM-derived.",
+   "OSM tee-box cross-check (computed from /Users/daniele/Development/mountain-gate/research/osm_golf.json: each tee centroid to the hole line's second vertex, then along the line to the pin). It supports the current card on hole 9 (back tee 466 vs 466 current / 502 legacy), hole 11 (402 vs 400 / 435) and hole 13 (back tee 358 vs 365 / 391). Residual doubts for GSPro tee placement follow. Hole 10: the back tee measures ~400 vs 417 card, and the middle tee ~372 vs 391. Hole 12: no mapped tee near the 97-yd Forward yardage (shortest ~162). Hole 13: Forward 224 vs nearest mapped tee ~256. Hole 17: every tee is ~8-13 yd short of the card. Hole 18: Forward 481 vs nearest mapped ~450. Holes 4 (middle 289) and 9 (middle 453) have no separate mapped middle tee box. Hole 6: the OSM hole line starts at the middle tee (407); the back tee box (way 1546621212) measures 432, which matches 434.",
+   "Men's course rating/slope for N/S: 73.2/134, 71.6/132, 68.3/123 is confirmed on golfingrecord N/S, offcourse, the GolfPass tee table and GolfNow (golfnow.co.uk course 1027547; GolfNow and GolfPass share a backend, so they are not independent). Greenskeeper's N/S combined card gives 73.6/135, 71.4/129, 68.1/121 (confirmed). 1golf.eu (Black 71.8/126, White 69.8/120, Red 74/123) and Golfify return HTTP 403 and are seen only in search snippets. USGA NCRDB also returns 403. No official rating could be checked.",
+   "Women's rating/slope: 80.4/143, 78.3/139, 74.7/129 is confirmed on golfingrecord, offcourse, GolfPass and GolfNow. Greenskeeper gives 80.4/144, 78.1/139, 74.3/131 (confirmed). Women's par 73 (hole 8 = par 5 for women) is confirmed on golfingrecord -L, the greenskeeper North women's-par row, the AllSquare North women's-par row and the GolfPass/GolfNow (W) tee tables. golfingrecord's N/S page is itself inconsistent: its header says par 73 and its text says par 72.",
+   "Tee colours: Gold/Blue/White are confirmed only through the GolfPass/GolfNow tee names (Championship/Gold, Middle/Blue, Forward/White) and the offcourse column headers. Golfingrecord names no colours. 1golf.eu reportedly uses Black/White/Red, and AllSquare/GolfPass also list a 'Players' tee. The club website (mtngatecc.com and /golf/) publishes no scorecard, tee colours or nine names.",
+   "Nine identity: OSM refs 1-9 = North, 10-18 = Lake and 19-27 = South. This is confirmed by par sequences: North 4,3,4,4,5,4,3,4,5; Lake 5,4,3,4,5,3,5,3,4; South 4,4,3,4,5,4,3,4,5. The OSM line lengths I recomputed match the researcher's figures to within 1-3 yd (for example ref 27 = 571 yd, ref 25 = 197 yd).",
+   "Club phone 310-476-6215 (club site, Golfify) vs 310-476-2800 (other directories), and opening year 1975/1976/1981, are unchanged from the researcher and not scorecard-relevant."
+  ],
+  "notes": "The adversarial check confirms the researcher's 18-hole North/South card, so the per-hole data is unchanged. Use the current golfingrecord N/S card (6719/6358/5667, par 36/36). Holes 1-9 = North and 10-18 = South, which are OSM refs 1-9 and 19-27.\n\nSources: golfingrecord N/S, offcourse.co N/S and the greenskeeper North/South nine cards each match every par, men's SI and yardage independently. Shotnavi matches every par and the Middle/Forward yards. GolfPass and opengolfapi match pars (except legacy holes 16 and 18) and all men's SIs.\n\nCorrections to the researcher's report:\n(1) BlueGolf is behind a CAPTCHA and is unverifiable. It was wrongly cited as support on holes 9/11/13/16/18, where it reportedly contradicts the card. It has been removed from source_urls.\n(2) GolfPass and opengolfapi are now cited only on holes where their yardages match.\n(3) The legacy-card differences are broader than stated: they also affect the Forward/White tee on holes 10-14, 16 and 18.\n(4) The men's SI is not unanimous. AllSquare's North card (likely older, in metres, with a Players tee) swaps the ranks on North 3/6/8.\n\nStroke-index provenance: every N/S-labelled card gives 16,10,6,18,8,2,14,4,12 | 15,1,13,9,5,11,17,7,3. This equals the North indexes from Lake/North plus the South indexes from South/Lake: each nine keeps a fixed parity (North even, South odd, Lake flips). It is a valid allocation and consistent everywhere, but it could not be confirmed against the club, GHIN or the NCRDB (403).\n\nOSM tee-box measurements from the project's osm_golf.json strongly support the current card over the legacy card (holes 9, 11, 13, 16 and 18). Points to watch when placing tees in GSPro:\n- Hole 10: the back tee measures ~17 yd short of the card.\n- Holes 12 and 13: the Forward tees (97 and 224 yd) have no matching mapped tee boxes.\n- Hole 18: the Forward tee (481) has no matching mapped tee box.\n- Hole 6: the back tee is a separate OSM way (1546621212) behind the hole line's start.\n\nUnreachable without bypassing protections, and not bypassed: BlueGolf (AWS WAF CAPTCHA), Golfify and 1golf.eu (403), NCRDB (403). Measurement script: /private/tmp/claude-501/-Users-daniele-Library-Application-Support-Claude-scratch-workspaces-abb34d83-5a3d-4e17-85db-46a7a7157086-87b0e083-6964-4d4d-8b49-9bd53d952dcd-scratch-2026-10-10-64f2a4/264a4132-42a5-4ac8-aaf5-5f09c308fd7e/scratchpad/scripts/tees.py"
+ },
+ "north": {
+  "holes": [
+   {
+    "hole": 1,
+    "nine_hole": "North 1",
+    "confidence": "sourced",
+    "description": "Par 4, 342/323/307 yd. Men's 9-hole handicap 8 (18-hole HCP 16 on the North/South card). The only hole-specific note is from a Greenskeeper.org reviewer (roarksown1, 02/22/21) who played 'a twilight nine at the Mountaingate North course'. While complaining that the greens were quick and hard to hold, they wrote 'Some are also very small, like the first hole.' So the source supports only one thing: the green is very small. No source describes the hole's shape, elevation or hazards. Caveat: the reviewer probably started on North 1, but the review does not say so.",
+    "shape": "unknown (not described in any source)",
+    "elevation": "unknown (not described in any source)",
+    "hazards": [
+     "very small green (reviewer comment); no other hazards described"
+    ],
+    "source_urls": [
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/reviews.cfm",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/index.cfm",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm"
+    ]
+   },
+   {
+    "hole": 2,
+    "nine_hole": "North 2",
+    "confidence": "sourced",
+    "description": "Par 3, 189/169/153 yd, men's 9-hole HCP 5. Golf Top 18's North/South review (last reviewed 2004) describes it as a par three with 'a very wide green that seems to horseshoe around a very deep and unforgiving bunker'. Any shot hit long ends up on a steep hill, pitching to a green that runs severely away from the player. A Greenskeeper.org North 9 tip (Daddy_IRS) agrees: the green is wide but not deep, so a high shot helps it stop; a deep bunker guards the front; from long, the chip or putt is downhill and fast; distance control is essential. WARNING: a search-engine summary wrongly tied a 'hidden lake to the right of the fairway about 80 yards from the green' to this hole. On the Golf Top 18 page that sentence belongs to SOUTH hole 2, not North 2.",
+    "shape": "straight par 3 (no dogleg applies)",
+    "elevation": "Steep hillside behind the green, so a long miss leaves a downhill chip or putt running fast toward the front. The green tilts away from a player above and behind it, i.e. back-to-front toward the tee.",
+    "hazards": [
+     "very deep front greenside bunker that the green horseshoes (wraps) around",
+     "steep bank or hill behind (long) the green",
+     "green very wide but shallow (not deep)"
+    ],
+    "source_urls": [
+     "http://www.golftop18.com/mountain-gate-northsouth-golf-course-review.html",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/index.cfm"
+    ]
+   },
+   {
+    "hole": 3,
+    "nine_hole": "North 3",
+    "confidence": "sourced",
+    "description": "Par 4, 346/323/298 yd, men's 9-hole HCP 3. Greenskeeper.org North 9 tip (Daddy_IRS): 'Tee shot don't go left stay middle-right.' Bunkers surround the green and the green is small, so check your distance and keep the approach below the hole. The source does not say what the trouble on the left is (it gives no type for the left-side hazard). 'Keep it below the hole' suggests a back-to-front sloping green, but that is an inference, not stated.",
+    "shape": "unknown from sources (the tip only says to favour the middle-right of the fairway off the tee)",
+    "elevation": "unknown (not described in any source)",
+    "hazards": [
+     "trouble left off the tee (type not specified)",
+     "bunkers around the green",
+     "small green"
+    ],
+    "source_urls": [
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/index.cfm"
+    ]
+   },
+   {
+    "hole": 4,
+    "nine_hole": "North 4",
+    "confidence": "unknown",
+    "description": "No hole-specific description found. Scorecard facts only: Par 4, 299/289/266 yd, men's 9-hole HCP 9 (easiest on the North nine; 18-hole HCP 18).",
+    "shape": "",
+    "elevation": "",
+    "hazards": [],
+    "source_urls": [
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club"
+    ]
+   },
+   {
+    "hole": 5,
+    "nine_hole": "North 5",
+    "confidence": "unknown",
+    "description": "No hole-specific description found. Scorecard facts only: Par 5, 516/498/467 yd (longest on the North), men's 9-hole HCP 4 (18-hole HCP 8).",
+    "shape": "",
+    "elevation": "",
+    "hazards": [],
+    "source_urls": [
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club"
+    ]
+   },
+   {
+    "hole": 6,
+    "nine_hole": "North 6",
+    "confidence": "unknown",
+    "description": "No hole-specific description found. Scorecard facts only: Par 4, 434/408/366 yd, men's and women's 9-hole HCP 1 (hardest hole on the North; 18-hole HCP 2 on North/South). The GolfPass photo caption 'hole #6 at Lake/North Course' does not apply here: on the Lake/North card the Lake nine is the front nine, so hole 6 there is Lake 6.",
+    "shape": "",
+    "elevation": "",
+    "hazards": [],
+    "source_urls": [
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club"
+    ]
+   },
+   {
+    "hole": 7,
+    "nine_hole": "North 7",
+    "confidence": "unknown",
+    "description": "No hole-specific description found. Scorecard facts only: Par 3, 172/154/131 yd (shortest on the North), men's 9-hole HCP 7 (18-hole HCP 14).",
+    "shape": "",
+    "elevation": "",
+    "hazards": [],
+    "source_urls": [
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm"
+    ]
+   },
+   {
+    "hole": 8,
+    "nine_hole": "North 8",
+    "confidence": "unknown",
+    "description": "No hole-specific description found. Scorecard facts only: Par 4 for men and PAR 5 for women, 438/420/401 yd, men's 9-hole HCP 2 (18-hole HCP 4).",
+    "shape": "",
+    "elevation": "",
+    "hazards": [],
+    "source_urls": [
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm"
+    ]
+   },
+   {
+    "hole": 9,
+    "nine_hole": "North 9",
+    "confidence": "unknown",
+    "description": "No hole-specific description found. Scorecard facts only: Par 5, 466/453/403 yd (Greenskeeper card), men's 9-hole HCP 6 (18-hole HCP 12). OpenGolfAPI lists hole 9 at 502 yd, which conflicts with 466 on the Greenskeeper and golfingrecord cards. The OSM centerline measures about 469 yd, which supports 466.",
+    "shape": "",
+    "elevation": "",
+    "hazards": [],
+    "source_urls": [
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/scorecard.cfm",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club"
+    ]
+   }
+  ],
+  "notes": "I found very little hole-by-hole content for the North nine online. Only North 1 (green size), North 2 and North 3 have explicit descriptions.\n\nWHERE I LOOKED\n- The club site (mtngatecc.com and /golf/) has no course tour, hole descriptions, flyovers or scorecard PDF. web.archive.org cannot be fetched from here.\n- Greenskeeper.org (index, reviews, scorecard pages). The full tips page (4 tips) needs a login, so only the 2 tips shown on the index page were read.\n- Golf Top 18 North/South review.\n- bogeysacrossamerica 2015 review. It covers the Lake/North combination but has only a Lake 5 note.\n- GolfPass North/South and Lake/North pages. They have only general 'hilly' remarks, and their hole-numbered photo captions refer to Lake holes.\n- BlueGolf Lake/North page (says 'No hole description').\n- hole19 and 18birdies: star ratings only.\n- scgolf, golflink, goprivategolf, wander.golf, mountaingate.la, imgprestige: nothing hole-specific.\n- No YouTube flyover or vlog was found.\n- Golfify returned 403, Yelp 403, alisterlinks 429.\n\nGENERAL NORTH-NINE CHARACTER (sourced, not hole-specific)\n- Golf Top 18: 'The north nine is short, hilly and otherwise forgettable, but difficult due to the small greens and thick rough.' Shots over cliffs and water are attributed to the SOUTH nine, not the North.\n- goprivategolf: the North offers challenging terrain with narrow fairways and small greens.\n- Greenskeeper JohnnyGK (played North/Lake): a narrow, hilly course with most fairways playing uphill, Kikuyu grass with almost no roll, and small elevated greens guarded by bunkers and Kikuyu rough, with two tiers.\n- GolfPass GreerGolf: 'most fairways falling away from the side where the cart path was located.'\n- Design credit: Ted Robinson. golflink and goprivategolf also credit Casey O'Callaghan; golflink gives 1976 as the North's opening year.\n- USGA/engineering sources: the 27 holes sit on four filled canyons of a former LA County landfill, with methane recovered and piped to UCLA.\n\nCORRECTION\nA search-engine summary placed the 'hidden lake to the right of the fairway about 80 yards from the green' on North 2. On the Golf Top 18 page it belongs to SOUTH 2, which winds left around a canyon to a peninsula green. South 3 (canyon short, left and long, with the hidden lake down the hill to the right) and South 4 (bite off the corner to an elevated green) are also described there, which is useful for the South research.\n\nWHAT THE LOCAL DATA SHOWS (from OSM and the elevation model, not any web source; confidence above stays unknown for this)\nMethod: OSM golf=hole ways ref 1-9 (pars match the North card) from /Users/daniele/Development/mountain-gate/research/osm_golf.json. Elevations come from /Users/daniele/Development/mountain-gate/build/backdrop_dem.tif (2 m), sampled at the hole-line start and end. Turn angle is the bend in the centerline: + is left, - is right.\n\n| Hole | Measured yd | Heading | Shape | Tee to green | Notes |\n|---|---|---|---|---|---|\n| N1 | 337 | NW | dogleg right, about 59\u00b0 | 404 m to 392 m, about 12 m downhill | |\n| N2 | 196 | SSW | straight | about 3 m up | ground rises about 4 m over the last quarter to the green; 1 front/greenside bunker in OSM |\n| N3 | 341 | SW | essentially straight (7\u00b0 right) | about 17 m uphill | 3 greenside bunkers |\n| N4 | 291 | NNE | slight left (9\u00b0) | about 10 m downhill | |\n| N5 | 504 | NNE | gentle left (14\u00b0) | 414 m to 408 m | dips to about 402 m mid-hole, then climbs to the green; 3 greenside bunkers |\n| N6 | 409 | SSW | straight | about 1 m net | dip of about 5 m mid-hole; 3 greenside bunkers plus a fairway bunker on the left at about 236 yd |\n| N7 | 171 | SSW | straight | flat | 3 greenside bunkers |\n| N8 | 430 | NNE | straight | 405 m to 396 m | low point about 391 m, then rises to the green |\n| N9 | 469 | SSE | straight, then slight left near the green (16\u00b0) | 391 m to 401 m | low point about 384 m at mid-hole, then climbs about 17 m to the green; 4 greenside bunkers |\n\nOSM has only 2 water_hazard polygons for all 27 holes, and the nearest one is at least 378 m from any North hole. So no water is in play on the North per OSM, which is consistent with the reviews describing water only on the South and Lake."
+ },
+ "south": {
+  "holes": [
+   {
+    "hole": 10,
+    "nine_hole": "South 1",
+    "confidence": "unknown",
+    "description": "Card: Par 4, 417/391/366 yd, SI 15 (Golfify and golfingrecord cards, which match the 6,719-yd rating). I found no written description of this hole. A captioned SkyGolf blog photo (2013, 'South Course: #1 Hole 417 yds Par 4') looks from a raised tee down a tree-lined fairway that drops into a valley. The cart path is on the left and a bunkered green is in the distance. Not from a written source (OSM + project DEM): the hole line plays east and bends slightly right (+16 deg) about 260 yd out. It falls about 35 m tee to green on build/backdrop_dem.tif (2 m). OSM bunkers: fairway right about 175 yd, left about 235 yd, left near the green about 388 yd, and 1 greenside right. Houses sit north of the hole past the cart path, so OB is possible there but unverified.",
+    "shape": "not sourced; OSM line bends slightly right (~16 deg)",
+    "elevation": "not sourced; photo shows an elevated tee looking down; DEM about 35 m (~115 ft) downhill tee to green",
+    "hazards": [
+     "trees lining both sides (photo)",
+     "OSM: fairway bunker right ~175 yd",
+     "OSM: fairway bunkers left ~235 yd and ~388 yd",
+     "OSM: 1 greenside bunker right",
+     "houses north of hole (possible OB, unverified)"
+    ],
+    "source_urls": [
+     "https://web.archive.org/web/20160826215313/http://www.skygolfblog.com/2013/08/mountaingate-country-club-los-angeles.html",
+     "https://www.golfify.io/courses/mountain-gate-country-club-north-south"
+    ]
+   },
+   {
+    "hole": 11,
+    "nine_hole": "South 2",
+    "confidence": "sourced",
+    "description": "Card: Par 4, 400/387/359 yd, SI 1 (hardest hole on the N/S card). GolfTop18 (last reviewed 2004) calls it the best hole on the course. It is a par 4 that winds left around a canyon from tee to green, and the player has to cut off some of the canyon to leave a reasonable approach. The green sits out on a peninsula with bunkers around it and canyon short, left and long. A hidden lake lies right of the fairway about 80 yd from the green, so even a layup has to avoid it. SkyGolf blog (2013) describes a 400-yd par 4: a severe, almost U-shaped dogleg with a ravine to carry on the second shot to a well-protected green. CONFLICT: SkyGolf calls it a dogleg RIGHT. The GolfTop18 text, the OSM hole line (-59 deg turn) and aerial imagery all show it turning LEFT: the tee is at the north, the fairway runs south beside a wooded canyon on the player's left (east), then turns left (east) to the green. Treat it as a dogleg left. SkyGolf photos: from the tee, a brushy ravine and trees are on the left and the fairway is on the right; the approach photo shows the green beyond a brush-filled ravine with three bunkers across its front. The 'hidden lake' matches a triangular pond that OSM does not map. It sits about 80 yd short of the green and about 45-65 yd right of the line, at roughly UTM11N 363397E 3774557N (lon -118.48095, lat 34.10291). A second pond, which OSM does map (way 950199971), lies about 100 yd right, further south. OSM bunkers: 3 greenside (1 left, 2 right) and 1 fairway bunker right about 243 yd.",
+    "shape": "dogleg left, sharp (OSM ~60 deg; GolfTop18 'winds left around a canyon'); SkyGolf says right, which conflicts with the geometry",
+    "elevation": "tee and green about level (DEM ~351 -> ~353 m); the canyon drops away left of the fairway (line skirts the canyon edge, DEM dips ~10 m) and short/left/long of the green",
+    "hazards": [
+     "canyon/barranca along the left of the fairway (carry needed to cut the corner)",
+     "canyon short, left and long of the peninsula green (GolfTop18), ravine carry on approach (SkyGolf)",
+     "hidden lake right of fairway ~80 yd from green (GolfTop18); matches a pond OSM does not map",
+     "bunkers surrounding green (GolfTop18; OSM 3 greenside: 1 L, 2 R; SkyGolf photo shows 3 across the front)",
+     "OSM: fairway bunker right ~243 yd"
+    ],
+    "source_urls": [
+     "http://www.golftop18.com/mountain-gate-northsouth-golf-course-review.html",
+     "https://web.archive.org/web/20160826215313/http://www.skygolfblog.com/2013/08/mountaingate-country-club-los-angeles.html",
+     "https://www.golfnow.com/courses/1027547-mountain-gate-country-club-details"
+    ]
+   },
+   {
+    "hole": 12,
+    "nine_hole": "South 3",
+    "confidence": "sourced",
+    "description": "Card: Par 3, 174/153/97 yd, SI 13. GolfTop18 (2004): a par 3 with a nerve-racking approach that puts a premium on accuracy. Canyon lies short, left and long. Right looks safe, but a ball that goes too far right runs down a hill into the hidden lake. The green is relatively flat. SkyGolf blog (2013) has photos taken from the 3rd tee that look down on the I-405 and out to Westwood and the Getty Center, so the tee sits high on the canyon rim. Its photos of the hole show the green across a brush-covered canyon, with bunkers on the front-left and a large tree behind. A GolfNow/GolfPass photo ('hole #3 at South Course') shows the green on a ridge with bunkers on both sides and a drop-off with city views beyond. OSM: the line plays straight SSW. There are 3 greenside bunkers (2 left, 1 right). The OSM-mapped pond (way 950199971) is about 39 yd right of the line near the green (about 163 yd from the tee) and downhill. DEM: tee about 356 m, green about 353 m, canyon floor about 340 m between them.",
+    "shape": "straight par 3",
+    "elevation": "tee at or slightly above green (DEM ~-3 m); forced carry over a canyon ~13-16 m below; ground right of the green falls downhill to the pond",
+    "hazards": [
+     "canyon short, left and long (GolfTop18) - forced carry over native brush",
+     "pond (hidden lake) right of and below the green (GolfTop18; OSM way 950199971)",
+     "greenside bunkers (OSM 3: 2 L, 1 R; photos show bunkers front-left and on both sides)"
+    ],
+    "source_urls": [
+     "http://www.golftop18.com/mountain-gate-northsouth-golf-course-review.html",
+     "https://web.archive.org/web/20160826215313/http://www.skygolfblog.com/2013/08/mountaingate-country-club-los-angeles.html",
+     "https://www.golfnow.com/courses/1027547-mountain-gate-country-club-details",
+     "https://www.golfpass.com/travel-advisor/courses/185-south-lake-at-mountain-gate-country-club"
+    ]
+   },
+   {
+    "hole": 13,
+    "nine_hole": "South 4",
+    "confidence": "sourced",
+    "description": "Card: Par 4, 365/356/224 yd, SI 9. The 224-yd forward tee suggests it sits past the pond and the corner. GolfTop18 (2004): a pretty tee shot where the player can cut off more of the corner to leave a shorter, better-angled approach to an elevated green. GolfTop18 does not say which way it bends; the OSM line bends LEFT about 28 deg about 180 yd out. SkyGolf photos (2013): the tee shot crosses native brush and a ravine to a fairway beyond. The green photo shows a large shaped front bunker, the cart path on the left and pampas grass on the right. OSM: the back-tee line crosses the mapped pond (way 950199971) about 39-56 yd from the tee, a short forced carry. Fairway bunkers frame the corner: left about 188 and 234 yd, right about 197 and 222 yd. There is 1 greenside bunker on the right. DEM: green about 3 m above the tee.",
+    "shape": "dogleg (GolfTop18: 'bite off more of the corner'); direction from OSM: left, ~28 deg",
+    "elevation": "elevated green (GolfTop18); DEM ~+3 m tee to green",
+    "hazards": [
+     "corner of native brush/ravine to cut (GolfTop18, SkyGolf photo)",
+     "pond directly in front of the back tee, ~39-56 yd carry (OSM)",
+     "OSM: fairway bunkers L ~188/234 yd and R ~197/222 yd around the corner",
+     "greenside bunker (front per photo; right per OSM)"
+    ],
+    "source_urls": [
+     "http://www.golftop18.com/mountain-gate-northsouth-golf-course-review.html",
+     "https://web.archive.org/web/20160826215313/http://www.skygolfblog.com/2013/08/mountaingate-country-club-los-angeles.html"
+    ]
+   },
+   {
+    "hole": 14,
+    "nine_hole": "South 5",
+    "confidence": "unknown",
+    "description": "Card: Par 5, 535/513/460 yd, SI 5 (the SkyGolf caption says 532 yd). I found no written description of this hole. SkyGolf blog (2013) has captioned photos. One shows the green set against a steep brush-covered hillside with a front bunker. One, looking back from the green, shows a bunker right-front and the fairway falling away behind it. A third shows a deer on the hole. Not from a written source (OSM + DEM): the hole plays west and is nearly straight, with a gentle S-bend (+11 / -16 deg). It climbs about 28 m (~92 ft) tee to green. OSM bunkers: fairway right about 232 yd, left about 257 yd, right about 314 yd; 3 greenside (2 left, 1 right). Imagery shows brush and wooded hillsides on both sides.",
+    "shape": "not sourced; OSM nearly straight with a gentle S-bend",
+    "elevation": "not sourced; DEM ~+28 m uphill tee to green (photo looking back from green is consistent)",
+    "hazards": [
+     "OSM: fairway bunkers R ~232 yd, L ~257 yd, R ~314 yd",
+     "OSM: 3 greenside bunkers (2 L, 1 R)",
+     "brush/wooded hillsides both sides (imagery, photo)"
+    ],
+    "source_urls": [
+     "https://web.archive.org/web/20160826215313/http://www.skygolfblog.com/2013/08/mountaingate-country-club-los-angeles.html"
+    ]
+   },
+   {
+    "hole": 15,
+    "nine_hole": "South 6",
+    "confidence": "unknown",
+    "description": "Card: Par 4, 412/361/326 yd, SI 11. I found no written description or captioned photo. Not from a written source (OSM + DEM): the hole plays NE, then bends right (+32 deg) about 300 yd out toward the green. It falls about 12 m tee to green. OSM bunkers: fairway right about 268 yd; greenside left and right. Imagery shows a brush hillside along the left.",
+    "shape": "not sourced; OSM dogleg right (~32 deg)",
+    "elevation": "not sourced; DEM ~12 m downhill tee to green",
+    "hazards": [
+     "OSM: fairway bunker R ~268 yd",
+     "OSM: greenside bunkers L and R",
+     "brush hillside left (imagery)"
+    ],
+    "source_urls": []
+   },
+   {
+    "hole": 16,
+    "nine_hole": "South 7",
+    "confidence": "unknown",
+    "description": "Card: Par 3, 202/190/180 yd, SI 17. Some older GolfPass and OpenGolfAPI cards list this hole as a 302-yd par 4. The 2013 SkyGolf caption ('#7 Hole 202 yds Par 3'), the current 6,719-yd card and OSM (par 3) all say par 3. I found no written description. The SkyGolf photo shows the green with bunkers on the left, backed by trees and a steep brushy hillside. Not from a written source (OSM + DEM): a straight par 3 playing SW, level tee to green. OSM bunkers: greenside left and right, plus one right about 113 yd from the tee.",
+    "shape": "not sourced; straight par 3",
+    "elevation": "not sourced; DEM roughly level",
+    "hazards": [
+     "OSM: greenside bunkers L and R (photo shows bunkers left)",
+     "OSM: bunker R ~113 yd",
+     "trees/brush hillside behind green (photo)"
+    ],
+    "source_urls": [
+     "https://web.archive.org/web/20160826215313/http://www.skygolfblog.com/2013/08/mountaingate-country-club-los-angeles.html"
+    ]
+   },
+   {
+    "hole": 17,
+    "nine_hole": "South 8",
+    "confidence": "unknown",
+    "description": "Card: Par 4, 450/430/382 yd, SI 7. I found no written description. The SkyGolf photo (2013) is taken from the tee: the fairway runs downhill with a cart path to a bunkered green, and homes sit on the far ridge. Not from a written source (OSM + DEM): the hole plays ENE with a slight bend left (-11 deg) about 300 yd out. It falls about 13 m tee to green. OSM bunkers: fairway right about 224 yd; 4 greenside (2 left, 2 right). Trees line the right side (imagery). OSM drain lines run about 56-79 yd left near the green.",
+    "shape": "not sourced; OSM nearly straight, slight bend left",
+    "elevation": "not sourced; photo shows a downhill tee shot; DEM ~13 m downhill",
+    "hazards": [
+     "OSM: fairway bunker R ~224 yd",
+     "OSM: 4 greenside bunkers (2 L, 2 R)",
+     "trees along right side (imagery)"
+    ],
+    "source_urls": [
+     "https://web.archive.org/web/20160826215313/http://www.skygolfblog.com/2013/08/mountaingate-country-club-los-angeles.html"
+    ]
+   },
+   {
+    "hole": 18,
+    "nine_hole": "South 9",
+    "confidence": "sourced",
+    "description": "Card: Par 5, 562/540/481 yd, SI 3, the longest hole on N/S. Older GolfPass and OpenGolfAPI cards list a 412-yd par 4; the 2013 SkyGolf caption, the current card and OSM all say par 5. SkyGolf blog (2013): a 562-yd par 5 with a severe 90-degree dogleg. The side of the hill runs along one side of the fairway and the fairway slopes away on the other. CONFLICT: SkyGolf says dogleg RIGHT with the hill on the right. Its own tee photo shows the brushy hill (houses on top) on the LEFT. OSM (-40 deg on the line; the fairway bends harder) and imagery show the hole turning LEFT, with the hillside and houses on the left/SW. Treat it as a dogleg left. Greenskeeper reviewer roarksown1 (Aug 2016) played South first and then North. While criticising the South nine (sloping fairways, awkward tee angles, lost-ball areas), he complained about finishing a nine on a par 5 where a perfectly struck driver rolls down a hill. That almost certainly means this hole, but he does not number it. SkyGolf approach photo: green with bunkers left and right, buildings (clubhouse area) behind. The photo looking back from the green shows the fairway falling away, so the green sits well above the landing area. DEM: tee about 365 m, dips slightly about 140 yd out, then climbs to the green at about 388 m (+23 m). OSM maps only 2 greenside bunkers (left, right). Imagery shows about 3 fairway bunkers on the outside (right) of the corner and about 2 more on the right of the second leg, none of them in OSM.",
+    "shape": "severe dogleg (SkyGolf: ~90 deg); direction from OSM/imagery: LEFT (SkyGolf says right - conflicts with geometry and its own photo)",
+    "elevation": "uphill finish: DEM ~+23 m tee to green, slight drop in the drive zone; fairway slopes away from the hillside (SkyGolf); drives run down a hill (Greenskeeper)",
+    "hazards": [
+     "hillside (brush, houses above) along the left - possible OB/penalty area along the houses, unverified",
+     "fairway sloping away toward the right/outside of the corner (SkyGolf)",
+     "greenside bunkers left and right (photo; OSM 2)",
+     "fairway bunkers right at the corner and on the second leg (imagery only; not in OSM)",
+     "OSM drain ~57-77 yd left near the tee"
+    ],
+    "source_urls": [
+     "https://web.archive.org/web/20160826215313/http://www.skygolfblog.com/2013/08/mountaingate-country-club-los-angeles.html",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/reviews.cfm"
+    ]
+   }
+  ],
+  "notes": "I found no hole-by-hole South description from the club itself, Golf Digest (403), BlueGolf (aerial tour only) or YouTube. Only three written sources describe South holes:\n(1) GolfTop18 (last reviewed 2004) covers South 2, 3 and 4.\n(2) The SkyGolf blog, 13 Aug 2013, has text on South 2 and 9 plus captioned photos of South 1, 2, 3, 4, 5, 7, 8 and 9. The live skygolfblog.com domain now serves unrelated spam, so use the Wayback copy: https://web.archive.org/web/20160826215313/http://www.skygolfblog.com/2013/08/mountaingate-country-club-los-angeles.html\n(3) A Greenskeeper review (roarksown1, 13 Aug 2016) gives general South criticism and the finishing par 5.\n\nGeneral South-nine notes:\n- SkyGolf: it plays on a plateau at the base of the mountains, is more open and less forgiving than North, and is about 300 yd longer. On clear days downtown LA and Catalina are visible from the highest South tees.\n- GolfTop18: shots over cliffs and water.\n- Greenskeeper: many sloping fairways, awkward tee angles, lost-ball and penalty areas.\n\nScorecard check:\n- The 6,719-yd card (Golfify, golfingrecord, SkyGolf 2013 captions) has South = 417/400/174/365/535/412/202/450/562, pars 4-4-3-4-5-4-3-4-5, total 3,517.\n- OSM pars for refs 19-27 match this card, and OSM hole lengths match within about 15 yd (South 4 is 327 vs 365). That confirms OSM refs 19-27 = South 1-9 = course holes 10-18.\n- The GolfPass and OpenGolfAPI N/S scorecard rows (back nine 3,528: 435 / 391 / 302 P4 / 412 P4) are outdated or wrong. Do not use them.\n\nLeft/right conflicts:\n- SkyGolf calls South 2 and South 9 doglegs RIGHT. The GolfTop18 text (South 2), SkyGolf's own South 9 tee photo, the OSM hole lines and the Esri imagery all show LEFT turns. I used left.\n\nTwo OSM gaps worth fixing for metadata (TODO item 3):\n(a) The triangular pond about 80 yd short of the South 2 green on the right is not tagged as water in OSM. It is at about UTM11N 363397E 3774557N (lon -118.48095, lat 34.10291) and fits GolfTop18's 'hidden lake'. About 75 m south of it is the OSM-mapped pond (way 950199971, about 1,620 m2). That one lies right of the South 3 green and in front of the South 4 back tee.\n(b) On South 9, imagery shows about 5 fairway bunkers on the right of the corner and second leg that OSM does not have.\n\nMethod for the derived data (not written sources):\n- Everything labelled OSM/DEM or imagery comes from my analysis of research/osm_golf.json, build/backdrop_dem.tif (2 m, approximate) and data/imagery/esri_z20_course.tif.\n- Dogleg sign: negative turn = left.\n- Per the instructions, holes with no written description (10, 14, 15, 16, 17) are marked 'unknown' even though they carry photo and OSM/DEM observations.\n\nYouTube:\n- 'LA GOLF VLOG Mountain Gate CC' (Angela Yang, 2025, youtube.com/watch?v=461f-m8jd9Q) has only auto chapters (holes 3, 10, 11, 12, no nine named).\n- 'Mountain Gate CC with Special Guest Vlog Part 1' (Black Birdie Golf, 2018) has no hole info.\n- I could not get transcripts for either.\n\nGreenskeeper playing tips need a login, so I did not access them.\n\nWorking files (scratchpad):\n- Imagery crops with OSM lines: /private/tmp/claude-501/-Users-daniele-Library-Application-Support-Claude-scratch-workspaces-abb34d83-5a3d-4e17-85db-46a7a7157086-87b0e083-6964-4d4d-8b49-9bd53d952dcd-scratch-2026-10-10-64f2a4/264a4132-42a5-4ac8-aaf5-5f09c308fd7e/scratchpad/ov/ (south1-9.png, wide_s2s4.png)\n- SkyGolf photos: .../scratchpad/img_dl/skygolf/\n- Analysis scripts: .../scratchpad/scripts/"
+ },
+ "facts": {
+  "facts": [
+   {
+    "topic": "water",
+    "statement": "The North/South 18 has exactly ONE open-water feature, a small pond (~1,600 m2, ~200 m perimeter, centroid 34.10228,-118.48082) on the South nine. OSM tags it golf=water_hazard + natural=water (way 950199971). It sits almost directly in front of, and slightly left of, the South #4 tee (GSPro hole 13). It starts within ~40-70 m of the tee, so it is a short forced carry/visual hazard off the tee. It is also ~32-35 m right (west) of the South #3 green (GSPro hole 12, par 3, which plays roughly south). The project's Esri imagery tile (z18 44796_104628, z17 22398_52314) shows dark water ringed by tan bare/native ground, with the South #3 green and its two bunkers just east of it. The OSM-derived opengolfapi listing says '2 water hazards' for North/South. In OSM, though, the second hazard is the Lake-nine pond, not a North or South one.",
+    "confidence": "high",
+    "source_urls": [
+     "https://www.openstreetmap.org/way/950199971",
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "/Users/daniele/Development/mountain-gate/research/osm_all.json",
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/18/44796_104628.jpg",
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/17/22398_52314.jpg"
+    ]
+   },
+   {
+    "topic": "water",
+    "statement": "The North nine has NO open water. OSM has a line tagged waterway=stream (way 1059731972, ~820 m, no name, not marked intermittent). It runs SW to NE from near the North #7/#8 area (34.1091,-118.4918) to the Lake-nine pond (34.1135,-118.4856). It crosses the centrelines of North #1 (~256 yd from tee, near the right side of the green), North #2 (~151 yd from tee on the 189-yd par 3), North #8 (~94 yd from tee) and North #9 (~279 yd from tee), and Lake #1, #8 and #9. It does not cross any OSM fairway, green, tee or bunker polygon. At the crossing points the Esri z19 imagery shows only grass with a faint linear mark and a cart-path crossing, with no water. The line matches the straight ~0.5 m-deep SW-to-NE linear swale already found in the LiDAR (research/NOTES.md). Treat it as a buried storm drain or grassed swale, not a creek. The separate brown 'barranca' right of North #1 green that NOTES.md describes (native/mulch, with a cart bridge) is a dry native area, which may warrant a red penalty-area or native-area surface rather than water.",
+    "confidence": "medium",
+    "source_urls": [
+     "https://www.openstreetmap.org/way/1059731972",
+     "/Users/daniele/Development/mountain-gate/research/osm_all.json",
+     "/Users/daniele/Development/mountain-gate/research/NOTES.md",
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/19/89580_209243.jpg",
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/19/89579_209243.jpg"
+    ]
+   },
+   {
+    "topic": "water",
+    "statement": "The Lake nine (scenery only for this build) has the other pond: OSM way 1059732898, golf=water_hazard, ~3,200 m2, centroid ~34.11386,-118.48596. It fronts the Lake #6 green (par 3, ~183 yd) and lies beside Lake #5 and Lake #7. In imagery a cart path or bridge splits it into two lobes. OSM also has minor drain lines near the South #8 green and South #9 tee (ways 345403525, 345403946; 40-70 m long, 50-70 m from play) and intermittent streams well south of the course (>290 m from any South hole). None of these are in play.",
+    "confidence": "high",
+    "source_urls": [
+     "https://www.openstreetmap.org/way/1059732898",
+     "https://www.openstreetmap.org/way/345403525",
+     "/Users/daniele/Development/mountain-gate/research/osm_all.json",
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/17/22396_52309.jpg"
+    ]
+   },
+   {
+    "topic": "water",
+    "statement": "Some directory text about water is unreliable. GoPrivateGolf says the Lake course 'features water hazards on every hole'. A search-engine summary attributed to wander.golf mentions an 'island green', but the fetched wander.golf page does not contain that text. Both are contradicted by OSM and imagery, which show only one pond on Lake and one on South. Golf Tennessee and SCGolf list 'Water Hazards: N/A' for North/South.",
+    "confidence": "medium",
+    "source_urls": [
+     "https://www.goprivategolf.com/private-golf-clubs/mountaingate-country-club",
+     "https://www.wander.golf/courses/california/los-angeles/mountaingate-country-club-los-angeles-19336",
+     "https://www.golftennessee.com/golfcourses/mountain-gate-country-club-northsouth"
+    ]
+   },
+   {
+    "topic": "history / terrain",
+    "statement": "MountainGate was built over a former municipal solid-waste landfill. The Mountaingate landfill used several canyons in the Brentwood/Sepulveda Pass area, and the LA County Sanitation Districts operated it until 1980. Landfill gas is still recovered there. The USGA Green Section Record of July/Aug 1994 (Vol. 32 No. 4) put Mountaingate CC on its cover as a course 'successfully built on landfill sites'. It reported that ~5 million cu ft/day of methane is piped 5.5 miles to UCLA's steam plant, and that four of the filled canyon surfaces support the 27 holes. EJMap lists a 'Mountaingate Landfill' at 34.1073,-118.4880 (the middle of the course) with a 7.5 MW landfill-gas turbine, and names Barclay Hollander/American Golf Corp. OSM has a disused landfill polygon just south of the South nine (way 345404049) and industrial buildings at ~34.0969,-118.4797 (likely the gas plant). Modelling implications: fill-cap terraces, flat-ish engineered landforms, and possible gas wellheads or vent risers and drainage channels in the rough.",
+    "confidence": "medium",
+    "source_urls": [
+     "https://d.lib.msu.edu/gsr/494",
+     "https://ejmap.org/displayfacilityadvanced-69947.htm",
+     "https://www.openstreetmap.org/way/345404049"
+    ]
+   },
+   {
+    "topic": "renovations",
+    "statement": "No published golf-course renovation (bunkers, greens, tees, tree removal) since ~2015 was found. Searches of trade press (Golf Course Architecture, GCI, USGA), club pages and directories returned nothing. The only documented recent change is the clubhouse restaurant 'The Gate' and its patio, described as 'newly renovated' (undated). The club Social page describes a large patio with fire pits and panoramic views of the North and Lake courses. GolfPass credits 'Ted Robinson, Sr. and Casey O'Callaghan Golf Course Design' as architects, which may indicate later remodel work, but no details or dates were found. Member reviews mention routine work only: an overseed with cart-path-only play (Oct 2015), Lake #5 fairway repair (Apr 2015), and 'a little bit beat up' uneven tee boxes (Feb 2021).",
+    "confidence": "medium",
+    "source_urls": [
+     "https://www.goprivategolf.com/private-golf-clubs/mountaingate-country-club",
+     "https://www.mtngatecc.com/social/",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/reviews.cfm",
+     "https://wanderlog.com/place/details/432587/mountaingate-country-club"
+    ]
+   },
+   {
+    "topic": "renovations / landscape",
+    "statement": "Imagery the project already has (Esri World Imagery, 2025-07 and 2026-01) shows extensive non-turf ground between and beside holes. It includes tan bare-dirt or mulch native areas (e.g. around the South #3/#4 pond and along North-nine corridors) and dense chaparral/scrub on the slopes. This looks like drought-era turf reduction plus natural hillside. No dated source was found for when the turf was removed. In GSPro these areas likely need a native/waste or 'pinestraw'-type surface rather than rough.",
+    "confidence": "low",
+    "source_urls": [
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/18/44796_104628.jpg",
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/17/22396_52309.jpg",
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/18/44791_104622.jpg"
+    ]
+   },
+   {
+    "topic": "fire",
+    "statement": "The January 2025 Palisades Fire forced the Mountaingate community to evacuate. ABC7 (11 Jan 2025) reported goats evacuated from Mountaingate as the fire moved toward the 405. The fire's north-east flare-up of 10-11 Jan burned into Mandeville Canyon, which lies west of Kenter Canyon and Mountaingate. No source reports fire damage to the club or course. Post-fire Esri imagery in the project (2025-07-18 and 2026-01-09) shows green turf and intact tree cover, with no visible burn scar on the North/South holes. The project's LiDAR comes from the USGS 'CA_2025LosAngelesPostWildfire' collection, whose name implies it was flown after the fires. Earlier, the October 2019 Getty Fire evacuation zone was bounded by Kenter Canyon, the 405 and Mountaingate; no course damage was reported then either.",
+    "confidence": "medium",
+    "source_urls": [
+     "https://abc7.com/15789350",
+     "https://www.foxla.com/news/palisades-fire-latest-jan-10-2025",
+     "https://en.wikipedia.org/wiki/Getty_Fire",
+     "/Users/daniele/Development/mountain-gate/research/NOTES.md"
+    ]
+   },
+   {
+    "topic": "out of bounds",
+    "statement": "Houses rarely line the North/South fairways closely; most homes sit on ridges above the course. Measured from OSM building footprints to the OSM hole centrelines (research/osm_all.json), the houses within 75 m are: South #1 left near the tee (~45 m); South #6 left by the green (48-68 m); North #3 left (~72 m, about 30% of the way down); North #4 around the tee (~67 m); South #9 left along most of the hole (74-86 m, 20 houses within 130 m). No houses lie within 130 m of North #1, #2, #6, #7, #9 or South #2-#5. North #8 and South #3 have one house each, near the tee and beyond 110 m. A 2016 member review: 'a few houses looming overhead, but not bearing down on you'. BlueGolf's North/South local-rules page says 'Local Rules have not been setup', so no published OB or penalty-area definitions exist. OB lines will have to come from the property/parcel boundary, and the OSM golf_course relation 5201230 boundary is coarse. In GSPro, OB should mostly follow the course perimeter and native hillsides, with the closest house-side OB on South #1, South #6 and South #9 (left).",
+    "confidence": "medium",
+    "source_urls": [
+     "https://www.openstreetmap.org/relation/5201230",
+     "/Users/daniele/Development/mountain-gate/research/osm_all.json",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/reviews.cfm",
+     "https://course.bluegolf.com/bluegolf/course/course/mountaingateccnorths/localrules.htm"
+    ]
+   },
+   {
+    "topic": "turf",
+    "statement": "Fairways and rough are kikuyugrass. GolfPass lists Kikuyu for the North/South fairways. A Greenskeeper.org reviewer (07/09/2019) wrote 'The golf course is primarily Kikuyu grass so you got next to no roll with your drives'. Another (07/19/2016) noted 'there was kikuyu in front' of the greens, so short shots got grabbed. An Oct 2015 review mentions overseeding, which suggests winter overseed. Golf Tennessee's directory instead lists Bermuda fairways, which is less credible.",
+    "confidence": "medium",
+    "source_urls": [
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/reviews.cfm",
+     "https://www.golftennessee.com/golfcourses/mountain-gate-country-club-northsouth"
+    ]
+   },
+   {
+    "topic": "turf",
+    "statement": "The putting-green species is uncertain. Golf Tennessee lists 'Bent Grass' greens; GolfPass and GoPrivateGolf list Kikuyu greens, which is very unlikely for greens. A 2016 Greenskeeper reviewer said 'same grass and greens as Brookside', and Brookside Pasadena is a typical SoCal poa/bent and kikuyu course. Reviewers describe the greens as fast, firm and hard to hold ('very quick', 2021), small on the North nine (North #1 'very small'), mostly elevated, and with slippery downhill putts. Best modelling assumption: Poa annua/bentgrass greens, fast, with a kikuyu collar and approach.",
+    "confidence": "low",
+    "source_urls": [
+     "https://www.golftennessee.com/golfcourses/mountain-gate-country-club-northsouth",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/reviews.cfm"
+    ]
+   },
+   {
+    "topic": "bunkers",
+    "statement": "Bunker sand is bright white to light cream. Esri z19/z20 imagery shows near-white, slightly warm off-white sand (e.g. tiles 20/179161_418484 and 18/44791_104622). Reviewers call it 'quality sand, groomed' (2019) and 'excellent soft sand' (2015). Bunkers range 'from very steep and difficult, to shallow' (2016), and greens are 'well protected by numerous bunkers' (2017). OSM maps 98 bunkers across all 27 holes. Directory copy (BlueGolf) says 'expansive bunkers' and 'deep roughs'.",
+    "confidence": "high",
+    "source_urls": [
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/20/179161_418484.jpg",
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/18/44791_104622.jpg",
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/reviews.cfm",
+     "https://course.bluegolf.com/bluegolf/course/course/mountaingateccnorths/index.htm"
+    ]
+   },
+   {
+    "topic": "trees",
+    "statement": "No authoritative tree-species inventory was found. The evidence: (a) a search-engine summary attributed to wander.golf says the course threads 'narrow fairways through native chaparral and towering eucalyptus groves', but the fetched page lacks that text, so it is unverified; (b) wedding-venue listings mention 'a cluster of birch trees' at the MountainGate Vista ceremony lawn by the clubhouse; (c) project imagery from January 2026 shows some leafless deciduous trees with pale branching (consistent with sycamores) next to dense dark evergreen canopies (pine/oak/eucalyptus type) and chaparral scrub on the slopes; (d) BlueGolf says 'lush stands of trees frame undulating fairways'. The project's existing archetypes (eucalyptus, oak, pine, sycamore, shrub) fit this. Reasonable split: eucalyptus and pines as tall evergreens, coast live oak, sycamores along swales, chaparral shrubs on the hillsides, and a few birch and ornamentals near the clubhouse.",
+    "confidence": "low",
+    "source_urls": [
+     "https://www.wander.golf/courses/california/los-angeles/mountaingate-country-club-los-angeles-19336",
+     "https://www.countryclubreceptions.com/location/mountaingate-country-club/",
+     "https://www.weddingwire.com/biz/mountaingate-country-club-los-angeles/bd065414db77a4f3.html",
+     "https://course.bluegolf.com/bluegolf/course/course/mountaingateccnorths/index.htm",
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/19/89581_209242.jpg"
+    ]
+   },
+   {
+    "topic": "clubhouse",
+    "statement": "The clubhouse is OSM way 419975852 (building=yes, sport=golf, start_date 1976, LA County height 8.4 m, footprint ~2,200 m2), centroid 34.10822,-118.48792, just SE of the North #1 tee and next to the North #9 green. Cvent gives 1981 as the year built. Aerial imagery (Esri z18 44791_104623, z19 89583_209246) shows an angular, geometric low-rise building of 1-2 storeys with flat or low-slope charcoal/dark-grey roofs, white parapet or fascia edges, terraces and courtyards, and planting beds. A large asphalt car park and tennis courts lie to the south-west. A second golf building (OSM way 419975078, 1976, 5.5 m high, ~960 m2) sits at 34.10873,-118.49015; it is likely the cart barn or maintenance building.",
+    "confidence": "medium",
+    "source_urls": [
+     "https://www.openstreetmap.org/way/419975852",
+     "https://www.openstreetmap.org/way/419975078",
+     "https://www.cvent.com/venues/los-angeles/special-event-venue/mountaingate-country-club/venue-9eaec601-a2cf-4dcb-a9cc-5f2018177cd6",
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/18/44791_104623.jpg",
+     "/Users/daniele/Development/mountain-gate/data/imagery/tilecache/esri/19/89583_209246.jpg"
+    ]
+   },
+   {
+    "topic": "clubhouse",
+    "statement": "Wedding-venue listings describe the clubhouse as mid-century-modern / Frank Lloyd Wright-inspired. The listed features are a geometric configuration with natural wood and glass, cascading waterfalls with ferns, bougainvillea and birds-of-paradise, and a main dining room with 'a dramatic glass atrium', 'floor-to-ceiling windows that wrap around three sides of the room' and a cherry-wood ceiling. The style wording comes from a search summary attributed to herecomestheguide.com, whose page returned 404 when fetched; the atrium and window details were confirmed on countryclubreceptions.com. Spaces include the Windows Ballroom (~4,965 sq ft), a Garden Terrace and veranda, and the patio with fire pits overlooking the North and Lake courses. For modelling: dark flat roofs, lots of glazing, warm wood or earth-tone facades, and decorative water features around the clubhouse, which are cosmetic and not in play.",
+    "confidence": "medium",
+    "source_urls": [
+     "https://www.countryclubreceptions.com/location/mountaingate-country-club/",
+     "https://www.herecomestheguide.com/southern-california/wedding-venues/mountaingate-country-club",
+     "https://www.mtngatecc.com/social/",
+     "https://www.cvent.com/venues/los-angeles/special-event-venue/mountaingate-country-club/venue-9eaec601-a2cf-4dcb-a9cc-5f2018177cd6"
+    ]
+   },
+   {
+    "topic": "course character",
+    "statement": "Member reviews describe the course as very hilly and narrow, with many fairways playing uphill or sloping away from the cart path, and elevated greens with deep bunkers. The South nine has 'Lots of sloping fairways' and 'awkward angles off the tee' and closes on a par 5 that runs downhill. There are views of the 405, and holes are cart-path-only at times. The three nines 'seem to run into each other' (shared corridors). Robinson's layouts are described as 'links-style' with the terrain 'left completely natural'. The course opened in 1975/76 (North nine 1976 per NOTES.md).",
+    "confidence": "medium",
+    "source_urls": [
+     "https://www.greenskeeper.org/southern_california/los_angeles/mountain_gate_country_club/reviews.cfm",
+     "https://www.golfpass.com/travel-advisor/courses/184-north-south-at-mountain-gate-country-club",
+     "https://course.bluegolf.com/bluegolf/course/course/mountaingateccnorths/index.htm"
+    ]
+   },
+   {
+    "topic": "scorecard data quality",
+    "statement": "opengolfapi's North/South back-nine card disagrees with golfingrecord. It lists hole 11 as P4 435, hole 16 as P4 302 and hole 18 as P4 412 (total 6,766). golfingrecord has South #2 P4 400, South #7 P3 202 and South #9 P5 562. OSM's South pars (4,4,3,4,5,4,3,4,5) and its hole-line lengths (South #7 \u2248 197 yd, South #9 \u2248 572 yd) support golfingrecord, so the opengolfapi back nine should not be used. In OSM, hole refs 1-9 = North, 10-18 = Lake, 19-27 = South.",
+    "confidence": "high",
+    "source_urls": [
+     "https://courses.opengolfapi.org/courses/CA/north-south-at-mountain-gate-country-club",
+     "https://www.golfingrecord.com/golf-scorecard/b43db86f-17fd-5b3a-802a-6f220b45bc88",
+     "/Users/daniele/Development/mountain-gate/research/osm_all.json"
+    ]
+   },
+   {
+    "topic": "operator",
+    "statement": "The club appears to be operated by American Golf Corp. Its website is served from an AGC multisite host ('mtngatecc-private.agc-multisite.prod.fruition.net', the same platform as AGC's Wood Ranch and El Camino clubs), and EJMap names 'Barclay Hollander/American Golf Corp.' Barclay Hollander was the original developer. Contact: 12445 MountainGate Dr, Los Angeles CA 90049, (310) 476-6215.",
+    "confidence": "medium",
+    "source_urls": [
+     "https://www.mtngatecc.com/",
+     "https://ejmap.org/displayfacilityadvanced-69947.htm"
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,14 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "middle": [
+   362306.93,
+   3775341.81
+  ],
+  "forward": [
+   362338.75,
+   3775402.38
+  ]
+ },
+ "notes": "R2 (2025 LiDAR + 2024 photo): the Middle and Forward markers sat on OSM pads 1157492258 / 1157492259, now native planting on a 9-10 % hillside with no deck (burned native in hole05.geojson). Real decks: Championship E 362295 N 3775333 (516 = card), the deck E 362308.6 N 3775344.8 (OSM 1157492257, flat at 411.7 m) and the turf-island deck E 362340.4 N 3775405.2 (flat at 408.2 m, not in OSM). Middle pinned 1 m inside the back of the E 362308.6 deck: 498.0 yd = card. Forward pinned 1 m inside the back of the turf-island deck, the only forward deck: 423 yd against the card's 467, 44 yd short (needs course.toml [tests] known_tee_gaps \"5.forward\"); no deck delivers 467 (the front of the Middle deck gives about 490), so no tee is invented. (verified round 2: both markers 1 m inside their decks, dem_raw within 0.05 m around them)"
+}

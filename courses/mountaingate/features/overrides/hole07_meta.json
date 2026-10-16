@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "middle": [
+   362378.65,
+   3775309.43
+  ]
+ },
+ "notes": "Middle marker kept on the deck the 2026-10-11 package used (152.7 yd, card 154): the rebuild found the same yardage on the neighbouring pad; the delivered position is kept so the GreenKeeper tees do not move."
+}

@@ -1,0 +1,14 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "forward": [
+   363204.13,
+   3774751.06
+  ],
+  "middle": [
+   363235.75,
+   3774675.25
+  ]
+ },
+ "notes": "Forward (White) marker on the only forward tee pad (OSM 1157472363). It measures ~446 yd against the 481 card; the automatic fairway-marker fallback put it in dry rough on the valley floor. Known gap, see research/NOTES.md. Lead decision 2026-10-10. Round 2: the Middle (Blue) marker was an automatic fairway_marker in dry rough on the slope 16 m east of the real Middle tee (z 360.5 m, no pad, no OSM tee). It is moved onto the Middle tee deck (OSM tee 950199963, model tee 63.2 m2, flat LiDAR deck at 361.26 m +-0.04), at the back of the deck 1.5 m inside the edge: 533.8 yd against the 540 card (6 yd short, the deck cannot deliver more). Championship stays automatic on its pad (562 = card). Round-1 override hole18 #5 (fringe on the W/SW green band) was removed in round 2: the automatic map now has green there (= OSM 344 m2) and the band is flat topdressed putting surface on the same LiDAR pad. (verified r2)"
+}

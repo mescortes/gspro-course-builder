@@ -1,0 +1,371 @@
+[
+ {
+  "hole": 1,
+  "approved": [],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "recurring: the concrete cart path behind the hole 1 tee decks (OSM way 758678358, golf=cartpath) is a 593 m2 'road' polygon (E 362608-362748, N 3775177-3775213). I confirmed it in course_surfaces.geojson. It lies outside the leisure=golf_course outline. Engine fix: keep OSM golf=cartpath ways as cartpath outside the outline."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 2,
+  "approved": [],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "low: the pin names on this wide, shallow green are odd ('front' and 'left' are both on the east lobe; 'right' is 4 m from 'middle'). All five pins are on the putting surface; this is how the engine names pins on such greens."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 3,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "bunker",
+    "reason": "The fairway bunker (hole 3) is redrawn to its 2025 hollow. On dem_raw the lip is at E ~362362.5-363 on the west face and N ~3775127 on the south side, the floor is at 411.2-411.3 m, and the hollow opens downhill to the north. The 2024 photo sand fills the 106 m2 outline (verify_r2_check.png), which contains the old 56 m2 bunker. It touches only bunker/3 and rough/99. Appended to hole03.geojson."
+   },
+   {
+    "index": 1,
+    "surface": "semirough",
+    "reason": "This fixes the confirmed round-1 regression: 28 m2 of tee/8 are exposed around hole03 #0. dem_raw is 413.28-413.45 m there, a smooth slope with no deck, and the hole 8 markers are at E 362383-362401. I merged it into the regressed feature rather than appending it: hole03 #0 now has the union of the round-1 polygon and this proposal (65.7 m2, 37 vertices, valid, no holes). That leaves 0.04 m2 of tee/8 and takes a fairway edge strip under 0.3 m wide (1.1 m2). It does not overlap the new bunker."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [
+   "hole03.geojson #0 (semirough/99): corrected rather than removed. Its geometry is replaced by its union with proposal #1 and its reason updated."
+  ],
+  "remaining_issues": [
+   "low: Championship plays 342.3 yd against the card's 346 on the rearmost deck. This is already accepted in hole03_meta notes and is within the 6 yd tolerance."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 4,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "bunker",
+    "reason": "The fairway bunker right of the fairway is redrawn to the full pear. On dem_raw at E 362322 the ground falls 412.77 -> 411.81 m from N 3775245.5 to N 3775241 (a crisp north lip), and the 2024 photo sand fills the whole 185 m2 outline (verify_r2_check.png). The old 87.6 m2 bunker is kept except for edge slivers under 0.2 m wide (0.54 m2 in all). It touches only bunker/4 and rough/99. No other override is within 2 m. Appended to hole04.geojson."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "low: an automatic aim point on a nearly straight hole (7 deg); it changes the yardage by only 0.5 yd.",
+   "low: the round-1 cart-path override at N 3775232 sits about 1.5 m west of the photo path. Cosmetic."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 5,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "native",
+    "reason": "OSM tee 1157492258 (the old Middle pad) is native planting. My plane fit on dem_raw gives a 8.9 % slope, rms 0.026 m and no raised bank (ring 0.08 m), against 1.2-1.3 %, rms 0.013-0.015 m and a 0.10-0.30 m bank on the three real decks. The 2024 photo shows tan ground with shrubs. The polygon is 72 m2 over the 59.5 m2 tee/5 and the surrounding native area (0.56 m2 of rough)."
+   },
+   {
+    "index": 1,
+    "surface": "native",
+    "reason": "OSM tee 1157492259 (the old Forward pad) is native planting: 10.5 % slope, rms 0.032 m, no bank, tan ground with shrubs in the photo. The polygon is 120 m2 over the 100.5 m2 tee/5, the 0.0 m2 tee speck and the native area. No override is within 2 m."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "hole05_meta.json created: tees_utm middle [362306.93, 3775341.81] (498.0 yd = card) and forward [362338.75, 3775402.38] (423.2 yd against the card's 467), plus notes. I recomputed both yardages from holes.json: tee -> aim (362413.88, 3775533.06) -> aim (362466.69, 3775709.73) -> green centre (362483.45, 3775758.8). Both markers are 1 m inside real decks (plane fit 1.3 %, dem_raw within 0.05 m around them).",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "ACTION FOR THE LEAD: Forward now plays 423 yd against the card's 467, a 44 yd gap on the only forward deck (the turf island at E 362340.4 N 3775405.2, flat, raised and not in OSM). course.toml [tests] known_tee_gaps has no '5.forward' entry, so tests/test_course.py will fail until \"5.forward\" = 44.0 is added there and in NOTES.md 'Card against the ground' (I did not edit those files). The alternative is the front of the Middle deck at about 490 yd (23 yd long); I rejected it because it makes Forward almost the same tee as Middle.",
+   "engine: automatic tee pads take OSM tees without a LiDAR deck check. A plane-fit slope above ~5 % or a deck not raised above its ring would have caught these two converted tees.",
+   "low: the second automatic aim point is collinear with the first and the green; it does not change the yardage."
+  ],
+  "score_after": 8
+ },
+ {
+  "hole": 6,
+  "approved": [],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "low: the Forward pad (OSM 1157476564) is a mown strip with a 4-6 % cross-slope, not a level deck. It gives 362.9/366, within tolerance.",
+   "low: the round-1 fairway fill (18 m2) at the right fairway edge forms a small fairway bump where the intensity reads rough. Cosmetic."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 7,
+  "approved": [],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "RECURRING (engine): thin automatic-bunker remnants about 0.25-0.5 m wide are left along the lips of the round-1 LiDAR-redrawn bunkers. Each becomes its own tiny bunker hazard in holes.json: hole 7 at 3.2 m2 (362332.8, 3775195.9) and 4.8 m2 (362336.2, 3775190.6), hole 8 at 10.5 m2 (362444.1, 3775393.6) and hole 9 at 5.7 m2 (362722.0, 3775224.2). The engine should merge or drop bunker fragments narrower than about 0.6 m that touch an override bunker.",
+   "The Middle marker (QA-pinned, delivered deck) measures 152.6 yd against the card's 154. That is inside tolerance, so no action."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 8,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "fairway",
+    "reason": "Confirmed. The 21.2 m2 semirough/99 island is completely surrounded by hole-8 fairway, including the shaded part to the west (sampled on a 3 m grid). Inside it: NDVI 0.34 against 0.30 on the ring, canopy 0.01 m, smooth dem_raw (p10-p90 391.56-391.89, the same as the ring) and intensity like the fairway. The overlay shows it at the edge of a tree shadow on uniform turf. The polygon adds 5.2 m2 of hole-8 fairway and nothing else. There are no overrides within 2 m. Appended to hole08.geojson; a local burn test leaves fairway/8 at the point."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "Round-1 regression CONFIRMED but not fixed in a hole-8 file: hole03.geojson #0 (semirough/99) now covers only 16.5 m2 of the 44.6 m2 auto tee/8 sliver, so a 28 m2 phantom tee/8 arc (362357.4, 3775126.7) is still in hole 8's tee_pads. The fix is build/mountaingate/qa/hole03/proposal_r2.geojson #1 (semirough/99), which hole 3's verifier owns. hole03.geojson was not touched here. If that proposal is rejected, the phantom tee stays.",
+   "The left fairway bunker (hole06.geojson #8, 197.5 m2) carries hole 99, while a 10.5 m2 lip sliver carries hole 8. The labels are cosmetic and were left.",
+   "RECURRING (engine): OSM line-of-play vertices on near-straight legs are kept as aim points (hole 8 bends 2 degrees, hole 9's first aim point 3.5 degrees). They are harmless; the engine could drop deflections under about 5 degrees."
+  ],
+  "score_after": 8
+ },
+ {
+  "hole": 9,
+  "approved": [],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "The north end of the upper fairway (N 3775480-505) is ragged along the tree shadows. There is no clear mowing line to redraw it to, so it was left.",
+   "A 3-6 m band of rough/semirough along the paved drainage V-ditch crosses the fairway at about 330 yd. The ditch is real, so no change.",
+   "The first aim point is on a 3.5-degree bend, which is the recurring engine behaviour noted under hole 8."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 10,
+  "approved": [],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [
+   "hole10.geojson #1 (rough/99, 22.1 m2, 'Not a bunker' on the bank behind the Championship tee): the regression is confirmed. The current auto map has no bunker there: it is deeprough/99 18.2 m2, rough 3.5 m2 and cartpath 0.4 m2. Canopy height has a median of 0.94 m (p90 2.1 m), and the photo shows shrub/landscape planting. Deleting it restores the chaparral deeprough. A local burn test gives deeprough/99.",
+   "hole10.geojson #2 (rough/99, 12.8 m2, same reason): the regression is confirmed. Under it is entirely auto deeprough/99, and canopy height has a median of 1.47 m (p90 2.8 m). Deleted; the area returns to deeprough. The Championship tee deck nearby is unaffected."
+  ],
+  "remaining_issues": [
+   "The fairway ends 6-8 m short of the front of the green. The 0.6 m photo cannot separate the approach cut from rough, so no edit.",
+   "hole10 #0, #3, #6 and #7 are rough on auto rough. They are redundant but harmless guards and were kept.",
+   "The Forward marker is QA-pinned at 358-360 yd against the card's 366 (documented gap 10.forward = 9 yd).",
+   "RECURRING: the rough/deeprough patchwork on the north hillside (see hole 11)."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 11,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "semirough",
+    "reason": "Confirmed false tee. The auto tee/11 piece (46.9 m2, an 18 x 2.5 m sliver on the left fairway edge at the dogleg, about 215 m out) is in hole 11's tee_pads, has no OSM tee and no deck: pad z 351.61 equals the ring 351.61, median slope 3.4 %. Photo: mown turf, NDVI 0.33 like the ring. The polygon covers 46.4 of 46.9 m2, with spill of 0.15 m2 onto fairway and about 8 m2 onto the edge semirough/rough. It touches no bunker, path or other hole, and no override is within 2 m. The remaining auto tee specks are under 3 m2 and get absorbed. No marker uses this pad. Appended to hole11.geojson."
+   }
+  ],
+  "rejected": [
+   {
+    "index": 1,
+    "reason": "Not appended. The confirmed round-1 regression was fixed at its source: hole11.geojson #5 (fairway/11) was deleted. The auto map under it is 100 % rough/99, so the result is identical and no second override is stacked. A photo profile at E 363294-306 shows the mowing line at N ~3774781 (NDVI drops from 0.30 to 0.22-0.26 and the turf brightens). The #5 spot (N 3774807) matches the rough strip between the fairway and the Forward tee, so the fairway island was spurious. A local burn test gives rough/99 there."
+   }
+  ],
+  "meta_applied": "none",
+  "overrides_removed": [
+   "hole11.geojson #5 (fairway/11, 29.6 m2 at 363300, 3774807): a confirmed regression, now an isolated fairway island in rough, 25 m in front of the Forward tee, with only auto rough/99 underneath. Deleted."
+  ],
+  "remaining_issues": [
+   "RECURRING (engine): canyon woodland and chaparral are split between rough and deeprough. About 9,900 m2 of the canyon left of the hole-11 fairway, the corner players cut, is rough with a median canopy of 2.5 m. The same happens on hole 10's north hillside and hole 12's east canyon.",
+   "DEM/engine: a drain-inlet pit about 1.75 m deep and 1.5 m wide (363301.6, 3774813.6) is still in dem_final, in the rough 25 m in front of the Forward tee.",
+   "An unmarked flat 53 m2 tee/11 deck lies 40 m behind the Championship tee in the brush, a plausible old back tee. It is out of play and was left.",
+   "Forward measures 363.5 yd against the card's 359, inside tolerance (a documented gap)."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 12,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Confirmed false tee. The auto tee/12 (172.9 m2) is now only partly covered by round-1 #5/#6, leaving a 66.8 m2 residual (363494, 3774504.6) in hole 12's tee_pads. The LiDAR shows no deck: pad 354.00 against ring 353.90, median slope 3.9 %, and the hillshade shows a continuous rim slope. The real decks stand 0.2-0.35 m above their rings. Photo: the mown band between the approach fairway and the tan rim. The polygon covers 79.8 m2 of the auto tee, plus 0.3 m2 of fairway and about 5 m2 of rough/semirough. It sits 35 m from the pinned Forward deck and touches no bunker, path or other hole. After the burn, only specks under 3 m2 remain, and those get absorbed. Rough/99 matches round-1 #5/#6 around it. Appended to hole12.geojson; a local burn test gives rough/99 and no tee near the point."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "Round-1 #5/#6 are confirmed misaligned with the current auto tee, but they still cover real false-tee ground (36.5 and 68.5 m2 of auto tee/12), so they were kept. The appended rough/99 fills the gap between them. #5 also notches 3.8 m2 off the fairway edge, which is negligible and within the fairway-edge uncertainty, so it was left.",
+   "RECURRING: the rough/deeprough patchwork in the east canyon (see hole 11)."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 13,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "semirough/99",
+    "reason": "The 98.6 m2 automatic tee/13 strip between the fairway and the round-1 path-side rough is not a deck. dem_raw reads +0.03 m over a plane fitted to its 1-3 m ring, against +0.21 to +0.39 m on the real hole 13 decks, and the hillshade is a plain slope. It is not an OSM tee and lies just outside OSM fairway 1157470198, so semirough is the right collar. The polygon covers the whole strip. It also takes about 6.6 m2 (about 0.2 m) off the fairway edge and 6.6 m2 of round-1 #0 rough. That is within tolerance: clipping it left tee slivers."
+   },
+   {
+    "index": 1,
+    "surface": "fairway/13",
+    "reason": "The 19.8 m2 tee/13 sliver west of the right-centre bunker has no deck (+0.06 m over the ring plane). It sits inside OSM fairway 1157470198, and the photo shows mowing to the sand. The polygon covers it fully and overwrites no bunker."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "Round-1 #0 and #6/#9-#11 are misaligned 1-4 m against the NAIP 2024 classification. They are harmless and kept, and the r2 features cover the leftovers.",
+   "Forward marker: 218.6 yd against the card's 224, on a flush deck at the top of the fairway (within tolerance, left as is)."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 14,
+  "approved": [],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "No proposal. The hole-17 tee slivers on the hole 14 fairway's north edge are now burned to rough/99 by the hole17.geojson r2 features (the round-1 hole17 #0 regression is fixed there; #0 itself is harmless and kept)."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 15,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough/99",
+    "reason": "The 6.4 m2 bunker/15 crescent is on the west foot of the sand complex that NAIP 2024 still shows. The 2025 LiDAR has a smooth convex mound there with no hollow or lip, and the newer Esri photo of the earlier rounds showed grass (hole16 #1). The polygon covers it fully and overwrites only rough."
+   },
+   {
+    "index": 1,
+    "surface": "rough/99",
+    "reason": "The 4.8 m2 crescent at the north tip of the same filled complex has no hollow in the 2025 LiDAR. The polygon covers it fully and overwrites only rough."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "Round-1 #11 and #12 are misaligned 1-2 m east of the NAIP 2024 crescents. They are harmless rough and kept.",
+   "hole15 #4/#5 cart path NE of the green is kept. It is a new path built after May 2024: NAIP 2024 shows grass (NDVI 0.30), but the 2025 LiDAR has a graded bench, intensity about 44.4k (same as the old path at 44.5k; turf reads about 50.5k), and the newer Esri photo showed paving. The NAIP texture will show grass on it."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 16,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough/99",
+    "reason": "The 3.9 m2 bunker/16 crescent on the west edge of round-1 #1 sits on a smooth 2025 LiDAR mound with no hollow or lip. The pans were filled after May 2024. The polygon covers it fully and overwrites only rough."
+   }
+  ],
+  "rejected": [
+   {
+    "index": 1,
+    "reason": "Regression not confirmed: hole16 #2 is a real, new cart path. NAIP 2024 predates it: in May 2024 the path ended at the junction, and the hole 15 SW bunker is still the old trefoil in that photo. The 2025 LiDAR shows a crisp graded bench continuous with hole15 #4/#5. The strip's LiDAR intensity (45.1k) matches the old path (44.5k), not turf (50.5k). The 'ratio 1.00' only says that the ring beside it is also low. The newer Esri photo of the earlier rounds showed light-grey paving."
+   },
+   {
+    "index": 2,
+    "reason": "Same reason as #1: it is part of the restoration of a path that is real."
+   },
+   {
+    "index": 3,
+    "reason": "Same reason as #1: not needed, because hole16 #2 is kept."
+   }
+  ],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "Round-1 #1 is about 1 m east of the NAIP sand outline. It is kept, and the r2 #0 crescent burn plus the hole 15 burns clear the leftovers.",
+   "The NAIP 2024 photo still shows sand at the filled pans and at the old north and front-left greenside lobes, so the photo texture will paint sand on rough (recurring)."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 17,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough/99",
+    "reason": "The leftover 3.8 m2 tee/17 piece of the bogus Championship blob, west of round-1 #0, is on a sloping hump (+0.10 m, not a flat deck). It is not an OSM tee and no marker uses it. Covered fully."
+   },
+   {
+    "index": 1,
+    "surface": "rough/99",
+    "reason": "The leftover 24.3 m2 tee/17 piece is on a hump crest with a 4.5 % slope inside it (+0.11 m over the ring plane). It is not an OSM tee and no marker uses it. Covered except 0.1 m2 of sub-pixel slivers, and clipped off the hole 14 fairway."
+   },
+   {
+    "index": 2,
+    "surface": "rough/99",
+    "reason": "The 45.3 m2 tee/17 blob between the paths is a plain rough slope in the hillshade with no pad edges. It reads +0.13 m over the ring plane, against +0.18 to +0.21 m on the three real decks. It is not an OSM tee and has no marker. Covered fully; no path or fairway is overwritten."
+   }
+  ],
+  "rejected": [
+   {
+    "index": 3,
+    "reason": "Not appended because the same fix was made by deleting the confirmed regression hole17.geojson #2. The automatic map has fairway/17 under all 34.9 m2, so deleting it restores exactly the same surface. It also adds no permanent fairway override at the ragged fairway start."
+   }
+  ],
+  "meta_applied": "none",
+  "overrides_removed": [
+   "hole17.geojson #2 (rough/99, 34.9 m2, E 363022-363032 / N 3774430-3774436): CONFIRMED regression and deleted. Its target tee blob is gone; auto_core has fairway/17 under all of it, so it punched a rough island into the fairway. Note: the reasons of old #4-#7 (now #3-#6) still say 'round-1 hole17 #3', which is now #2."
+  ],
+  "remaining_issues": [
+   "Round-1 #0 is about 2.5 m east of the NAIP blob. It is kept, and r2 #0/#1 clear the leftovers.",
+   "All three tees are 13-16 yd short on the only decks (the documented known_tee_gaps).",
+   "The fairway start E 363000-363050 is ragged, and OSM fairway 1157472367 starts at E 363050 (cosmetic, NAIP classification noise)."
+  ],
+  "score_after": 9
+ },
+ {
+  "hole": 18,
+  "approved": [],
+  "rejected": [
+   {
+    "index": 0,
+    "reason": "Regression NOT confirmed. The inspector's evidence predates the work. NAIP 2024 (May 2024) also predates the five second-leg and corner bunkers, which are hollows in the Jan 2025 LiDAR, and the inspector says so. The 2025 LiDAR is a construction site here: a freshly graded oval round the new bunkers, 0.3-0.5 m stockpile mounds, and vehicle tracks. It also has a crisp-edged 2.5 m box-cut groove (0.1-0.5 m deep) exactly on round-1 #0. The groove starts at the dead end of OSM cart path 1157465490 (362905, 3774905). The Esri photo of the earlier rounds is newer than May 2024. It shows grass on the hole 15/16 pans that NAIP 2024 shows as sand and the 2025 LiDAR as filled. It also had sand at the new hole 18 bunkers, which neither OSM nor NAIP 2024 has. That photo showed paving with a parked cart here. Turf-like intensity in Jan 2025 fits an unpaved box-cut. So the path is a new path, and restoring turf would be a speculative edit against the newest evidence."
+   },
+   {
+    "index": 1,
+    "reason": "Same reason as #0: it is part of the path and band restoration."
+   },
+   {
+    "index": 2,
+    "reason": "Same reason as #0: it is part of the path and band restoration."
+   },
+   {
+    "index": 3,
+    "reason": "Native band (round-1 #1-#4): NOT confirmed. The pro-turf evidence predates the work: NAIP NDVI (May 2024) and OSM fairway 1157472368 (about 2023). LiDAR smoothness cannot tell freshly graded ground from mown turf. The newer Esri photo showed the band brown, alongside the new path. Its current state is unknown, so the band is kept and flagged."
+   },
+   {
+    "index": 4,
+    "reason": "Same reason as #0: not needed, because the path is kept."
+   },
+   {
+    "index": 5,
+    "reason": "Oval 'lawn' (round-1 #6): NOT confirmed. NAIP 2024 (tan) is older than the Esri photo that showed an irrigated lawn. The 2025 LiDAR deck is as smooth as mown turf: 0.42 cm roughness, against green 0.42, fairway 0.45 and nearby native 0.7-1.6. It is out of play; kept."
+   }
+  ],
+  "meta_applied": "none",
+  "overrides_removed": [],
+  "remaining_issues": [
+   "Open question for the lead: confirm the Esri World Imagery capture date (Wayback metadata). Hole 15/16/18 evidence puts it after May 2024. If it turns out to be older, the path and band question should be reopened.",
+   "The current state of the round-1 native band (#1-#4) is uncertain: it could be a construction scar since re-turfed, or a native cross-hazard. No data newer than the Esri photo settles it.",
+   "The NAIP 2024 texture shows turf with no path and no bunkers on the second leg, so it disagrees visually with the model's path, band and five LiDAR bunkers (recurring: the photo predates part of the renovation).",
+   "Forward tee 447 yd against 481 (documented gap); Middle 535 against 540."
+  ],
+  "score_after": 7
+ }
+]

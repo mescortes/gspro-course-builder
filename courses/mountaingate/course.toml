@@ -1,0 +1,271 @@
+# MountainGate Country Club, Los Angeles (Ted Robinson, opened 1975-76): the North/South course of the club's 27 holes (North, South
+# and Lake nines) in the canyons of the Santa Monica Mountains. Read by scripts/config.py (COURSE=mountaingate).
+# Ported from the standalone MountainGate project, whose GSPro package was delivered on 2026-10-11 (README.md).
+# Anything not set here comes from the region preset (regions/southern_california.toml), then the engine defaults.
+
+[course]
+name = "MountainGate Country Club"
+short = "MountainGate CC"
+layout = "North/South"
+model_name = "mountain_gate_ns"       # output/mountaingate/mountain_gate_ns.glb, _noveg.glb (the delivered names)
+unity_script = "MountainGateSetup.cs"  # menu MountainGate, Assets/MountainGate (as delivered)
+region = "southern_california"
+
+[frame]
+# NAD83(2011) / UTM zone 11N, the frame of the 3DEP LiDAR (LAZ: EPSG:6340 + NAVD88 GEOID18). The original build labelled
+# its rasters EPSG:32611; the two give the same coordinates here (pyproj null transform), so every coordinate carries over.
+crs = "EPSG:6340"
+crs_label = "NAD83(2011) / UTM zone 11N (EPSG:6340); heights NAVD88 (GEOID18) (m)"
+origin = [362650.0, 3775300.0]  # the original model origin, so model-frame coordinates match the delivered package
+base_h = 350.0                  # metres NAVD88 subtracted from heights in the model frame
+# Build extent: all 27 holes + ~100 m margin, 6 x 8 tiles of 256 m.
+core = { xmin = 362100.0, ymin = 3774150.0, xmax = 363636.0, ymax = 3776198.0 }
+# Unity/GSPro terrain square (2048 m, 4097^2 heightmap at 0.5 m): centred on CORE east-west, equal to CORE north-south
+terrain = { xmin = 361844.0, ymin = 3774150.0, xmax = 363892.0, ymax = 3776198.0 }
+
+[osm]
+# The club's leisure=golf_course multipolygon (two outer rings, 30.3 + 41.5 ha, golf:course=27_hole)
+outline = ["relation/5201230"]
+
+[lidar]
+# Flown 2025-01-21: coast live oak, pines, eucalyptus and chaparral are evergreen (only the sycamores are bare)
+leaf_off = false
+
+# Data providers (scripts/sources).
+[sources.lidar]
+# USGS 3DEP CA_2025LosAngelesPostWildfire_C25 (work unit CA_LAPostWildfire_Palisades_C25), ~45 pts/m2, LAS 1.4, classes
+# 1 / 2 / 7 / 17 / 18 only (no vegetation or building class; 17 = bridge decks). Nine 750 m tiles over CORE. Public domain.
+provider = "usgs_3dep"
+project = "CA_2025LosAngelesPostWildfire_C25"
+
+[sources.imagery]
+# USDA NAIP 2024 (California, quarter quad m_3411861_nw flown 2024-05-06, 0.6 m, R G B NIR, public domain), pinned to
+# 2024: the service keeps only the latest year. It shows most of the bunker renovation and the turf-to-native
+# conversions the 2025 LiDAR has (NAIP 2022, on USGS The National Map, predates both). Esri World Imagery, which the standalone
+# build used, does not allow redistributing derived textures; LA County's LARIAC imagery is licensed to its participants.
+provider = "arcgis_imageserver"
+url = "https://apps.geo.fpac.usda.gov/geo-imagery/rest/services/naip/conus_naip/ImageServer"
+mosaic_rule = { mosaicMethod = "esriMosaicNorthwest", where = "Name LIKE 'm%2024____'" }
+bands = [0, 1, 2, 3]  # R, G, B, NIR
+max_chunk_m = 1500.0
+
+[sources.backdrop]
+# USGS 3DEP 1 m DEM tile x36y378: the 2025 survey first, LA County 2023 (B23) fills the 19 % of the 5 km box C25 misses.
+# The COGs are stamped NAD83 / UTM 11N (EPSG:26911) but made from NAD83(2011) LiDAR. 3DEP publishes no DSM.
+provider = "cog_dem"
+dtm = ["https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/CA_2025LosAngelesPostWildfire_C25/TIFF/USGS_1M_11_x36y378_CA_2025LosAngelesPostWildfire_C25.tif",
+       "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/CA_LosAngeles_B23/TIFF/USGS_1M_11_x36y378_CA_LosAngeles_B23.tif"]
+src_crs = "EPSG:6340"
+
+[imagery]
+raw = "naip2024_course.tif"
+registered = "naip2024_course_reg.tif"
+res = 0.6
+# NAIP 2024 vs the 2025 LiDAR (measure_registration.py, 84 bunkers: photo sand vs LiDAR hollows): dx -0.75 m (MAD 1.0),
+# dy +0.25 m (MAD 1.5); the halves agree within about a pixel east-west (north -1.00, south -0.50), within 1 m north-south (+1.00 / 0.00)
+shift = [-0.75, 0.25]  # metres +E/+N applied to the photo
+leaf_off = false    # May photo, leaf-on
+credit = "USDA NAIP 2024 orthoimagery (public domain)"
+
+[holes]
+# GSPro "North/South" = the North nine (holes 1-9) + the South nine (10-18). The Lake nine is scenery: modelled (medium
+# mesh, SVG Hole19-27), not played. OSM numbers the nines North 1-9, Lake 10-18, South 19-27 (checked against the pars).
+playable = "1-18"
+scenery = "19-27"
+nines = { North = "1-9", South = "10-18" }
+
+[holes.osm_ref]  # OSM golf=hole ref -> course hole; refs 1-9 are the same
+10 = 19
+11 = 20
+12 = 21
+13 = 22
+14 = 23
+15 = 24
+16 = 25
+17 = 26
+18 = 27
+19 = 10
+20 = 11
+21 = 12
+22 = 13
+23 = 14
+24 = 15
+25 = 16
+26 = 17
+27 = 18
+
+# Tee sets, back to front: the club's Championship (Gold), Middle (Blue) and Forward (White). Gold goes in GreenKeeper's
+# Black slot, as in the delivered package (GreenKeeper has no Gold slot).
+[[tees]]
+key = "championship"
+name = "Championship (Gold)"
+colour = "#d4a017"
+gkd_slot = "Black"
+
+[[tees]]
+key = "middle"
+name = "Middle (Blue)"
+colour = "#2a52be"
+gkd_slot = "Blue"
+
+[[tees]]
+key = "forward"
+name = "Forward (White)"
+colour = "#f5f5f5"
+gkd_slot = "White"
+
+# The North/South card (golfingrecord.com, cross-checked against offcourse.co and greenskeeper.org per-nine cards,
+# 2026-10-10; research/ns_research.json). Par 36 / 36. Older 6,766-yd cards (GolfPass, BlueGolf) are outdated.
+# hole = [par, championship, middle, forward]
+[scorecard]
+1 = [4, 342, 323, 307]
+2 = [3, 189, 169, 153]
+3 = [4, 346, 323, 298]
+4 = [4, 299, 289, 266]
+5 = [5, 516, 498, 467]
+6 = [4, 434, 408, 366]
+7 = [3, 172, 154, 131]
+8 = [4, 438, 420, 401]
+9 = [5, 466, 453, 403]
+10 = [4, 417, 391, 366]
+11 = [4, 400, 387, 359]
+12 = [3, 174, 153, 97]
+13 = [4, 365, 356, 224]
+14 = [5, 535, 513, 460]
+15 = [4, 412, 361, 326]
+16 = [3, 202, 190, 180]
+17 = [4, 450, 430, 382]
+18 = [5, 562, 540, 481]
+
+[stroke_index]  # men's, on every North/South card. The sources disagree on the women's allocation: everyone uses the men's.
+men = [16, 10, 6, 18, 8, 2, 14, 4, 12, 15, 1, 13, 9, 5, 11, 17, 7, 3]
+women = "same"
+
+[ratings]  # tee = { men = [rating, slope], women = [rating, slope], yards } (golfingrecord, offcourse, GolfPass, GolfNow)
+championship = { men = [73.2, 134], women = [80.4, 143], yards = 6719 }
+middle = { men = [71.6, 132], women = [78.3, 139], yards = 6358 }
+forward = { men = [68.3, 123], women = [74.7, 129], yards = 5667 }
+
+[structures]
+# OSM amenity=parking lots that get parked cars: the main clubhouse lot (11,815 m2) and the small lot 115 m from the clubhouse
+parking = [642571319, 419975897]
+
+[tuning]
+trace_paths = false      # OSM maps the cart paths (44 golf=cartpath ways); the photo-traced extras are not needed
+forward_tee_frac = 0.55  # a forward pad is penalised only beyond 55 % of the hole line (the original build's rule)
+
+[tuning.native]
+# Native (dry, unmown) ground seeds, on NAIP 2024: the turf-to-native plantings are bright tan sand and mulch (L up to
+# about 80, NDVI below 0.16) and the summer-dry grass grey-tan, not red-brown; mown turf stays out by its a* (below -7)
+# and NDVI (above 0.25), white bunker sand by its lightness
+a_min = -3.0
+b_min = 12.0
+L_max = 82.0
+ndvi_max = 0.16
+
+[tuning.level_tees]
+enabled = false  # the LiDAR (January 2025) was flown after every tee was built: its decks are the real ones
+
+# Region overrides (merged key by key over regions/southern_california.toml): the colours, trees, grass and buildings
+# tuned in the first port's visual review (on NAIP 2022 and the 2025 LiDAR).
+[turf_tint]  # sRGB medians: irrigated turf held green; native ground golden; chaparral olive-brown; sand warm
+green = [108, 134, 80]
+fringe = [104, 128, 76]
+fairway = [110, 130, 78]
+tee = [108, 130, 78]
+semirough = [102, 118, 72]
+rough = [100, 112, 70]
+bunker = [186, 172, 142]
+native = [132, 116, 78]
+deeprough = [92, 90, 64]
+cartpath = [134, 130, 114]
+
+[trees.bark]
+shrub = "jolcham_oak_bark_01"
+
+[trees.backdrop]  # the canyon slopes: mostly coast live oak, some pine and eucalyptus
+kinds = ["coast_live_oak", "aleppo_pine", "eucalyptus"]
+share = [0.65, 0.2, 0.15]
+crown = [0.45, 1.0, 2.5, 9.0]
+
+[trees.shapes.aleppo_pine]
+R = 5.5
+crown = ["irregular", 0.3, 1.0]
+trunk = 0.3
+
+[trees.shapes.eucalyptus]
+crown = ["ovoid", 0.3, 1.0]
+trunk = 0.3
+cards = 1000
+
+[trees.shapes.shrub]  # chaparral: denser, larger cards
+attract = 400
+cards = 520
+card = [1.0, 1.5]
+
+[foliage.sycamore]
+alt = [[[0.23, 0.5, 0.5], 0.12], [[0.18, 0.5, 0.48], 0.15]]
+
+[foliage.eucalyptus]
+hsv = [0.19, 0.28, 0.42]
+
+[foliage.shrub]
+hsv = [0.21, 0.36, 0.38]
+alt = [[[0.17, 0.25, 0.42], 0.2]]
+
+[grass.3dg.Rough]
+blade_height_m = [0.045, 0.085]
+relative_density = 0.9
+
+[grass.3dg.DeepRough]
+blade_height_m = [0.12, 0.32]
+
+[grass.viewer.surfaces.SemiRough]
+width = 0.006
+density = 60
+blades = 10
+colour_tip = [1.04, 1.1, 0.98]
+
+[grass.viewer.surfaces.Rough]
+height = [0.05, 0.09]
+width = 0.006
+density = 60
+blades = 12
+colour_tip = [1.04, 1.1, 0.98]
+
+[grass.viewer.surfaces.DeepRough]
+height = [0.14, 0.32]
+colour_tip = [1.2, 1.08, 0.8]
+dry = 0.6
+
+[grass.viewer.surfaces.Pinestraw]
+height = [0.22, 0.45]
+colour_tip = [1.24, 1.1, 0.78]
+dry = 0.85
+
+[buildings]  # stucco walls, terracotta and dark roofs
+wall_palette = [[1.0, 0.96, 0.88], [0.97, 0.92, 0.8], [0.9, 0.82, 0.66], [0.84, 0.74, 0.58], [0.95, 0.9, 0.82]]
+roof_palette = [[0.42, 0.12, 0.05], [0.5, 0.16, 0.07], [0.36, 0.13, 0.06], [0.32, 0.25, 0.17], [0.12, 0.12, 0.12]]
+suv_share = 0.5
+
+[backdrop]
+summer_green = [86, 106, 56]
+
+[materials]
+deeprough = "dry_ground_01"  # chaparral floor: dry ground, not leaf litter
+
+[viewer]
+species_tint = { coast_live_oak = [0.86, 0.9, 0.74], aleppo_pine = [0.86, 0.95, 0.86], sycamore = [1.04, 1.07, 0.86], eucalyptus = [0.95, 0.98, 0.84], shrub = [0.96, 0.99, 0.88] }
+sky = [[0.0, "#3a78c0"], [0.3, "#6aa0d4"], [0.45, "#b4cbdf"], [0.5, "#dcdcd6"], [0.53, "#c9c2a8"], [1.0, "#8a7d5c"]]
+
+[test_profile]  # MG_PROFILE=test: the 640 m square around North #1, in build/mountaingate-test/
+core = { xmin = 362330.0, ymin = 3774980.0, xmax = 362970.0, ymax = 3775620.0 }
+terrain = { xmin = 362330.0, ymin = 3774980.0, xmax = 362970.0, ymax = 3775620.0 }
+holes = [1]
+
+[tests]
+# 25 bunkers over the size floors (Westmount: 40): the renovated bunkers are drawn from the 2025 LiDAR
+# (features/overrides), which leaves fewer photo-classified ones for the hollow and edge tests
+min_bunkers = 25
+# Card yardages no deck delivers (research/NOTES.md, "Card against the ground"): the markers stay on the real decks
+known_tee_gaps = { "5.forward" = 45.0, "10.forward" = 9.0, "17.championship" = 18.0, "17.middle" = 16.0, "17.forward" = 14.0, "18.forward" = 35.0 }
