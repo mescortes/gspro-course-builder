@@ -21,6 +21,9 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
 | Course | Where | Status |
 |---|---|---|
 | [Westmount Golf & Country Club](courses/westmount/README.md) | Kitchener, Ontario (Stanley Thompson, 1931) | Built and QA'd in two multi-agent rounds. The reference build: its golden fingerprint checks every engine change. |
+| [Whistle Bear Golf Club](courses/whistle-bear/) | Cambridge, Ontario (John Robinson, 2000-01) | Built with its practice facility; QA round 1 (63 override features). Hole 1 and 11 Black tees can't reach the card from any deck (documented gaps). QA round 2 and the course README are still to do. ([#9](https://github.com/mescortes/gspro-course-builder/pull/9)) |
+| [Brambles](courses/brambles/) | Middletown, Lake County, California (Coore & Crenshaw with James Duncan, 2024) | The first course without OSM: features drafted from the GolfNow GPS layout and the NAIP photo. QA rounds 1 and 2 (157 override features). Holes 1, 7 and 18 measure short of the card from every deck (documented gaps). The course README is still to do. ([#7](https://github.com/mescortes/gspro-course-builder/pull/7)) |
+| [Deer Ridge Golf Club](courses/deer-ridge/) | Kitchener, Ontario (Thomas McBroom; the club dates itself to 1991) | Built on the current engine with six tee sets; the photo is registered to the LiDAR (0.25 m east, 0.25 m south). QA rounds 1 and 2 (51 override features): every hole scores 8 or 9, and test_course passes (137). The course README is still to do. ([#12](https://github.com/mescortes/gspro-course-builder/pull/12)) |
 
 ## How a course is built
 
@@ -61,7 +64,8 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
 12. **Export**: glTF, the OPCD package, FBX (headless Blender), yardage-book maps and viewer camera presets.
 
 **[docs/PLAYBOOK.md](docs/PLAYBOOK.md) is the step-by-step guide to building a new course**; [docs/LESSONS.md](docs/LESSONS.md)
-explains why the engine works the way it does.
+explains why the engine works the way it does. [CONTRIBUTING.md](CONTRIBUTING.md) covers branches, pull requests and
+what each PR reports, for building a course or changing the engine.
 
 ## Repository layout
 
@@ -73,6 +77,8 @@ explains why the engine works the way it does.
 | `courses/<slug>/features/` | Hand-made and reviewed features: golf features OSM lacks, structures, QA overrides |
 | `courses/<slug>/research/` | OSM snapshot, research notes, hole descriptions, QA verdicts |
 | `courses/<slug>/fingerprint.json` | Golden build fingerprint (Westmount) |
+| `courses/<slug>/TODO.md` | A course's open items: hand-off steps, facts to confirm on site (Westmount) |
+| `TODO.md` | Engine problems QA rounds found and left open |
 | `regions/<name>.toml` | Region presets: tree archetypes and rules, foliage, 3D grass, turf tint, buildings, backdrop, materials, viewer sky, scaffold defaults |
 | `data/<slug>/`, `build/<slug>/`, `output/<slug>/` | Downloads, intermediate rasters, products (not tracked) |
 | `viewer/` | three.js viewer (`?course=<slug>`) |
@@ -140,7 +146,19 @@ yet: see its header). A course outside them needs a region preset: copy `regions
   `.npz` files by their arrays. Any difference must be explained. Floating-point results only match on the machine
   and package set recorded in the file. FBX and .blend files are listed but not compared, because Blender writes
   timestamps and per-process ids into them.
-* **Test first.** Every fix starts with a failing test.
+* **From another machine.** The golden file was written on the owner's Mac, and `fingerprint.py` records that
+  environment: machine, OS, Python, GDAL, PROJ, BLAS, Blender and every package. On any other machine the
+  floating-point products can differ, and `check` lists the environment differences as `note:` lines. A contributor
+  runs:
+  * the unit tests;
+  * `tests/test_course.py` on their own course;
+  * with Westmount's data, a clean Westmount build and `fingerprint.py check`.
+
+  Under each `FAIL:` line, `check` prints the summary entries that changed (surface counts or areas, trees per
+  archetype, hole yardages, glTF objects). A `FAIL:` line with nothing under it is floating-point noise. Changed
+  summary entries are a real difference, and the PR must explain it. The owner re-runs the Westmount check on the
+  golden machine before merging. The commands are in [docs/PLAYBOOK.md §10](docs/PLAYBOOK.md#10-rules).
+* **Test first.** Every fix starts with a failing test, on its own branch and PR ([CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ## Data and licences
 
