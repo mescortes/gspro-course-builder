@@ -766,3 +766,20 @@ def test_small_mapped_fairways_fill_the_ground_rejected_tees_leave():
     before = dict(final)
     V.burn_small_fairways(final, [])
     assert final == before
+
+
+def test_burning_small_fairways_leaves_untouched_layers_as_they_are():
+    """Westmount's clean rebuild: burn_small_fairways re-differenced the whole native layer though no small mapped
+    fairway touched it, so a native-area hazard's ring started at another vertex in holes.json. A layer the small
+    fairways do not change is left as it is (the same geometry object)."""
+    from shapely.geometry import Polygon, box
+    drop = box(0, 0, 10, 8)
+    final = {n: Polygon() for n in ("water", "green", "bunker", "tee", "cartpath", "road", "building", "court", "deeprough")}
+    final["fairway"] = box(-5, -5, 20, 20)                                         # already holds the drop zone
+    final["native"] = box(100, 100, 120, 130)                                      # far from it
+    before = dict(final)
+    V.burn_small_fairways(final, [drop])
+    assert all(final[n] is before[n] for n in final)
+    final["fairway"] = box(5, 0, 20, 20); final["native"] = box(-10, 0, 2, 8)      # half of it native, half not yet fairway
+    V.burn_small_fairways(final, [drop])
+    assert abs(final["fairway"].area - (300.0 + 40.0)) < 1e-9 and abs(final["native"].area - 80.0) < 1e-9

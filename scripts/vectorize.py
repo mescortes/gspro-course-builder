@@ -558,10 +558,14 @@ def burn_small_fairways(final, small_fw):
     speck limit."""
     if not small_fw:
         return final
+    small = unary_union(small_fw)
     above = unary_union([final[n] for n in ("water", "green", "bunker", "tee", "cartpath", "road", "building", "court")])
-    final["fairway"] = unary_union([final["fairway"]] + [g.difference(above) for g in small_fw])
+    add = small.difference(above).difference(final["fairway"])
+    if add.area > 1e-6:   # a layer the small fairways do not change is left as it is (no re-noding)
+        final["fairway"] = unary_union([final["fairway"], add])
     for n in ("native", "deeprough"):
-        final[n] = final[n].difference(unary_union(small_fw))
+        if final[n].intersection(small).area > 1e-6:
+            final[n] = final[n].difference(small)
     return final
 
 
