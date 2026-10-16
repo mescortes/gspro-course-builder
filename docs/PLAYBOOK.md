@@ -39,9 +39,12 @@ and 30 GB of disk, and no GPU (code.claude.com/docs/en/cloud-environments). For 
   `x-deny-reason: host_not_allowed`.
 * **Nothing in `data/`, `build/` or `output/` survives the session** (they are not in git): download and build in one
   session, and commit what the course needs (`courses/<slug>/`) before it ends.
-* **Memory**: the 18-hole courses built so far peak at 8.4-9.9 GB on macOS (Westmount, Brambles, Whistle Bear: the
-  export or gspro step), under a session's 16 GB; the mesh step, once 15.2 GB on Whistle Bear, is 4-8 GB. A full
-  18-hole build has not been measured on Linux yet. `build_all.py` prints each step's peak memory (e.g.
+* **Memory**: on macOS the mesh step peaks at 4-8 GB (once 15.2 GB on Whistle Bear), the export step at 4-6 GB and
+  the gspro step at 2.4-3.5 GB (Westmount, Whistle Bear, Brambles; they were 6.3-10.5 GB), under a session's 16 GB;
+  Westmount's whole build peaks at 4.6 GB (vectorize). The larger courses' other steps have not been measured again
+  since. macOS keeps freed memory counted until a step ends, so these are high-water marks: with
+  `MallocLargeCache=0` set (freed blocks go back to the system, as on Linux) export and gspro peak at 1.5-3.4 GB. A
+  full 18-hole build has not been measured on Linux yet. `build_all.py` prints each step's peak memory (e.g.
   `rasters done in 312s, peak memory 8.4 GB`) and the highest at the end (not on Windows). Prefer your own
   machine (or Remote Control to it) for full builds when a course peaks above about 14 GB.
 * **Long steps**: run builds as background commands with an explicit timeout (a background command gets 30 min by
