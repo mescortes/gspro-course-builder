@@ -1,0 +1,18 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "championship": [
+   363456.6,
+   3774549.4
+  ],
+  "middle": [
+   363452.4,
+   3774540.4
+  ],
+  "forward": [
+   363335.04,
+   3774486.89
+  ]
+ },
+ "notes": "Championship (Gold) and Middle (Blue) on the paired tee decks NW of the cart path (OSM tees 950199976 and 950199975, merged in the model into one 99.6 m2 pad; both flat at 355.32-355.38 m, +0.3 m above the ring). Measured 365.0 / 355.8 yd vs card 365 / 356; the decks are 9.8 yd apart, matching the 9-yd card spacing. Before: the Championship marker sat at the pad centroid in the waist between the two decks (359.6 yd, the pad-axis clamp failed on the dumbbell shape), and the Middle marker sat on the small round pad 1157465526 that the lead assigned to hole 12 Forward (both holes on one pad). Forward (White) is left to the pipeline (pad at the top of the fairway, 219.2 yd vs 224). Verified r2: both points are on the raised OSM decks in the raw hillshade (3.3 / 2.5 m inside the merged 99.6 m2 pad, dem_raw 355.34 / 355.32 m, slope ~2 %); the small round pad 1157465526 is relabelled tee 12 in hole13.geojson. Forward marker on the forward deck the 2026-10-11 package used (218 yd against the card's 224; flat LiDAR deck, 4 % stance): the NAIP-based rebuild classifies no forward pad there, and its fairway marker at the card distance stood on a 17.6 % slope."
+}

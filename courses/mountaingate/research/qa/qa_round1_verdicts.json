@@ -1,0 +1,761 @@
+[
+ {
+  "hole": 1,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "The 80 m2 tee/1 polygon at (362699,3775169) is on a sloping lawn bank south of the cart path, beside the clubhouse walkway and inside the OSM sports_centre polygon. The hillshade and the detrended DEM show no raised deck (inside mean 405.22 m against 405.29 m in the surrounding ring). OSM has no tee there and no marker uses it. The proposal covers the whole tee polygon and touches only rough/99, so rough/99 is correct."
+   },
+   {
+    "index": 1,
+    "surface": "semirough",
+    "reason": "The 32 m2 tee/1 blob at the right fairway edge (362651,3775253) is a light grass patch with no deck: its height is the same as the ring around it and there is no OSM tee. Semirough is better than a tee texture. I clipped the polygon so it no longer cuts a 0.25 m strip (3.35 m2) off the fairway/1 edge."
+   },
+   {
+    "index": 2,
+    "surface": "semirough",
+    "reason": "The 15 m2 tee/1 blob at the head of the dogleg-corner notch (362606,3775293) has no deck and no OSM tee. It is replaced with semirough. I clipped the polygon so it no longer overwrites the 2.2 m2 sliver of fairway/1."
+   },
+   {
+    "index": 3,
+    "surface": "rough",
+    "reason": "The 104 m2 tee/99 polygon at (362594,3775358) is partly under tree canopy and partly a light strip between tree clumps by the bridge. It has no deck and no OSM tee, and the neighbouring surface is rough/99. I clipped it so it no longer overwrites 5.24 m2 of fairway/1 under the canopy edge."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "The 2 m x 16 m notch between the two hole 1 fairway lobes at about (362602,3775285) is left unchanged. The imagery does not settle whether it is real.",
+   "In the semirough override at (362651,3775253), the semirough reaches about 3 m past the normal collar band into the rough. This is minor and still a large improvement over a tee."
+  ]
+ },
+ {
+  "hole": 2,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "The 16 m2 tee/2 blob under a tree shadow at (362538,3775383) sits in rough. It has no deck in the hillshade or the detrended DEM and is not an OSM tee. The proposal covers only tee and rough/99."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "The 16 m2 tee/2 blob at (362533,3775395) is about 5 m west of the Forward tee deck (10.7 m from the Forward marker) and does not touch that pad. It sits at a lower level than the deck, with no deck of its own. I clipped off the 0.03 m2 that touched cartpath/98."
+   },
+   {
+    "index": 2,
+    "surface": "semirough",
+    "reason": "The 35 m2 tee/2 blob at (362526,3775443) is on the grass slope between the hole 8 fairway and the cart path. It is about 1.5 m clear of the visible path and has no deck. I clipped it so it no longer overwrites a 3.56 m2 sliver of fairway/8."
+   },
+   {
+    "index": 3,
+    "surface": "semirough",
+    "reason": "The 12 m2 tee/2 blob at the edge of the hole 8 fairway (362543,3775477) has no deck and no OSM tee. I clipped it so it no longer overwrites a 1.55 m2 sliver of fairway/8."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "For the hole 8 review: two hole 8 'tee' pads at about (362478,3775343) and (362486,3775353), beside the left edge of the hole 2 fairway, appear to have no deck. I did not change them here."
+  ]
+ },
+ {
+  "hole": 3,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "semirough",
+    "reason": "The 21 m2 tee/8 sliver at (362354,3775128) on the top edge of the hole 3 fairway has a flat profile that follows the ground, with no raised deck. It does not touch the fairway bunker (bunker/3, about 7 m away), and the hole 8 markers do not use it. OSM's fairway edge runs through the middle of it, so semirough (collar) is a sound compromise. I clipped it so it no longer overwrites a 2.67 m2 sliver of fairway/3."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "The 17 m2 tee/4 blob at (362283,3775115) is a light grass patch in the right rough of the approach. It has no deck and no OSM tee, and the hole 4 markers are about 55 m away on their own pads. The proposal covers only tee and rough/99."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "The hole 3 Championship tee measures 342.7 yd against the card's 346, 3.3 yd short. This is within tolerance and I did not change it."
+  ]
+ },
+ {
+  "hole": 4,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "fairway",
+    "reason": "Feature 240 (tee/99, 90 m2) is a hole in fairway 738 about 15-25 m short of the green. The photo shows mown approach turf and the LiDAR shows a smooth slope with no deck. A tee here is impossible, and fairway is the only sensible fill."
+   },
+   {
+    "index": 1,
+    "surface": "semirough",
+    "reason": "Feature 238 (tee/99) sits in the transition band between the approach fairway and the rough. No pad in the photo and no deck in the hillshade."
+   },
+   {
+    "index": 2,
+    "surface": "semirough",
+    "reason": "Feature 239 (tee/99) sits at the left edge of the approach fairway. No pad and no deck."
+   },
+   {
+    "index": 3,
+    "surface": "semirough",
+    "reason": "Feature 241 (tee/99) sits between the left greenside bunker and the fairway. No pad and no deck."
+   },
+   {
+    "index": 4,
+    "surface": "fringe",
+    "reason": "Collar part of tee strip 248. Today the existing fringe there is only 0.26-0.5 m wide and the tee strip lies directly against the green, so this restores the collar ring. Clipped so it does not touch the green."
+   },
+   {
+    "index": 5,
+    "surface": "fringe",
+    "reason": "Collar part of tee strip 244, east edge of the green. Clipped to remove its 0.3 m2 overlap with green/4."
+   },
+   {
+    "index": 6,
+    "surface": "rough",
+    "reason": "Outer part of 248, matching the rough/99 that surrounds the green. Extended to cover the rest of the strip so no tee sliver is left, and kept from overlapping the collar part."
+   },
+   {
+    "index": 7,
+    "surface": "rough",
+    "reason": "Outer part of 244. Extended so no sliver is left (an 0.08 m2 piece would otherwise survive), and kept from overlapping the collar part."
+   },
+   {
+    "index": 9,
+    "surface": "cartpath",
+    "reason": "Bunker 51 lies on the light path strip in the photo (RGB about 205 at E 255-257). The DEM falls steadily across it with no hollow. The existing cartpath polygon sits about 2 m east of the path seen in the photo."
+   },
+   {
+    "index": 10,
+    "surface": "cartpath",
+    "reason": "Bunker 56 lies on the light path strip (E 273.5-275.5 at N 3775232). The DEM falls steadily across it, so there is no hollow."
+   }
+  ],
+  "rejected": [
+   {
+    "index": 8,
+    "reason": "Duplicate. The same spot (old feature 231, tee/4, 17 m2) is already fully covered by the rough/99 override in features/overrides/hole03.geojson (100% overlap). Override polygons are not differenced against each other, so this would add an overlapping duplicate polygon."
+   }
+  ],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "Championship measures 294.1 yd against a card of 299 (4.9 yd short). The marker is already at the back of the rear pad, so it was left as is.",
+   "Course-wide offset between the photo and the LiDAR: path asphalt (intensity) and bunker hollows sit about 2-3 m east of the photo features. The cartpath polygons follow the LiDAR or OSM more closely, so the relabelled path strips widen the path to cover both positions. Fix the photo-to-LiDAR offset before final export."
+  ]
+ },
+ {
+  "hole": 5,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Feature 246 (tee/5, 21 m2) is surrounded entirely by rough/99 west of the hole-4 green. It is not an OSM tee, the hillshade shows a smooth slope with no deck, and the real hole-5 tees are elsewhere."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Feature 259 (tee/5, 15 m2) is surrounded by rough beside a tree on the right. The photo shows rough grass and there is no deck in the hillshade."
+   },
+   {
+    "index": 2,
+    "surface": "cartpath",
+    "reason": "Bunker 67 lies on the light path strip along the left of the fairway. The DEM shows no hollow (plane-fit residual +0.02 m)."
+   },
+   {
+    "index": 3,
+    "surface": "cartpath",
+    "reason": "Bunker 69 lies on the light, worn path at E 394-400, N 3775580-596. There is no bowl in the DEM (residual -0.04 m, within the ring noise of 0.24 m)."
+   },
+   {
+    "index": 4,
+    "surface": "cartpath",
+    "reason": "Bunker 70 lies on the light path strip. The hillshade is flat with no hollow (residual +0.12 m)."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "Same course-wide photo-to-LiDAR offset: the relabelled path strips sit on the path as seen in the photo, about 2 m west of the existing cartpath polygons."
+  ]
+ },
+ {
+  "hole": 6,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "fringe",
+    "reason": "Feature 254 (tee labelled hole 7) lies directly on the SE edge of the hole-6 green, where the fringe ring is missing. The hole-7 tees are far away. This collar band restores the ring and is clipped to remove its 0.6 m2 overlap with green/6."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Outer part of 254, matching the rough/99 around the green. Extended to cover the leftover tee/7 pieces (about 0.68 m2 in fragments up to 0.24 m2 would otherwise survive) and kept from overlapping the collar."
+   },
+   {
+    "index": 2,
+    "surface": "fairway",
+    "reason": "Feature 261 (tee/6) is a hole in fairway 748 with mown turf in the photo and no deck in the LiDAR."
+   },
+   {
+    "index": 3,
+    "surface": "fairway",
+    "reason": "Feature 263 (tee/6) is a notch on the fairway edge next to a tree. The turf is the same light mown fairway in the photo, and there is no deck."
+   },
+   {
+    "index": 4,
+    "surface": "semirough",
+    "reason": "Feature 262 (tee/6) is under a tree canopy at the right fairway edge, between fairway and rough. No pad."
+   },
+   {
+    "index": 5,
+    "surface": "rough",
+    "reason": "Feature 297 (tee/99) is under a tree in the right rough and is surrounded by rough/99."
+   },
+   {
+    "index": 6,
+    "surface": "semirough",
+    "reason": "Feature 260 (tee/99) lies between the fairway and the fairway bunker. Extended to the part of 260 not covered by the new bunker, so no tee sliver is left."
+   },
+   {
+    "index": 7,
+    "surface": "cartpath",
+    "reason": "Bunker 71 is the west half of the light path strip in the photo. LiDAR intensity puts the asphalt about 2-3 m east (the existing cartpath polygon), and the hillshade shows only the path cut. Not a bunker."
+   },
+   {
+    "index": 8,
+    "surface": "cartpath",
+    "reason": "Bunker 110 sits on the light concrete path/apron by the tees; the photo shows concrete joints. The slightly negative DEM residual comes from the path cut next to it, not from a bunker bowl."
+   },
+   {
+    "index": 9,
+    "surface": "bunker",
+    "reason": "Transects confirm the bunker is much bigger than modelled. At N 3775515 the photo sand runs E 481.5-489 and the proposal covers 481.7-489.7. The LiDAR hollow and the low-intensity sand band (about 41k vs 52k for grass) cover E 484.5-492, about 2.5-3 m further east. At N 3775508 the photo sand starts at 478.5 and the shifted LiDAR band ends at 487.1, matching the proposal (478.6-487.1). At N 3775525 the edges match within about 1 m. The polygon replaces bunker 68 and rough under the canopy, overwrites no fairway, and hole 6 is correct."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "Course-wide photo-to-LiDAR offset (about 2-3 m east) seen in this hole's bunker hollows and in the path asphalt intensity. Resolve it before export.",
+   "Hole-6 Forward tee measures 363 against a card of 366, within tolerance. No change."
+  ]
+ },
+ {
+  "hole": 7,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Bunker #61 is not a bunker. The DEM falls steadily down a 2 m bank (408.0 to 405.8 m at N 300) with no hollow. LiDAR intensity there matches grass (about 57k). The LiDAR path (low intensity, x 87-90) is already modelled as cartpath #500 just east; the sand in the photo is that path, offset about 2.75 m west. Rough 99 matches the surroundings. Tagged frame=lidar because the geometry is right relative to the LiDAR path and bank, so shift_overrides.py must not move it 2.75 m onto cartpath #500 (it would overlap 31.6 m2)."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Bunker #62 is the same case: a steady bank at N 313-316 with no hollow, grass-level intensity, and the real path is modelled 1-2 m east. Tagged frame=lidar for the same reason (a shift would put it on 17.8 m2 of the cart path)."
+   },
+   {
+    "index": 2,
+    "surface": "fringe",
+    "reason": "#233 (hole-99 'tee') is a crescent wrapping the back of the North 7 green, where the fringe ring is missing. It has no deck edges; the only steep slope nearby is the green pad edge. The 1 m band hugs green #9 (it overlaps the green by only 0.18 m2) and joins fringe #1811 at both ends. Tagged frame=lidar: the green outline fits the LiDAR intensity collar to within about 0.5 m, so shifting this band 2.75 m would cut 4.9 m2 into the putting surface."
+   },
+   {
+    "index": 3,
+    "surface": "rough",
+    "reason": "Rest of #233 (west part). The surroundings are rough 99 and there is no deck. Tagged frame=lidar (a shift would put 4.3 m2 of rough on green 7)."
+   },
+   {
+    "index": 4,
+    "surface": "rough",
+    "reason": "Rest of #233 (south part). Rough 99 matches the surroundings. Tagged frame=lidar."
+   },
+   {
+    "index": 5,
+    "surface": "rough",
+    "reason": "Rest of #233 (east tip, short of bunker #53). Tagged frame=lidar."
+   }
+  ],
+  "rejected": [
+   {
+    "index": 6,
+    "reason": "The diagnosis is correct (#254 is the collar of green 6, not a hole-7 tee), but features/overrides/hole06.geojson features 0-1 already fix this feature: a 1.3 m fringe-6 collar plus rough. This polygon would overlap them, and because hole07 is burned after hole06 it would silently replace their geometry. Redundant."
+   },
+   {
+    "index": 7,
+    "reason": "Duplicate of the #254 fix in hole06.geojson (feature 1)."
+   },
+   {
+    "index": 8,
+    "reason": "Duplicate of the #254 fix in hole06.geojson (features 0-1). It would also overwrite part of hole 6's 1.3 m fringe collar."
+   },
+   {
+    "index": 9,
+    "reason": "Duplicate of the #254 fix in hole06.geojson (features 0-1)."
+   }
+  ],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "Bunkers across the course are traced from the photo, which sits 2.75 m west of the LiDAR. Greenside bunkers #53 and #54 sit about 2-2.5 m west of their hollows. The pipeline now has a fix for this (config.IMAGERY_SHIFT, esri_z20_course_reg.tif, shift_overrides.py), so no per-bunker override was added.",
+   "The six approved hole-7 overrides carry an extra property, 'frame': 'lidar'. They are drawn against the LiDAR-aligned cart path and green 7, so shift_overrides.py must not move them; once shifted they would erase about 49 m2 of cart path and cut about 9 m2 into green 7. assemble_features.py ignores the property.",
+   "The hole-6 overrides for #254 (in hole06.geojson, not tagged) run along the east edge of green 6. If shift_overrides.py moves them 2.75 m east they will come away from the green edge, which does not move. Whoever runs the shift should check them."
+  ]
+ },
+ {
+  "hole": 8,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "semirough",
+    "reason": "#251 is a hole-8 'tee' blob of worn turf or shade on the right fairway edge. Inside, the DEM is a plain 3.4% slope, and the edges are only 4-6% (real tee decks here have edges of 19-36%). The semirough band continues the existing semirough band #1859/#1860."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "The outer part of #251 has no deck. It meets rough 99 #4103/#4104."
+   },
+   {
+    "index": 2,
+    "surface": "semirough",
+    "reason": "#253 is a blob under the canopy on the right fairway edge: a 3.6% slope with edges of only 4-6.5%, so no deck. Semirough next to the fairway (it overlaps the fairway by 0.06 m2)."
+   },
+   {
+    "index": 3,
+    "surface": "rough",
+    "reason": "Outer part of #253. It does not overlap cartpath #500 in the current frame."
+   },
+   {
+    "index": 4,
+    "surface": "rough",
+    "reason": "North part of #253, beside rough #2012."
+   }
+  ],
+  "rejected": [
+   {
+    "index": 5,
+    "reason": "The diagnosis is correct (#232 is a sliver on the North 3 fairway edge, not a hole-8 tee), but features/overrides/hole03.geojson feature 0 already turns the whole sliver into semirough 99. This polygon overlaps it by 15 m2. Redundant."
+   },
+   {
+    "index": 6,
+    "reason": "Conflicts with hole03.geojson feature 0: it would burn rough over 8.4 m2 of the semirough collar already approved for hole 3. Redundant."
+   }
+  ],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "The fairway bunkers (#63, #65) and greenside bunker #101 sit about 2-2.5 m west of their LiDAR hollows because of the photo offset. The registered imagery should fix this in the pipeline.",
+   "The approved #253 and #251 rough parts sit next to cart path #500, which follows the OSM centre line under the canopy and does not move. If shift_overrides.py moves them 2.75 m east they will cover about 7 m2 and 2.6 m2 of that path, and semirough index 0 will cover about 5 m2 of fairway. Check this after the registration shift.",
+   "The single dogleg aim point lies on the straight tee-to-green line. It is harmless and was left as is."
+  ]
+ },
+ {
+  "hole": 9,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "#103 is the sand-coloured west arm of the cart path in the photo. At N 553-558 the DEM falls steadily with no hollow and the intensity is grass (56-59k). The LiDAR path (49-51k) sits at x 590-594, already modelled as cartpath. Tagged frame=lidar: shifting it 2.75 m would put it on 21 m2 of cartpath #502."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "#102 sits between the two LiDAR path arms at N 543-546, on grass-intensity ground with no hollow. Tagged frame=lidar (a shift would cover 17.7 m2 of path)."
+   },
+   {
+    "index": 2,
+    "surface": "rough",
+    "reason": "#104 is photo path beside the back tee. At N 624-635 the intensity is grass and the LiDAR path is 1-3 m east (already cartpath). There is no hollow. Tagged frame=lidar (a shift would cover 39 m2 of path)."
+   },
+   {
+    "index": 3,
+    "surface": "rough",
+    "reason": "#295 is a gentle crown beside the path, with edges of 5-8% and no constructed deck. It is 22 m short of the Forward pad, which already gives the card 403 yd."
+   },
+   {
+    "index": 4,
+    "surface": "rough",
+    "reason": "#293 is worn turf on a plain slope: 2.9% inside, edges 5-8%."
+   },
+   {
+    "index": 5,
+    "surface": "rough",
+    "reason": "#292 is a small patch in the right rough on a smooth slope with no deck in the exaggerated hillshade."
+   },
+   {
+    "index": 6,
+    "surface": "rough",
+    "reason": "#290 is under the edge of the canopy right of the fairway. It is a gentle flat with 5-7% surroundings, not a deck. It overwrites only 0.6 m2 of the semirough band."
+   },
+   {
+    "index": 8,
+    "surface": "semirough",
+    "reason": "#328 is a thin 1.5-3 m strip on the south lip of fairway bunker #94, so it cannot be a tee. Semirough next to the fairway, matching #1891."
+   },
+   {
+    "index": 9,
+    "surface": "rough",
+    "reason": "The bunker-side part of #328 joins the rough ring around the bunker (#2582)."
+   },
+   {
+    "index": 10,
+    "surface": "semirough",
+    "reason": "#285 is on the bank beside the two-rut maintenance track. The LiDAR shows a smooth slope and swale, not a deck. Semirough next to the fairway, matching #1865."
+   },
+   {
+    "index": 11,
+    "surface": "rough",
+    "reason": "The outer part of #285 meets rough #2521."
+   }
+  ],
+  "rejected": [
+   {
+    "index": 7,
+    "reason": "Refuted: #301 IS a constructed flat pad. The DEM is level at 394.12-394.18 m over about 5 x 6 m (E 362542-547, N 3775644-650). It is cut into a hillside that falls from 395.6 to 392.9 m, with banks of 27-31% on the west, east and south sides. The median edge slope is 21.6%, the same as the real tee decks (8-18%) and unlike the other blobs (4-8%). It may be an old or alternate back tee, or some other pad, but 'no tee deck in LiDAR' is wrong."
+   }
+  ],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "#301 (21 m2 at E 362544.7, N 3775646.6) is a real level pad about 47 yd behind the Championship tee, still labelled as a hole-9 tee. It needs a manual check: it could be a tips tee, a tee for another hole, or a non-tee pad. It does not affect the card markers.",
+   "The fairway is split into two polygons (3854 and 5126 m2) by a strip of rough or semirough along the diagonal maintenance track, about 265 yd from the Championship tee. It was left unchanged pending a manual check (the LiDAR shows a swale and bank there).",
+   "Bunkers #92, #93 and #94 sit about 2-3 m west of their LiDAR hollows because of the photo offset; the registered imagery should fix this in the pipeline.",
+   "Three hole-9 overrides (indices 0-2) carry the extra property 'frame': 'lidar' so that shift_overrides.py does not move them onto the real cart path. The other overrides are left untagged so they follow the imagery shift. After the shift, semirough index 8 would cover about 7 m2 of fairway and should be checked."
+  ]
+ },
+ {
+  "hole": 10,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Tan dry grass or dirt on the bank behind the Championship tee. It is not white or cream sand, it has no lip or rake texture, and OSM has no bunker there. The LiDAR shows no clear hollow (-0.11 m on a 29% bank). Clipped so it does not touch the cart path (0.1 m2)."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Same as #0: a tan patch on the bank behind the tee. The LiDAR has it 0.2 m higher than its surroundings, not hollow."
+   },
+   {
+    "index": 2,
+    "surface": "rough",
+    "reason": "Same as #0: a tan patch with no LiDAR hollow (-0.08 m)."
+   },
+   {
+    "index": 3,
+    "surface": "rough",
+    "reason": "A thin tan dirt strip along the north edge of the cart path, 70 m in front of the tees. OSM has no bunker there and the colour is not sand. Clipped so it does not touch the cart path."
+   },
+   {
+    "index": 4,
+    "surface": "rough",
+    "reason": "Confirmed not a bunker: it is the inner half of the concrete path in the photo, with no hollow (+0.11 m). Relabelled ROUGH instead of the proposed cartpath. The imagery-derived surfaces here sit about 2-3 m west of the LiDAR. In the LiDAR intensity and hillshade the path is at E 300-303.5, and the existing cartpath/98 feature already covers that full width. In the model frame this crescent is the rough bank inside the curve, so cartpath would make the path about 6.5 m wide. Clipped so it does not touch the cartpath feature."
+   },
+   {
+    "index": 5,
+    "surface": "rough",
+    "reason": "A stray hole-10 'tee' (20.7 m2) on mown and shaded grass just off the right edge of the fairway, about 170 m out. It is not a deck: the area is generally flat and the shape is a sliver. Removing it also takes a false pad out of hole 10's pad list."
+   },
+   {
+    "index": 6,
+    "surface": "rough",
+    "reason": "A hole-99 'tee' in the shaded grass between the left fairway bunker and the cart path, with no deck. Rough/99 surrounds it."
+   },
+   {
+    "index": 7,
+    "surface": "fairway",
+    "reason": "A hole-number fix for the mown patch in the short-game practice area west of the 10th tee. Written with the EXACT geometry of the fairway/10 feature (58.0 m2) and hole 99. The proposed buffered version would also have turned 3.2 m2 of semirough/99 into fairway."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "tees_utm.forward = [362946.5, 3774943.6], with notes. Verified: the point is inside the tee/10 pad polygon (0.75 m from its edge), on the flat LiDAR deck (z 376.35, ~4% slope), and measures 359.9 yd (card 366, about 6 yd short) along tee -> aim (363132.27, 3774935.55) -> green centre. The current holes.json fairway marker (362944.0, 3774970.9) sits in rough/99 on a ~21% slope north of the path. The middle deck is flat only to E ~932 (about 376 yd) and a ~30% bank separates the decks. The square deck north of the path gives 373-378 yd, about 7-12 yd long, so the small east pad is the better fit for the old red tee.",
+  "remaining_issues": [
+   "Affects the whole course, not just this hole: surfaces made from the imagery are offset about 2-3 m WEST (dy about 0) from the LiDAR and OSM features. On holes 10-13, 17 and 18, every bunker of 40 m2 or more becomes deepest when shifted +2 to +3.5 m east. The cart path in the LiDAR intensity and hillshade lies about 2-2.5 m east of the path in the photo, and the OSM pond matches the LiDAR flat exactly. Unless this is fixed at the source (imagery georeferencing or a shift of auto_core), surfaces will not sit on their LiDAR hollows, pads or decks. Overrides traced from the imagery (on all holes) would also need the same shift.",
+   "Forward tee is still about 6 yd short of the 366 card. No pad delivers 366 exactly."
+  ]
+ },
+ {
+  "hole": 11,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Confirmed not a bunker: a path-coloured strip with no hollow (-0.03 m, and still only -0.1 m after the registration shift). Relabelled ROUGH instead of the proposed cartpath. The existing cartpath/98 feature just east (E ~293.5-297 at N 825) already matches the path in the LiDAR. Because of the ~2-3 m imagery offset, in the model this strip is the bank between the forward tee and the path. Clipped so it does not touch the cartpath feature."
+   },
+   {
+    "index": 1,
+    "surface": "water",
+    "reason": "Confirmed: a missing pond (GolfTop18's 'hidden lake'). It is open water in the photo, the LiDAR intensity has no returns there, and the DEM is dead flat at 346.41 m (the same level as the OSM pond on hole 13). GEOMETRY REPLACED: the proposed outline traced from the imagery was about 2.3 m west of the LiDAR water surface (IoU 0.77, best fit at +2.25 m E / +0.5 m N), so the water would have lain on the west bank. I wrote a polygon traced from the LiDAR instead (DEM within 0.08 m of the water level, 715 m2). The OSM pond on hole 13 is registered the same way (IoU 0.90 with the LiDAR at zero shift). It lies over rough/99 and 12 m2 of native/99 only."
+   },
+   {
+    "index": 2,
+    "surface": "semirough",
+    "reason": "A hole-99 'tee' strip (85 m2) on the grass band between the right edge of the fairway and the service road, near the green. It has no deck (2% slope, flat relative to its surroundings) and its shape is a strip. Clipped so it does not touch fairway/11 (2.5 m2) or the road."
+   },
+   {
+    "index": 3,
+    "surface": "semirough",
+    "reason": "Same band as #2 (46 m2). Clipped so it does not touch fairway/11 or the road."
+   },
+   {
+    "index": 4,
+    "surface": "rough",
+    "reason": "A long 124 m2 'tee' strip of rough and fairway-edge grass along the cart path right of the fairway start. It is not shaped like a tee and has no deck. Rough/99 surrounds it."
+   },
+   {
+    "index": 5,
+    "surface": "rough",
+    "reason": "A small 16 m2 hole-99 'tee' piece in the same strip. Rough/99 surrounds it."
+   },
+   {
+    "index": 6,
+    "surface": "fairway",
+    "reason": "A 29 m2 hole-11 'tee' on the mown north tip of the fairway, about 25 m in front of the Forward tee. It has no deck, and no card distance fits it (about 339 yd). Clipped to the tee piece plus the adjacent fairway/11 so no rough or semirough is converted."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "The same course-wide imagery-vs-LiDAR offset as hole 10: imagery-based surfaces sit about 2-3 m west of the LiDAR. The hole 11 greenside bunkers line up best with their hollows when shifted +2 to +3 m east.",
+   "The canyon left of the fairway is a patchwork of rough and deeprough (the inspector's note). This follows the course-wide classification, so it was not edited.",
+   "The forward tee measures 364 yd against the 359 card, about 5 yd long. That is acceptable."
+  ]
+ },
+ {
+  "hole": 12,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "semirough",
+    "reason": "A 21.6 m2 hole-99 'tee' on mown grass at the east edge of the approach fairway, about 25 m short of the green, with no deck (0.0 m relief, 2% slope). The semirough/99 pieces next to it support the label. Clipped so it does not touch fairway/12 (0.5 m2)."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "tees_utm.forward = [363492.4, 3774514.0], with notes. Verified: it measures 89.4 yd straight to the green centre (card 97, about 8 yd short). The LiDAR is flat here (z 354.27, ~4% slope) on the mown plateau rim, on the line of play. Past ~91 yd the line drops into the canyon at 26-65% slope. The current holes.json fairway marker (363494.75, 3774520.56) sits in canyon deeprough/99 on a ~65% slope, which is unplayable. The detected plateau pad gives only 80-84 yd. In the model the point is on rough/99 (because of the imagery offset), but in the photo frame it is mown plateau.",
+  "remaining_issues": [
+   "Forward tee is still about 8 yd short of the 97 card. This is the best flat point on the hole's own line.",
+   "An alternative is still open. The small round OSM tee pad (way 1157465526, 363460.6, 3774524.9) is flat and on a tee surface, and measures 96 yd to this green, matching the card. OSM mapped it in the same batch as the hole 12 plateau fairway. The pipeline assigns it as hole 13's middle tee, but hole 13's 356 is delivered just as well (355.0 yd) by the 42.6 m2 pad at 363450.9, 3774540.4. Its line to the hole 12 green runs about 45 yd down the cart path, so it was not adopted. This needs a human or photo check of where the 97-yd red tee really is.",
+   "The same course-wide imagery-vs-LiDAR offset as hole 10: the hole 12 greenside bunker lines up best with its hollow at +1.5 m E / -1 m N, and the tee outlines sit west of their LiDAR decks."
+  ]
+ },
+ {
+  "hole": 13,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Strip #449 labelled tee 13 between the fairway edge and the cart path. LiDAR shows no deck: it sits 0.05-0.1 m above the fairway as a path-side shoulder, against +0.2-0.4 m for real tees. The imagery shows lighter path-side grass. Written as proposed (rough 99)."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Blob #447 labelled tee 13, about 4 m east of the path. Flat LiDAR (353.19-353.23), dark rough grass grading into native. Rough 99 matches its neighbours."
+   },
+   {
+    "index": 2,
+    "surface": "rough",
+    "reason": "Blob #453 labelled tee 13 at the fairway's top edge, in the transition to the native. LiDAR has only the natural 0.1 m rise at the fairway edge, and the imagery shows no box. The neighbouring strip is already rough/semirough 99."
+   },
+   {
+    "index": 3,
+    "surface": "rough",
+    "reason": "Tee 99 strip between the fairway and the path in front of the green. Grass in the imagery, no deck. Clipped so it no longer overwrites 1.0 m2 of the road polygon (137.0 m2 written)."
+   },
+   {
+    "index": 4,
+    "surface": "rough",
+    "reason": "16 m2 tee 99 blob in the rough beside the left fairway bunker. Not a tee, and it does not touch the bunker."
+   },
+   {
+    "index": 5,
+    "surface": "fairway",
+    "reason": "Tee 99 collar on the fairway side of the right-centre fairway bunker. The imagery shows the fairway mowing running to the sand. No overlap with the bunker polygon."
+   },
+   {
+    "index": 6,
+    "surface": "fairway",
+    "reason": "Tee 99 collar on the fairway side of the right corner bunker, in the landing zone. The grass matches the fairway. The inner edge follows the bunker edge (306.2 E at N 422) without overlapping it."
+   },
+   {
+    "index": 7,
+    "surface": "water",
+    "reason": "98 m2 green 99 inside the main pond. The imagery shows only open water. The polygon lies entirely within the existing water 99 and the fake green."
+   }
+  ],
+  "rejected": [
+   {
+    "index": 8,
+    "reason": "Correct finding but a duplicate. The pond NW of the tees (rough 99, 346.4 m flat LiDAR surface) is already burned as water 99 by features/overrides/hole11.geojson#1 (715.5 m2, also traced from the LiDAR). It overlaps this proposal by 663 m2, so writing it again would add overlapping override polygons. Both traces sit in the LiDAR frame, like the auto water polygons (main pond = LiDAR flat to within 0.4 m)."
+   },
+   {
+    "index": -1,
+    "reason": "Meta tees_utm.forward [363334.0, 3774489.0] rejected. It was based on stale info.json (auto marker 216.3 yd). The current output/holes.json already places the forward tee as a fairway_marker at (363348.36, 3774478.38). That is exactly 224.0 yd on the line of play, on mown grass east of the path. The proposed pin recomputes to 219.8 yd, 4.2 yd short of the card, so it would make the model worse."
+   }
+  ],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "The forward tee is the pipeline fairway_marker at (363348.36, 3774478.38), 224.0 yd. It sits on mown grass labelled rough 99, on a small mound beside the path with about 3-10% slope. A point on the same 224-yd arc, (363347.9, 3774479.1), has about 3% slope if a flatter spot is wanted.",
+   "The cart path along the right of the fairway (road 99) sits about 2-3 m east of the imagery path near N 3774440-470, and a 491 m2 rough 99 sliver covers part of the visible path. The grass strip east of the path (about E 363333-345, N 3774442-480) is labelled fairway 13 and is probably rough. Neither was in the proposals.",
+   "The elongated real tee deck at 363482,3774558 is assigned to hole 13 but lines up with hole 12's tees, and it holds no marker. Left unchanged.",
+   "Frame note: the imagery-derived surfaces and these overrides are in the raw-imagery frame, about 2.75 m west of the LiDAR (config IMAGERY_SHIFT). Water polygons, including the hole11 pond override, are in the LiDAR frame. When the pipeline switches to the registered imagery, the non-water overrides will need the +2.75 m E shift."
+  ]
+ },
+ {
+  "hole": 14,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "Isolated 60 m2 fairway 14 island (#753) south of the fairway. It is not contiguous with the mown fairway in the imagery and has no LiDAR feature. Extended over its 61.5 m2 orphan semirough 99 collar ring (idx 1923), which touches only the island and rough 99, so no ring of semirough is left in the rough. 128.1 m2 written."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "Isolated irregular 98 m2 fairway 14 island (#774) in the rough band left of the fairway, near the left fairway bunker. It is a tone patch, not mown fairway. Extended over its orphan semirough collar (idx 1921, 110 m2). 218.7 m2 written. Does not touch the bunker or the main fairway."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "The automatic 'back' and 'right' pins share one position (362760.63, 3774394.63). This cannot be fixed with surface or meta overrides."
+  ]
+ },
+ {
+  "hole": 15,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "fairway",
+    "reason": "Tee 15 sliver #356 at the fairway edge by the path, about 200 yd out. Fairway grass, no deck. Trimmed rather than all fairway: the adjacent stretch of this fairway edge has a rough (about 1 m) plus semirough (about 1-1.5 m) strip before the path, and the imagery shows the same lighter path-side band here. Written as fairway 15 beyond 1.75 m from the road polygon, semirough 99 at 0.75-1.75 m and rough 99 within 0.75 m."
+   },
+   {
+    "index": 1,
+    "surface": "fairway",
+    "reason": "Tee 15 sliver #357 next to the tree. Same treatment as #0, merged into the same three pieces: fairway 15 32.6 m2, semirough 99 12.8 m2, rough 99 7.6 m2."
+   },
+   {
+    "index": 2,
+    "surface": "rough",
+    "reason": "Isolated 58 m2 fairway 15 island in the green band between the forward tee and the path. No contiguous mown fairway, no LiDAR feature. Extended over its orphan semirough collar (idx 1882, 53 m2). 117.2 m2 written."
+   },
+   {
+    "index": 3,
+    "surface": "cartpath",
+    "reason": "Approved only where it replaces the false 73.8 m2 'greenside bunker' #198 (proposal clipped to the bunker plus 1 m; 101.5 m2). The imagery shows uniform light-grey paving continuous with the path. Fine DEM profiles (dem_final, dem_raw, dem) are monotonic across it: the path bed then the bank, with no bunker hollow. The NW edge matches the path edge to within about 0.5-1 m. OSM's right greenside bunker is the real front-right bunker, which stays."
+   }
+  ],
+  "rejected": [
+   {
+    "index": 3,
+    "reason": "The NE continuation of the proposed cart path polygon (beyond about 363089 E) was dropped. Brightness and DEM profiles at E 363095-363108 put the path at N 3774572-577 (flat bed 379.1-379.2 m). The proposed strip lies at N 3774576-581, on the bank north of the path (379.4 to 381.4 m, steep). It is 3-4 m off in both the imagery and LiDAR frames."
+   }
+  ],
+  "meta_applied": "aim_points_utm: [[362964.46, 3774570.33]] (dropped automatic aim 1 at 362823.64, 3774472.54, which sat on the cart path in the rough 108 yd from the back tee). The corner aim is in fairway 15, about 12 m from the edge, 296 yd from the back tee and 116 yd to the green. Recomputed: 412.0/361.0/325.2 yd against the 412/361/326 card; the pipeline will re-place the forward marker on its pad.",
+  "remaining_issues": [
+   "Beside the green, the SE part of the path (about 40% of its width) is still labelled rough 99, and so is the path's NE continuation past the green. No cart path polygon covers them, and a correct trace was not available from the proposal.",
+   "Frame note: these overrides are in the raw-imagery frame, about 2.75 m west of the LiDAR (config IMAGERY_SHIFT). They will need a +2.75 m E shift when the registered imagery is adopted."
+  ]
+ },
+ {
+  "hole": 16,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "bunker",
+    "reason": "The approach bunker on the right is under-mapped: the old 40 m2 polygon covers only the SW lobe. The new outline follows the sand edge in the imagery to within about 0.5 m. LiDAR shows the hollow under it, offset about 2.75 m east, which is the known Esri-to-LiDAR shift (config.IMAGERY_SHIFT). It only overwrites rough/99 and its own bunker. I unioned it with the old bunker polygon so no sliver under 0.4 m is left outside the outline (151.3 m2)."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "tees_utm.championship = [363069.5, 3774529.0]. Recomputed: 202.0 yd to the green centre, which matches the 202 card. The point is inside the long tee pad, about 2 m from its edge, in the darker NE back box beside OSM tee 1157470219, on a flat LiDAR deck at 377.2 m (+-0.03 m). Middle (190) and Forward (180) stay automatic on the same deck.",
+  "remaining_issues": [
+   "A 33 m2 tee blob east of the cart path at (363082, 3774534) sits on a raised mound. At 217 yd it matches no card tee. Left unchanged and still listed as a hole 16 tee pad.",
+   "Small fairway-labelled patches in the rough between the tee and the green look like mowing or colour noise. Left unchanged."
+  ]
+ },
+ {
+  "hole": 17,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "rough",
+    "reason": "The bogus 43 m2 'tee' that held the Championship marker is a dry patch in hole 14 rough, south of the cart path and retaining wall. It has no deck in LiDAR (it lies on the slope) and there is no OSM tee there; OSM hole line 26 starts on deck A. Shots from it would cross a tree grove. It covers the whole blob; the overlap with hole 14 fairway is under 1 m2."
+   },
+   {
+    "index": 1,
+    "surface": "rough",
+    "reason": "A 27 m2 blob inside the cart-path hairpin with no tee shape in the imagery, no OSM tee, and a yardage (~421) that matches no card tee. Note: LiDAR shows a graded flat bench there at about 377.1 m, so the inspector's 'no deck' is not strictly true. Relabelling is still harmless because no marker uses it once the tees are pinned, and it matches the surrounding rough label."
+   },
+   {
+    "index": 2,
+    "surface": "rough",
+    "reason": "A 31 m2 blob on a plain slope in the rough, with no deck, no OSM tee and no card match."
+   },
+   {
+    "index": 3,
+    "surface": "rough",
+    "reason": "A 106 m2 irregular blob with a tail running under a tree north of the cart path. No deck, no OSM tee. It covers the blob fully (0.06 m2 remnant); the road overlap is 0.1 m2."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "tees_utm: championship [362926.15, 3774383.72] = 431.8 yd (card 450); middle [362939.48, 3774390.15] = 415.6 yd (card 430); forward [362975.63, 3774415.3] = 368.3 yd (card 382). I recomputed these as tee -> aim -> green centre. Each marker is 1.5 m inside its pad (decks A, B and D = OSM tees 1157472354/55/56) on a flat LiDAR deck at about 377.5, 376.4 and 372.5 m. The automatic markers were wrong: Championship on the bogus pad across the trees, Forward inside the tree grove. All three new markers are 14-18 yd short of the card, but the deck spacing (16 and 47 yd) matches the card spacing (20 and 48 yd). The notes were updated.",
+  "remaining_issues": [
+   "Every hole 17 tee measures 14-18 yd short of the card. An alternative reading: a flat mown area labelled fairway/17 just west of deck A, about 0.2 m lower, could hold a Championship marker at about 448 yd, with A as Middle at 430 (the old automatic Middle). It is not an OSM tee and would leave deck B unused, so it was not applied. The lead should decide.",
+   "Two tee-labelled blobs assigned to hole 99 near the aim point, at (363203, 3774496) and (363183, 3774466), were left unchanged.",
+   "Cart paths around holes 16/17 are labelled road/99 instead of cartpath/98. This is a global labelling issue."
+  ]
+ },
+ {
+  "hole": 18,
+  "approved": [
+   {
+    "index": 0,
+    "surface": "cartpath",
+    "reason": "A clear concrete path about 2.5 m wide with a parked cart on it. The trace follows it to within about 0.5 m from the existing spur by the green at 362901 to its dead end near 363040. It shows as a graded strip in LiDAR, with no hollows. It replaces the three strip 'bunkers' (284, 86 and 18 m2) completely and leaves the real fairway bunkers (LiDAR hollows NE of the path) untouched."
+   },
+   {
+    "index": 1,
+    "surface": "native",
+    "reason": "Dry, unirrigated grass band, mean red about 152 vs 68 on the irrigated fairway. Clipped so it no longer overwrites 1.2 m2 of the existing cart path or touches the new path."
+   },
+   {
+    "index": 2,
+    "surface": "native",
+    "reason": "Dry band crossing the second leg. Its 595 m2 currently labelled fairway is brown in the imagery (red about 153 vs 68 on the fairway), so it is not fairway. The west edge follows the green/brown boundary. Clipped exactly against the paths."
+   },
+   {
+    "index": 3,
+    "surface": "native",
+    "reason": "Thin dry strip between the path and the fairway edge. It removes the last part of the false strip bunker. Clipped exactly against the path."
+   },
+   {
+    "index": 4,
+    "surface": "native",
+    "reason": "Dry grass between the path and the trees south of the path, which removes the rest of the false strip bunker. Clipped exactly against the path; the real fairway bunkers are not touched."
+   },
+   {
+    "index": 5,
+    "surface": "fringe",
+    "reason": "The sand-coloured W/SW 'bunker' ring lies on the same flat LiDAR green pad (387.6-388.0 m) with no hollow; the whole green looks topdressed in the imagery. Fringe matches the collar on the other sides. Clipped against the green polygon so the putting surface is not reduced (79.3 to 73.9 m2)."
+   },
+   {
+    "index": 6,
+    "surface": "rough",
+    "reason": "The false bunker on the east bank of the Middle tee is light dry grass on a slope; LiDAR shows no hollow (it is higher than its ring)."
+   },
+   {
+    "index": 7,
+    "surface": "semirough",
+    "reason": "An irrigated oval lawn behind the hole 17 green, across the road from the hole 18 tees, was wrongly assigned to hole 18 as fairway and tee. Relabelled semirough/99 to match the surrounding lawn. Correction to the inspector: LiDAR shows a raised flat deck with a path leading to it, possibly a disused tee. It is still no card tee of any hole and no OSM hole starts there. I rewrote the feature's reason to say so."
+   },
+   {
+    "index": 8,
+    "surface": "rough",
+    "reason": "A 35 m2 irregular 'tee' blob at the fairway's front edge, 20 m west of the real OSM forward tee. No tee shape in the imagery, no OSM tee, and its 436 yd matches no card tee. Removing it does not change marker placement."
+   }
+  ],
+  "rejected": [],
+  "meta_applied": "none",
+  "remaining_issues": [
+   "The Forward tee (481 on the card) is still the automatic fairway marker in dry rough on the valley floor at (363219, 3774724). The only forward pad, OSM 1157472363 at (363204, 3774752), measures about 450 yd. The lead should choose.",
+   "The lawn behind the hole 17 green at (363258, 3774615) is a raised flat deck (possibly a disused tee) that is now labelled semirough/99. If it is a live tee for some other use, it could be labelled tee/99 instead.",
+   "Override polygons, like the current model, are in the raw Esri imagery frame, about 2.75 m west of the LiDAR. That needs consistent handling when the registered imagery is switched in."
+  ]
+ }
+]

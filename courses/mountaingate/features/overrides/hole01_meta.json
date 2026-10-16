@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "aim_points_utm": [
+  [
+   362565.0,
+   3775300.0
+  ]
+ ],
+ "notes": "Aim point (hand-checked, the left third of the fairway at the dogleg): it reproduces the card on all three tees."
+}

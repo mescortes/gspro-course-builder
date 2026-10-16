@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "aim_points_utm": [
+  [
+   362967.21,
+   3774570.33
+  ]
+ ],
+ "notes": "Single dogleg aim at the corner of the right-hand dogleg (fairway 15, about 296 yd from the back tee, 116 yd to the green centre, about 12 m inside the fairway edge). The automatic first aim (362823.64, 3774472.54) was dropped: it sat on the cart path in the rough only 108 yd from the back tee, about 23 yd past the forward tee, almost on the tee-to-corner line. Recomputed play distances with the current markers: 412.0 / 361.0 / 325.2 yd (card 412/361/326). (verified)"
+}
