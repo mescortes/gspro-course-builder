@@ -16,11 +16,11 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
 
 ## Explore the courses
 
-Four courses are built, and you can walk round any of them in the bundled three.js viewer without hours of downloads
-and a build. Each course's viewer bundle (the textured model, the hole data, the camera presets and the yardage-book
-maps; 250-280 MB) is an asset of this repository's GitHub Release. One command fetches it, checks it against the
-sha256 in `courses/<slug>/prebuilt.json`, unpacks it into `output/<slug>/` and starts the viewer's server. It needs
-Python 3.9 or newer and curl (or requests), nothing else.
+Four of the courses have a prebuilt viewer bundle: you can walk round any of them in the bundled three.js viewer
+without hours of downloads and a build. Each bundle (the textured model, the hole data, the camera presets and the
+yardage-book maps; 250-280 MB) is an asset of this repository's GitHub Release. One command fetches it, checks it
+against the sha256 in `courses/<slug>/prebuilt.json`, unpacks it into `output/<slug>/` and starts the viewer's server.
+It needs Python 3.9 or newer and curl (or requests), nothing else.
 
 | | |
 |---|---|
@@ -50,6 +50,7 @@ that needs attribution: see [Data and licences](#data-and-licences).
 | [Whistle Bear Golf Club](courses/whistle-bear/README.md) | Cambridge, Ontario (John Robinson, 2000-01) | Built with its practice facility; QA round 1 (63 override features). Hole 1 and 11 Black tees can't reach the card from any deck (documented gaps). QA round 2 is still to do. ([#9](https://github.com/mescortes/gspro-course-builder/pull/9)) |
 | [Brambles](courses/brambles/README.md) | Middletown, Lake County, California (Coore & Crenshaw with James Duncan, 2024) | The first course without OSM: features drafted from the GolfNow GPS layout and the NAIP photo. QA rounds 1 and 2 (157 override features). Holes 1, 7 and 18 measure short of the card from every deck (documented gaps). ([#7](https://github.com/mescortes/gspro-course-builder/pull/7)) |
 | [Deer Ridge Golf Club](courses/deer-ridge/README.md) | Kitchener, Ontario (Thomas McBroom; the club dates itself to 1991) | Built on the current engine with six tee sets; the photo is registered to the LiDAR (0.25 m east, 0.25 m south). QA rounds 1 and 2 (51 override features): every hole scores 8 or 9, and test_course passes (137). ([#12](https://github.com/mescortes/gspro-course-builder/pull/12)) |
+| [MountainGate Country Club: North/South](courses/mountaingate/README.md) | Los Angeles, California (Ted Robinson, 1975-76) | The first Southern California course, ported from the standalone project this builder grew out of: the North and South nines, with the Lake nine as scenery. Four QA rounds (268 override features); every hole scores 8 or 9 except 18 (7: the May 2024 photo predates its new bunkers). Holes 5, 10, 17 and 18 measure short of the card from every deck (documented gaps), and GreenKeeper's OB ring is empty (one test_course failure). Built on another machine and kept private (a private club), so it has no prebuilt bundle. ([#17](https://github.com/mescortes/gspro-course-builder/pull/17)) |
 
 ## How a course is built
 
