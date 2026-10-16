@@ -1,0 +1,15 @@
+{
+ "course": "westmount",
+ "name": "Westmount Golf & Country Club",
+ "release": "courses-2026-10-16",
+ "asset": "westmount-viewer.tar.gz",
+ "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-16/westmount-viewer.tar.gz",
+ "sha256": "05d1d38be939fbe7ccb0ee6e04025926591f6cc04df662267d223e16bbb5f631",
+ "bytes": 252234574,
+ "files": 42,
+ "unpacked_bytes": 341294101,
+ "model": "westmount.glb",
+ "packaged": "2026-10-16",
+ "built_from": "57a53a23267e",
+ "attribution": "Contains information licensed under the Open Government Licence - Ontario and the Open Government Licence - Canada (OMAFRA Lidar 2016-18, SWOOP 2025 orthoimagery, NRCan HRDEM). Course features and buildings: (c) OpenStreetMap contributors, ODbL. Textures: Poly Haven, CC0."
+}
