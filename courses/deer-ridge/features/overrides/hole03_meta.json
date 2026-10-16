@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "copper": [
+   546494.43,
+   4806119.1
+  ]
+ },
+ "notes": "Copper (374) has no deck: the automatic fairway marker (E 546503 N 4806149) sat in rough 4.6 m from the fairway bunker. Pinned on the fairway lobe in front of the White deck, on the line White deck -> aim point, at 374.0 yd. White plays from OSM tee 890853489 (reassigned from hole 99 to hole 3 in features/overrides/hole03.geojson) at 439 of 444, clamped at the back of the deck like Black (581/587) and Gold (550/553) on this line."
+}

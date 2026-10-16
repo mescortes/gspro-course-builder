@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "copper": [
+   547159.28,
+   4806303.26
+  ]
+ },
+ "notes": "Copper (95 yd, new 2025, markers on existing ground): the automatic fairway marker on the line of play at 95 yd (547164.6, 4806294.7) sits in the native scrub strip south of the pond (NDVI 0.05). No deck on this hole delivers 95 yd and the line has no mown ground between about 85 and 125 yd, so the marker is pinned about 9 m left of the line at 95.0 yd from the green centre (after the green's front-left tail is cut back), on the striped mown strip between the scrub and the pond (NDVI 0.34), 4 m from the scrub and 8 m from the water."
+}

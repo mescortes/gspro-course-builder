@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "copper": [
+   545956.51,
+   4806259.9
+  ]
+ },
+ "notes": "Copper (card 206, new in 2025; no pad delivers it, the nearest, White, is 77 yd long) is a fairway marker. The automatic marker (E 545970.70 N 4806246.30) sits where the back-tee -> aim line crosses the lake corner: rough (hole 99) on the lake bank, dem_final slope 51 %, 4 m outside the fairway. Pinned on the same yardage arc round the aim point (72.47 m to E 545913.91 N 4806201.27, + 115.89 m to the green centre = 206.0 yd) in the middle of the 10th fairway: E 545956.51 N 4806259.90, z 281.40, slope 1.1 %, 15 m inside the fairway edge."
+}
