@@ -12,7 +12,7 @@ so the measured yardage matches the card (that is how real markers are set), cla
 import sys, json, math
 import numpy as np
 import rasterio
-from shapely.geometry import shape, Point, LineString, Polygon
+from shapely.geometry import shape, Point, LineString, Polygon, box
 from shapely.ops import unary_union
 from scipy import ndimage
 
@@ -51,6 +51,48 @@ def load_features(feats_path=None):
     return [(shape(f["geometry"]), f["properties"]) for f in json.load(open(feats_path or (C.FEATURES / "course_surfaces.geojson")))["features"]]
 
 
+def penalty_areas(G, aoi=None):
+    """[(polygon, hazard type)]: the golf water hazards mapped as wetlands (surface_classify.is_penalty_wetland) in the
+    OSM features G, clipped to `aoi` (the build area). They have no water surface (their ground is reeds or marsh
+    grass), so the hole data takes them from OSM: "lateral_water" for golf=lateral_water_hazard, else "water"."""
+    from surface_classify import is_penalty_wetland
+    out = []
+    for _, t, g in G:
+        if not is_penalty_wetland(t) or g.geom_type not in ("Polygon", "MultiPolygon"):
+            continue
+        g = g if aoi is None else g.intersection(aoi)
+        for p in getattr(g, "geoms", [g]):
+            if p.geom_type == "Polygon" and not p.is_empty:
+                out.append((p, "lateral_water" if t["golf"] == "lateral_water_hazard" else "water"))
+    return out
+
+
+def penalty_hazards(areas, corridor, min_area=50.0):
+    """holes.json hazards for the penalty areas (penalty_areas) over `min_area` m2 that reach a hole's corridor."""
+    out = []
+    for g, kind in areas:
+        if g.area > min_area and g.intersects(corridor):
+            c = g.centroid
+            out.append({"type": kind, "utm_centroid": [round(c.x, 2), round(c.y, 2)], "area_m2": round(g.area, 1),
+                        "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
+    return out
+
+
+def surface_hazards(feats, corridor, penalties=(), min_area=50.0):
+    """holes.json hazards from the surfaces: the water and native polygons over `min_area` m2 that reach a hole's
+    corridor, except those lying mostly inside a penalty area (penalty_areas: the reedbed's own ground is native area
+    and deep rough; it is in the lateral hazard's ring already)."""
+    out = []
+    for g, p in feats:
+        if p["surface"] in ("native", "water") and g.area > min_area and g.intersects(corridor):
+            if any(g.intersection(a).area >= 0.5 * g.area for a, _ in penalties):
+                continue
+            c = g.centroid
+            out.append({"type": "native_area" if p["surface"] == "native" else "water", "utm_centroid": [round(c.x, 2), round(c.y, 2)],
+                        "area_m2": round(g.area, 1), "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
+    return out
+
+
 def hole_lines():
     from surface_classify import osm_geoms
     return {C.course_hole(t["ref"]): g for _, t, g in osm_geoms()
@@ -58,6 +100,9 @@ def hole_lines():
 
 
 FAIRWAY_MARKER_GAP = 6.0  # yd: a pad that misses the card by more than this is not that tee's box
+FAIRWAY_MARKER_OFFSET = C.tuning("fairway_marker_offset", 20.0)       # m: a deckless marker's spot either side of the leg
+FAIRWAY_MARKER_CLEARANCE = C.tuning("fairway_marker_clearance", 5.0)  # m: from bunkers, water and native areas
+MARKER_HAZARDS = ("bunker", "water", "native")
 
 
 def point_at_distance(d_m, aims, green_c, back_tee):
@@ -69,6 +114,53 @@ def point_at_distance(d_m, aims, green_c, back_tee):
     if need <= 0 or L < 1e-6 or need > L + 1.0:
         return None
     return first + leg / L * need
+
+
+def marker_ground(feats, hole, clear=None):
+    """The ground a deckless forward marker of `hole` may stand on (feats: [(polygon, properties)], the surfaces), as a
+    function of a point: its rank, 0 the hole's fairway, 1 its tee decks, 2 semirough or another hole's fairway, 3
+    rough (the worst of the surfaces at the point); None on any other surface (a path, a green or its fringe, deep
+    rough, another hole's tee, no surface) or within `clear` m (FAIRWAY_MARKER_CLEARANCE) of a bunker, water or a
+    native area."""
+    from shapely import STRtree
+    clear = FAIRWAY_MARKER_CLEARANCE if clear is None else clear
+    tree = STRtree([g for g, _ in feats]); props = [p for _, p in feats]
+    def rank(pt):
+        P = Point(pt)
+        if any(props[i]["surface"] in MARKER_HAZARDS for i in tree.query(P, predicate="dwithin", distance=clear)):
+            return None
+        ranks = []
+        for i in tree.query(P, predicate="intersects"):
+            s, h = props[i]["surface"], props[i].get("hole")
+            ranks.append(0 if s == "fairway" and h == hole else 1 if s == "tee" and h == hole else
+                         2 if s in ("semirough", "fairway") else 3 if s == "rough" else None)
+        return None if not ranks or None in ranks else max(ranks)
+    return rank
+
+
+def marker_spots(d_m, aims, green_c, back_tee, ground=None, offset=None, step=0.5):
+    """Spots for a deckless forward marker at a play distance of d_m m, best first ([] when there is none).
+    point_at_distance gives the spot on the back tee's first leg; with `ground` (marker_ground) the spots are the points
+    at the same play distance within `offset` m (FAIRWAY_MARKER_OFFSET) either side of that leg, every `step` m across
+    it, that ground ranks: the best ground first, then the nearest the leg. Without it, the spot on the leg."""
+    base = point_at_distance(d_m, aims, green_c, back_tee)
+    if base is None or ground is None:
+        return [] if base is None else [base]
+    offset = FAIRWAY_MARKER_OFFSET if offset is None else offset
+    centre = np.asarray(aims[0] if len(aims) else green_c, float)[:2]
+    u = base - centre; r = np.linalg.norm(u); u = u / r; n = np.array([-u[1], u[0]])
+    cand = []
+    for k in range(-int(offset / step), int(offset / step) + 1):
+        s = k * step
+        if abs(s) >= r:
+            continue
+        p = base if k == 0 else centre + u * math.sqrt(r * r - s * s) + n * s
+        if abs(play_distance(p, aims, green_c) - d_m) > 0.05:   # past a dogleg's aim point: another distance
+            continue
+        g = ground(p)
+        if g is not None:
+            cand.append((g, abs(s), s, p))
+    return [p for *_, p in sorted(cand, key=lambda c: c[:3])]
 
 
 def play_distance(p, aims, green_c):
@@ -162,19 +254,22 @@ def place_tees(pads, aims, green_c, card, min_sep=None):
     return tees
 
 
-def fairway_markers(tees, aims, green_c, min_sep=None):
-    """In place: no tee pad can deliver a set's card yardage (composite forward tees): its marker goes on the line of play
-    at exactly the card distance, as forward markers on a fairway are - unless that spot is on another set's marker
+def fairway_markers(tees, aims, green_c, min_sep=None, ground=None, offset=None):
+    """In place: no tee pad can deliver a set's card yardage (composite forward tees): its marker goes at exactly the
+    card distance, as forward markers on a fairway are, on the best ground by the back tee's first leg (marker_spots;
+    ground: marker_ground, None for the spot on the leg) - unless every such spot is on another set's marker
     (`clashes`; Brambles hole 7: the Middle card equals the Back deck's length, so the fairway marker sat on the Back
-    marker, clamped there from a longer card); then it stays on its pad and the gap is reported. Sets each tee's
-    "source"."""
+    marker, clamped there from a longer card) or none is on fit ground (a lake across the leg); then it stays on its
+    pad and the gap is reported. Sets each tee's "source"."""
     min_sep = TEE_MARKER_GAP if min_sep is None else min_sep
     for t in tees:
         t["source"] = "pad"
         if t["pad_err"] > FAIRWAY_MARKER_GAP and t["key"] != TEE_KEYS[0]:
-            pos = point_at_distance(t["card"] / YD, aims, green_c, np.asarray(tees[0]["pos"]))
-            if pos is not None and not clashes(pos, t["card"], [o for o in tees if o is not t], min_sep):
-                t["pos"] = pos; t["measured"] = play_distance(pos, aims, green_c) * YD; t["source"] = "fairway_marker"
+            others = [o for o in tees if o is not t]
+            for pos in marker_spots(t["card"] / YD, aims, green_c, np.asarray(tees[0]["pos"]), ground, offset):
+                if not clashes(pos, t["card"], others, min_sep):
+                    t["pos"] = pos; t["measured"] = play_distance(pos, aims, green_c) * YD; t["source"] = "fairway_marker"
+                    break
     return tees
 
 
@@ -225,7 +320,7 @@ def pin_candidates(inside, edge, slope, limits=PIN_LIMITS, min_frac=PIN_MIN_FRAC
     return ok, limit
 
 
-def hole_record(h, line, feats, terr, all_feats):
+def hole_record(h, line, feats, terr, all_feats, penalties=()):
     par, *card = C.SCORECARD[h]
     hf = [(g, p) for g, p in feats if p["hole"] == h]
     greens = [g for g, p in hf if p["surface"] == "green"]
@@ -240,7 +335,7 @@ def hole_record(h, line, feats, terr, all_feats):
         aims = []
     pads = [g for g, p in hf if p["surface"] == "tee" and g.area > 15]
     tees = place_tees(pads, aims, gc, card)
-    fairway_markers(tees, aims, gc)   # QA overrides below still win
+    fairway_markers(tees, aims, gc, ground=marker_ground(all_feats, h))   # QA overrides below still win
     for t in tees:  # QA-pinned marker positions (e.g. a forward tee that sits in the fairway)
         fixed = meta.get("tees_utm", {}).get(t["key"])
         if fixed:
@@ -330,11 +425,8 @@ def hole_record(h, line, feats, terr, all_feats):
             rec["hazards"].append({"type": "bunker", "utm_centroid": [round(c.x, 2), round(c.y, 2)], "area_m2": round(g.area, 1),
                                    "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
     corridor = play.buffer(40)
-    for g, p in all_feats:
-        if p["surface"] in ("native", "water") and g.area > 50 and g.intersects(corridor):
-            c = g.centroid
-            rec["hazards"].append({"type": "native_area" if p["surface"] == "native" else "water", "utm_centroid": [round(c.x, 2), round(c.y, 2)],
-                                   "area_m2": round(g.area, 1), "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
+    rec["hazards"] += surface_hazards(all_feats, corridor, penalties)
+    rec["hazards"] += penalty_hazards(penalties, corridor)   # wetland hazards: penalty areas with no water surface
     if rec["tees"]:
         rec["elevation_change_m"] = round(gh - rec["tees"][0]["utm"][2], 2)
     return rec
@@ -344,11 +436,13 @@ def main():
     feats = load_features()
     terr = Terrain()
     lines = hole_lines()
+    from surface_classify import osm_geoms
+    penalties = penalty_areas(osm_geoms(), box(C.CORE["xmin"], C.CORE["ymin"], C.CORE["xmax"], C.CORE["ymax"]))
     holes = []
     for h in C.PLAYABLE:
         if h not in lines:
             holes.append({"hole": h, "error": "no OSM line of play"}); continue
-        rec = hole_record(h, lines[h], feats, terr, feats)
+        rec = hole_record(h, lines[h], feats, terr, feats, penalties)
         holes.append(rec)
         if "tees" in rec and rec["tees"]:
             print(f"hole {h:2d} ({rec['nine']} {rec['nine_hole']}) par {rec['par']}: " +

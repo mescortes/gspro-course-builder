@@ -390,6 +390,88 @@ def test_the_osm_api_fallback_survives_a_dropped_connection_and_splits_a_tile_ov
     assert len(els) == 4 and len(calls) == 1 + 1 + 4   # the dropped try, the refused tile, its four quarters
 
 
+
+def test_the_osm_api_fallback_completes_multipolygons_that_reach_past_the_box(monkeypatch):
+    """Deer Ridge's snapshot came from the OSM API fallback: /map returns a relation with only its member ways inside the
+    box, so the Grand River (natural=water, 47 members, 5 of them in the box) was never polygonised and the river was
+    rough. A multipolygon with a member way the tiles lack gets its members' geometry from /relation/<id>/full (as
+    Overpass 'out geom' gives it); those ways are not added as features. Other relations (routes) are left as they
+    are, and a relation the API cannot give stays as it was."""
+    tile = """<osm version="0.6">
+     <node id="1" lat="43.0" lon="-80.0"/><node id="2" lat="43.0" lon="-80.001"/><node id="3" lat="43.001" lon="-80.001"/>
+     <way id="12"><nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="1"/></way>
+     <relation id="20"><member type="way" ref="12" role="outer"/><member type="way" ref="99" role="outer"/>
+      <tag k="type" v="multipolygon"/><tag k="natural" v="water"/></relation>
+     <relation id="21"><member type="way" ref="12" role="outer"/><member type="way" ref="98" role="inner"/>
+      <tag k="type" v="multipolygon"/><tag k="natural" v="wood"/></relation>
+     <relation id="30"><member type="way" ref="12" role=""/><member type="way" ref="97" role=""/>
+      <tag k="type" v="route"/><tag k="route" v="bicycle"/></relation>
+    </osm>"""
+    full20 = """<osm version="0.6">
+     <node id="1" lat="43.0" lon="-80.0"/><node id="2" lat="43.0" lon="-80.001"/><node id="3" lat="43.001" lon="-80.001"/>
+     <node id="7" lat="43.1" lon="-80.1"/><node id="8" lat="43.1" lon="-80.101"/><node id="9" lat="43.101" lon="-80.1"/>
+     <way id="12"><nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="1"/></way>
+     <way id="99"><nd ref="7"/><nd ref="8"/><nd ref="9"/><nd ref="7"/><tag k="waterway" v="riverbank"/></way>
+     <relation id="20"><member type="way" ref="12" role="outer"/><member type="way" ref="99" role="outer"/>
+      <tag k="type" v="multipolygon"/><tag k="natural" v="water"/></relation>
+    </osm>"""
+    calls = []
+
+    def get(url, params=None, **kw):
+        calls.append(url.rsplit("/api/0.6/", 1)[-1])
+        if url.endswith("/relation/20/full"):
+            return Resp(200, body=full20)
+        if url.endswith("/relation/21/full"):
+            return Resp(404, body="Not Found")
+        return Resp(200, body=tile)
+    monkeypatch.setattr(fetch_data.requests, "get", get); _no_sleep(monkeypatch)
+    els = fetch_data.osm_api_map((-80.005, 43.0, -80.0, 43.005))
+    by = {(e["type"], e["id"]): e for e in els}
+    river = {m["ref"]: m for m in by[("relation", 20)]["members"]}
+    assert river[99]["geometry"] == [{"lat": 43.1, "lon": -80.1}, {"lat": 43.1, "lon": -80.101},
+                                     {"lat": 43.101, "lon": -80.1}, {"lat": 43.1, "lon": -80.1}]
+    assert len(river[12]["geometry"]) == 4
+    assert ("way", 99) not in by, "a member outside the box is no feature of the snapshot"
+    assert "geometry" not in {m["ref"]: m for m in by[("relation", 21)]["members"]}[98]
+    assert "geometry" not in {m["ref"]: m for m in by[("relation", 30)]["members"]}[97]
+    assert sorted(c for c in calls if c.startswith("relation")) == ["relation/20/full", "relation/21/full"]
+
+
+
+def _incomplete_snapshot(research):
+    """An OSM snapshot from the old OSM API fallback: multipolygon 20 (natural=water) has one of its two member ways."""
+    rel = {"type": "relation", "id": 20, "tags": {"type": "multipolygon", "natural": "water"},
+           "members": [{"type": "way", "ref": 12, "role": "outer", "geometry": [{"lat": 43.0, "lon": -80.0}]},
+                       {"type": "way", "ref": 99, "role": "outer"}]}
+    route = {"type": "relation", "id": 30, "tags": {"type": "route"}, "members": [{"type": "way", "ref": 97, "role": ""}]}
+    research.mkdir(exist_ok=True)
+    (research / "osm_all.json").write_text(json.dumps({"version": 0.6, "elements": [
+        {"type": "node", "id": 1, "lat": 43.0, "lon": -80.0, "tags": {"golf": "pin"}}, rel, route]}))
+    (research / "osm_golf.json").write_text(json.dumps({"version": 0.6, "elements": [
+        {"type": "node", "id": 1, "lat": 43.0, "lon": -80.0, "tags": {"golf": "pin"}}]}))
+
+
+def test_a_snapshot_from_the_old_fallback_is_completed_in_place(tmp_path, monkeypatch):
+    """Snapshots fetched through the OSM API fallback before it completed multipolygons (Deer Ridge, Whistle Bear)
+    lack the member ways outside the box. fetch_data.osm_incomplete names them (check_course reports them), and
+    `fetch_data.py osm-relations` completes them in both snapshot files without refetching anything else."""
+    monkeypatch.setattr(C, "RESEARCH", tmp_path); _no_sleep(monkeypatch)
+    _incomplete_snapshot(tmp_path)
+    golf = (tmp_path / "osm_golf.json").read_text()
+    assert fetch_data.osm_incomplete() == ["relation 20 (natural=water): 1 of 2 member ways"]
+    full = """<osm version="0.6"><node id="7" lat="43.1" lon="-80.1"/><node id="8" lat="43.1" lon="-80.101"/>
+     <way id="99"><nd ref="7"/><nd ref="8"/></way></osm>"""
+    monkeypatch.setattr(fetch_data.requests, "get", lambda url, **kw: Resp(200, body=full))
+    fetch_data.complete_snapshot()
+    d = json.loads((tmp_path / "osm_all.json").read_text())
+    rel = {e["id"]: e for e in d["elements"] if e["type"] == "relation"}
+    assert rel[20]["members"][1]["geometry"] == [{"lat": 43.1, "lon": -80.1}, {"lat": 43.1, "lon": -80.101}]
+    assert rel[20]["members"][0]["geometry"] == [{"lat": 43.0, "lon": -80.0}] and "geometry" not in rel[30]["members"][0]
+    assert d["version"] == 0.6 and len(d["elements"]) == 3 and d["elements"][0]["tags"] == {"golf": "pin"}
+    assert (tmp_path / "osm_golf.json").read_text() == golf
+    assert fetch_data.osm_incomplete() == []
+
+
 # ---- imagery
 
 def test_an_imageserver_fetch_resumes_from_its_chunks(tmp_path, monkeypatch):
@@ -641,8 +723,10 @@ def test_check_course_reports_downloads_that_do_not_fit_course_toml(tmp_path, mo
                        dtype="float32", crs=C.CRS, transform=from_origin(0.0, 100.0, 2.0, 2.0)) as d:
         d.write(np.full((1, 50, 50), 300.0, np.float32))
     monkeypatch.setattr(fetch_backdrop, "B", dict(xmin=0.0, ymin=0.0, xmax=200.0, ymax=200.0))
+    monkeypatch.setattr(C, "RESEARCH", tmp_path / "research"); _incomplete_snapshot(tmp_path / "research")
     r = K.data_report()
     flagged = [x for x in r if x.startswith("!!")]
+    assert any("relation 20 (natural=water)" in x and "fetch_data.py osm-relations" in x for x in flagged), r
     assert any("a.laz" in x and "b.laz" in x for x in flagged), r
     assert any("photo" in x and "empty" in x for x in flagged), r
     assert any("photo" in x and "core" in x for x in flagged), r

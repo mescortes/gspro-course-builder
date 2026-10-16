@@ -17,7 +17,7 @@ from shapely import make_valid
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import config as C
 from surface_classify import CLASSES, CID, osm_geoms, grid, ROAD_HALF_WIDTH, is_water, SAND, SHADOW_SAND, TURF, tuned
-from surface_classify import TURF_TRACK, turf_track
+from surface_classify import TURF_TRACK, turf_track, is_path
 
 RES = C.DEM_RES
 # OSM/override water outranks everything (dark water is easily mistaken for green by the classifier)
@@ -26,11 +26,15 @@ STROKE = {"green": "#BCE5A4", "fringe": "#A4C88F", "fairway": "#43E561", "semiro
           "deeprough": "#164B20", "tee": "#A0E5B8", "bunker": "#E5E5AA", "cartpath": "#BEBEBB", "native": "#BE751D",
           "road": "#555555", "building": "#C83C3C", "court": "#3355AA", "water": "#0000C0"}
 FORWARD_TEE_FRAC = C.tuning("forward_tee_frac", 0.45)   # tee pads past this fraction of a hole are not its tees (Westmount <= 0.35)
+FORWARD_TEE_REACH = C.tuning("forward_tee_reach", 60.0)        # m: a mapped tee no line claims, off its hole's line ...
+FORWARD_TEE_CARD_TOL = C.tuning("forward_tee_card_tol", 10.0)  # yd: ... playing the hole's card within this (card_tee_hole)
 BUNKER_CLEARANCE = C.tuning("bunker_clearance", (1.0, 10.0))  # unmapped bunkers: m clear of roads / of buildings
 SHARED_FAIRWAY_MIN_PART = C.tuning("shared_fairway_min_part", 150.0)  # m2: smallest part of a shared fairway a hole takes
 SHARED_FAIRWAY_MIN_RUN = C.tuning("shared_fairway_min_run", 80.0)     # m of a line inside a fairway it runs along ...
 SHARED_FAIRWAY_GREEN_REACH = C.tuning("shared_fairway_green_reach", 30.0)  # ... or m from it to the line's green end
 GREEN_OFF_COURSE = C.tuning("green_off_course", 15.0)  # m: a classifier green farther off the course outline is a lawn
+SMALL_OSM_FAIRWAY = C.tuning("small_osm_fairway", 300.0)  # m2: a mapped fairway under this is fairway as mapped
+GREEN_CANOPY_MAX = C.tuning("green_canopy_max", 0.5)  # leaf-off: a green this much under the closed canopy is woodland
 MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 150, "cartpath": 6, "native": 25, "road": 25,
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
 # Photo colour rules SAND, SHADOW_SAND and TURF ([tuning.sand], [tuning.shadow_sand], [tuning.turf]): surface_classify.py
@@ -58,6 +62,20 @@ def under_canopy_labels(lab, canopy, leaf_off_photo):
     near = open_lab[idx[0], idx[1]]
     soft = np.isin(near, [CID["fairway"], CID["native"]])
     return np.where(canopy, np.where(soft, near, CID["rough"]), lab).astype(np.uint8)
+
+
+def drop_greens_under_canopy(green, canopy, share=None):
+    """The green mask without its components (8-connected) lying `share` (GREEN_CANOPY_MAX) or more under `canopy`,
+    the closed canopy of a leaf-off survey. Under bare crowns the classifier's labels stand (under_canopy_labels), and
+    woodland floor in the trees' shadow came out green: four 61-94 m2 greens in Deer Ridge's woods and two on Whistle
+    Bear, each entirely under the closed canopy, while no real green on the four courses has 2 % of it there. A green
+    with an overhanging crown at its edge is kept whole."""
+    share = GREEN_CANOPY_MAX if share is None else share
+    lab, n = ndimage.label(green, structure=np.ones((3, 3)))
+    if not n:
+        return green
+    keep = np.r_[False, ndimage.mean(canopy, lab, np.arange(1, n + 1)) < share]
+    return keep[lab]
 
 
 def is_deck(P, R, tol=0.06, max_slope=0.05, step=0.12, fill=0.2):
@@ -406,19 +424,110 @@ def split_shared_fairways(fairways, lines, min_part=None, step=2.0, min_run=None
             continue
         # a shard the corridor boundary cuts off a ragged edge (smaller than any fairway part vectorize keeps) joins
         # the piece it shares the longest edge with
-        speck = 0.25 * MIN_AREA["fairway"]
-        pieces = sorted(((r, h) for h, q in parts.items() for r in polys_of(q)), key=lambda x: -x[0].area)
-        keep = [[r, h] for r, h in pieces if r.area >= speck]
-        for r, h in pieces:
-            if r.area >= speck:
-                continue
-            edge = max(((r.boundary.intersection(k[0].boundary).length, i) for i, k in enumerate(keep)), default=(0, 0))
-            if edge[0] > 0:
-                keep[edge[1]][0] = keep[edge[1]][0].union(r)
-            else:
-                keep.append([r, h])
-        out.extend((r, h) for r, h in keep)
+        out.extend(join_shards(parts, 0.25 * MIN_AREA["fairway"]))
     return out
+
+
+def join_shards(parts, speck):
+    """[(polygon, hole)] from parts ({hole: geometry} cut from one polygon): each polygon of a part, biggest first,
+    except the shards under `speck` m2, which join the piece they share the longest edge with (a shard touching none
+    stays on its own)."""
+    pieces = sorted(((r, h) for h, q in parts.items() for r in polys_of(q)), key=lambda x: -x[0].area)
+    keep = [[r, h] for r, h in pieces if r.area >= speck]
+    for r, h in pieces:
+        if r.area >= speck:
+            continue
+        edge = max(((r.boundary.intersection(k[0].boundary).length, i) for i, k in enumerate(keep)), default=(0, 0))
+        if edge[0] > 0:
+            keep[edge[1]][0] = keep[edge[1]][0].union(r)
+        else:
+            keep.append([r, h])
+    return [(r, h) for r, h in keep]
+
+
+def ring_holes(rings, fairways, reach=2.0, step=1.0):
+    """[(semirough polygon, hole)]: a semirough ring takes the hole of the fairway it rings (fairways: [(polygon,
+    hole)], the parts within `reach` m of it). One that rings the fairways of several holes (a shared fairway split
+    between their corridors, two holes' fairways a few metres apart) is cut between them along the Voronoi cells of
+    their outer edges (points every `step` m within `reach` m of it), each part to the hole of the fairway it lies by;
+    a shard joins its neighbour (join_shards). By no fairway: 99. Deer Ridge QA: every semirough was hole 99."""
+    from shapely.geometry import MultiPoint
+    from shapely.ops import voronoi_diagram
+    from shapely import STRtree, segmentize
+    tree = STRtree([f for f, _ in fairways]) if fairways else None
+    out = []
+    for q in rings:
+        zone = q.buffer(reach)
+        near = [fairways[i] for i in np.sort(tree.query(zone, predicate="intersects"))] if tree is not None else []
+        hs = sorted({h for _, h in near})
+        if len(hs) < 2:
+            out.append((q, hs[0] if hs else 99))
+            continue
+        pts, own = [], []
+        for f, h in near:   # (an edge two parts share is no site: it would give the cells round its ends to one hole)
+            b = f.boundary.intersection(zone).difference(unary_union([o for o, _ in near if o is not f]).buffer(0.01))
+            for g in getattr(b, "geoms", [b]):
+                if g.geom_type == "LineString" and g.length > 0:
+                    for c in segmentize(g, step).coords:
+                        pts.append(Point(c)); own.append(h)
+        sites = STRtree(pts)
+        cells = {h: [] for h in hs}
+        for c in voronoi_diagram(MultiPoint(pts), envelope=q.envelope.buffer(50)).geoms:
+            i = sites.query(c, predicate="contains")
+            if len(i):
+                cells[own[min(i)]].append(make_valid(c))
+        parts = {h: q.intersection(unary_union(cs)) for h, cs in cells.items() if cs}
+        out.extend(join_shards(parts, 0.25 * MIN_AREA["semirough"]))
+    return out
+
+
+def nearest_line(p, holes, lim, end=None):
+    """The hole whose line of play ({hole: LineString}) is nearest p's representative point, or 99 when none is within
+    `lim` m. end="start": tee pads, which sit behind / along the first part of the line (forward tees can be far up it):
+    the line is extended 35 m back past its tee, and a pad past FORWARD_TEE_FRAC of it counts 400 m further per unit
+    of the fraction past it (a pad that far up a hole is not its tee)."""
+    c = p.representative_point(); best, bd = 99, 1e9
+    for ref, line in holes.items():
+        if end == "start":
+            a = np.asarray(line.coords[0]); b = np.asarray(line.coords[1]); u = (b - a) / np.linalg.norm(b - a)
+            ext = LineString([a - 35 * u] + list(line.coords))
+            d = c.distance(ext)
+            frac = ext.project(c) / ext.length
+            d += max(0.0, frac - FORWARD_TEE_FRAC) * 400
+        else:
+            d = c.distance(line)
+        if d < bd:
+            best, bd = ref, d
+    return best if bd < lim else 99
+
+
+def card_tee_hole(p, holes, cards, reach=None, tol=None, clear=0.5):
+    """The hole of a mapped tee pad p that nearest_line leaves to no hole (99): an OSM forward tee beside the line of
+    play (Deer Ridge holes 1, 3 and 8: 42-46 m off it) or a par 3's forward deck past FORWARD_TEE_FRAC of its line
+    (Deer Ridge 13, Whistle Bear 5, 14 and 17, Brambles 12). A hole may take it when its line, extended 35 m back
+    past the tee, is within `reach` m (FORWARD_TEE_REACH) of p's representative point, and p plays its card: the play
+    distance (hole_data.play_distance, to the line's end) is within `tol` yd (FORWARD_TEE_CARD_TOL) of the hole's
+    shortest to longest yardage (cards: {hole: yardages}; a hole without a card takes no tee). The nearest such hole
+    takes it if every other one is more than 1 / `clear` times as far; otherwise, or with none, it stays 99 (a
+    driving-range tee, a pad that plays no hole's card)."""
+    from hole_data import play_distance, YD
+    reach = FORWARD_TEE_REACH if reach is None else reach
+    tol = FORWARD_TEE_CARD_TOL if tol is None else tol
+    c = p.representative_point(); xy = c.coords[0]
+    fits = []
+    for ref, line in holes.items():
+        card = cards.get(ref)
+        if not card or ref == 99:
+            continue
+        a = np.asarray(line.coords[0]); b = np.asarray(line.coords[1]); u = (b - a) / np.linalg.norm(b - a)
+        d = c.distance(LineString([a - 35 * u] + list(line.coords)))
+        yards = play_distance(xy, [tuple(q) for q in line.coords[1:-1]], line.coords[-1]) * YD
+        if d <= reach and min(card) - tol <= yards <= max(card) + tol:
+            fits.append((d, ref))
+    fits.sort()
+    if not fits or (len(fits) > 1 and fits[0][0] > clear * fits[1][0]):
+        return 99
+    return fits[0][1]
 
 
 def green_keep_area(course_area, osm_greens, margin=None):
@@ -430,6 +539,56 @@ def green_keep_area(course_area, osm_greens, margin=None):
         return None
     margin = GREEN_OFF_COURSE if margin is None else margin
     return unary_union([course_area.buffer(margin)] + [g for g in osm_greens if not g.is_empty])
+
+
+def small_osm_fairways(G, limit=None):
+    """The mapped fairways (golf=fairway, not drafted) under `limit` m2 (SMALL_OSM_FAIRWAY): collection areas and drop
+    zones the classifier does not hold, or holds in pieces under MIN_AREA["fairway"] that vectorize drops (Deer Ridge:
+    66-238 m2 by the greens of 6, 14, 16 and 18, all rough). They are fairway as mapped, below the surfaces that
+    outrank fairway; a larger one is left to the classifier, whose mowing lines are more exact than an outline."""
+    limit = SMALL_OSM_FAIRWAY if limit is None else limit
+    return [make_valid(g) for _, t, g in G if t.get("golf") == "fairway" and not is_drafted(t)
+            and g.geom_type in ("Polygon", "MultiPolygon") and g.area < limit]
+
+
+def burn_small_fairways(final, small_fw):
+    """In place: the small mapped fairways (small_osm_fairways) laid down again after the tee and bunker validation,
+    under the surfaces that outrank fairway and survived it (water, green, bunker, tee, paths, roads, buildings,
+    courts): the ground a rejected classifier tee or bunker leaves on a drop zone is fairway, not a remnant under the
+    speck limit."""
+    if not small_fw:
+        return final
+    small = unary_union(small_fw)
+    above = unary_union([final[n] for n in ("water", "green", "bunker", "tee", "cartpath", "road", "building", "court")])
+    add = small.difference(above).difference(final["fairway"])
+    if add.area > 1e-6:   # a layer the small fairways do not change is left as it is (no re-noding)
+        final["fairway"] = unary_union([final["fairway"], add])
+    for n in ("native", "deeprough"):
+        if final[n].intersection(small).area > 1e-6:
+            final[n] = final[n].difference(small)
+    return final
+
+
+def rejected_tee_is_fairway(p, fair, mapped=None):
+    """Is a classifier tee the LiDAR rejected fairway (else rough)? When fairway (`fair`) covers most of the ring 1.5 m
+    round it, or when it lies mostly on a small mapped fairway (`mapped`: small_osm_fairways; Deer Ridge's 66 m2 drop
+    zone, way 892441100, was 55 % classifier tee)."""
+    ring = p.buffer(1.5).difference(p)
+    if ring.intersection(fair).area > 0.5 * ring.area:
+        return True
+    return mapped is not None and not mapped.is_empty and p.intersection(mapped).area >= 0.5 * p.area
+
+
+def keep_part(p, n, mapped=None):
+    """Is a part p of surface n big and thick enough to keep (a speck becomes rough)? At least MIN_AREA[n] m2 (a
+    quarter of it for fringe and semirough rings, and for a fairway part lying on a small mapped fairway, `mapped`:
+    small_osm_fairways), and not thinner than a few decimetres."""
+    small = n in ("fringe", "semirough") or (n == "fairway" and mapped is not None and not mapped.is_empty
+                                             and p.intersection(mapped).area >= 0.5 * p.area)
+    if p.area < MIN_AREA.get(n, 0.5) * (0.25 if small else 1.0):
+        return False
+    thin = {"fringe": 0.1, "semirough": 0.15, "cartpath": 0.3, "road": 0.8, "building": 0.8}.get(n, 0.3)
+    return not p.buffer(-thin).is_empty
 
 
 def is_court(t):
@@ -466,6 +625,12 @@ def osm_vectors(G):
                   if g.geom_type in ("Polygon", "MultiPolygon")],
     }
     return vector, course_tracks, course_area
+
+
+def path_lines(G, bridges=True):
+    """The centre lines of the OSM paths (surface_classify.is_path: cart paths, footpaths, cycle trails); without the
+    bridges (bridge=yes) when `bridges` is False: the path surface stops at a bridge, a structure."""
+    return [g for _, t, g in G if g.geom_type == "LineString" and is_path(t) and (bridges or t.get("bridge") != "yes")]
 
 
 def chaikin(coords, n=2):
@@ -536,13 +701,14 @@ def main():
     tall_cov = ndimage.gaussian_filter((chm_s >= 5.0).astype(np.float32), 3.0 / RES)
     brush = (shrub_cov > 0.55) & (tall_cov < 0.5)
     del chm, p_tree, chm_s, shrub_cov, tall_cov
+    closed = None   # the closed canopy of a leaf-off survey: no green grows under it (drop_greens_under_canopy)
     if C.IMAGERY_LEAF_OFF:
         # litter test on the closed canopy (the leaf-off CHM is full of holes between bare branches)
         from detect_trees import smooth_chm
         c05 = rasterio.open(C.BUILD / "chm.tif").read(1)
-        wide = np.kron(smooth_chm(c05, 0.5) > 2.0, np.ones((2, 2), bool))[:H, :W]
-        lab = under_canopy_labels(lab, ndimage.binary_dilation(wide, iterations=int(2.0 / RES)), True)
-        del c05, wide
+        closed = np.kron(smooth_chm(c05, 0.5) > 2.0, np.ones((2, 2), bool))[:H, :W]
+        lab = under_canopy_labels(lab, ndimage.binary_dilation(closed, iterations=int(2.0 / RES)), True)
+        del c05
     else:
         lab = under_canopy_labels(lab, canopy, False)
 
@@ -572,8 +738,7 @@ def main():
     sand = sand_hysteresis(sand, shade_sand); del shade_sand
     osm_bunk = burn_mask(osm(lambda t: t.get("golf") == "bunker"))
     near = ndimage.binary_dilation(surf["bunker"] | osm_bunk, iterations=int(6 / RES))
-    path_lines0 = [g for _, t, g in G if g.geom_type == "LineString" and
-                   (t.get("golf") == "cartpath" or t.get("golf_cart") == "yes" or t.get("highway") in ("path", "footway"))]
+    path_lines0 = path_lines(G)
     # (the raw classifier "cart path" class is over-predicted course-wide, so only trust it next to a mapped path)
     on_path = burn_mask([g.buffer(1.5) for g in path_lines0]) | ((lab == CID["cartpath"]) & burn_mask([g.buffer(3.0) for g in path_lines0]))
     # second route for darker / shaded sand: a confident classifier bunker inside a mapped bunker (validated below)
@@ -590,11 +755,9 @@ def main():
     surf["bunker"] = ndimage.binary_opening(surf["bunker"] & ~grass, iterations=1)
 
     # 3) cart paths: classifier evidence near mapped OSM paths, plus the OSM centre-line under canopy
-    path_lines = [g for _, t, g in G if g.geom_type == "LineString" and
-                  (t.get("golf") == "cartpath" or t.get("golf_cart") == "yes" or t.get("highway") in ("path", "footway"))
-                  and t.get("bridge") != "yes"]
-    corridor = burn_mask([g.buffer(3.0) for g in path_lines])
-    backbone = burn_mask([g.buffer(1.1, cap_style=1) for g in path_lines])
+    paths = path_lines(G, bridges=False)
+    corridor = burn_mask([g.buffer(3.0) for g in paths])
+    backbone = burn_mask([g.buffer(1.1, cap_style=1) for g in paths])
     surf["cartpath"] = ((lab == CID["cartpath"]) & corridor) | (backbone & canopy)
     # stray classifier "path" pixels away from mapped paths are just worn turf -> rough
     # 4) OSM-authoritative non-golf features
@@ -635,6 +798,9 @@ def main():
     if keep is not None:
         surf["green"] &= burn_mask([keep])
     surf["green"] = clean(surf["green"], MIN_AREA["green"], fill_holes=1e9, open_px=2)
+    if closed is not None:
+        surf["green"] = drop_greens_under_canopy(surf["green"], closed)
+        del closed
     surf["bunker"] = clean(surf["bunker"], MIN_AREA["bunker"], fill_holes=1e9, open_px=1)
     surf["tee"] = clean(surf["tee"], MIN_AREA["tee"], fill_holes=1e9, open_px=2)
     surf["fairway"] = clean(surf["fairway"], MIN_AREA["fairway"], fill_holes=12, open_px=2, close_px=2)
@@ -657,6 +823,8 @@ def main():
     trim_bunkers = trims_bunkers(C.IMAGERY_RES)
 
     aoi = box(C.CORE["xmin"], C.CORE["ymin"], C.CORE["xmax"], C.CORE["ymax"])
+    small_fw = small_osm_fairways(G)
+    small_fw_area = unary_union(small_fw) if small_fw else None
     final = {}
     taken = Polygon()
     for n in PRIORITY:
@@ -669,6 +837,8 @@ def main():
             g = smooth_poly(g, close=0.4, simp=0.1)
         else:
             g = smooth_poly(g, close=0.35 if n != "bunker" else 0.2)
+        if n == "fairway" and small_fw:   # small mapped fairways (collection areas, drop zones) as mapped
+            g = unary_union([g] + small_fw)
         g = make_valid(g).intersection(aoi).difference(taken)
         if n == "bunker" and trim_bunkers:
             n0 = len(polys_of(g)); a0 = g.area
@@ -683,27 +853,14 @@ def main():
     for _, t, g in G:
         if t.get("golf") == "hole" and t.get("ref") and g.geom_type == "LineString":
             holes[C.course_hole(t["ref"])] = g
-    def nearest_line(p, lim, end=None):
-        c = p.representative_point(); best, bd = 99, 1e9
-        for ref, line in holes.items():
-            if end == "start":
-                # tee pads sit behind / along the first part of the line of play (forward tees can be far up it)
-                a = np.asarray(line.coords[0]); b = np.asarray(line.coords[1]); u = (b - a) / np.linalg.norm(b - a)
-                ext = LineString([a - 35 * u] + list(line.coords))
-                d = c.distance(ext)
-                frac = ext.project(c) / ext.length
-                d += max(0.0, frac - FORWARD_TEE_FRAC) * 400  # a pad past this fraction of the hole is not its tee
-            else:
-                d = c.distance(line)
-            if d < bd:
-                best, bd = ref, d
-        return best if bd < lim else 99
     # LiDAR / OSM validation of the small features the photo classifier over-predicts (QA round 1 found many):
     # a tee must overlap a mapped tee or be a built, flat deck; a bunker must overlap a mapped bunker or be a hollow.
     osm_tees = unary_union(osm(lambda t: t.get("golf") == "tee")).buffer(2.0)
     osm_bunk = survey_bunkers(G)   # drafted bunkers (draft=yes) are not survey data: they get the LiDAR test
+    def mapped_tee(p):
+        return p.intersection(osm_tees).area >= 0.25 * p.area
     def tee_ok(p):
-        if p.intersection(osm_tees).area >= 0.25 * p.area:
+        if mapped_tee(p):
             return True
         if p.area < 40:
             return False
@@ -732,10 +889,9 @@ def main():
     keep_t, to_fair, keep_b, to_path, dropped = [], [], [], [], 0
     for p in polys_of(final["tee"]):
         # a flat deck that is no hole's tee (lawn, terrace, court apron) is not a tee (QA round 2)
-        if tee_ok(p) and (p.intersection(osm_tees).area >= 0.25 * p.area or nearest_line(p, 40, "start") != 99):
+        if tee_ok(p) and (mapped_tee(p) or nearest_line(p, holes, 40, "start") != 99):
             keep_t.append(p); continue
-        ring = p.buffer(1.5).difference(p)
-        (to_fair if ring.intersection(fair).area > 0.5 * ring.area else []).append(p); dropped += 1
+        (to_fair if rejected_tee_is_fairway(p, fair, small_fw_area) else []).append(p); dropped += 1
     paved = unary_union([make_valid(x) for x in vector["road"]]) if vector["road"] else Polygon()
     bldgs = unary_union([make_valid(x) for x in vector["building"]]) if vector["building"] else Polygon()
     for p in polys_of(final["bunker"]):
@@ -769,6 +925,7 @@ def main():
     if to_path:
         final["cartpath"] = unary_union([final["cartpath"]] + to_path)
     final["cartpath"], final["road"] = off_course_paths(final["cartpath"], final["road"], course_area)
+    burn_small_fairways(final, small_fw)
 
     # greens: clear banks (LiDAR slope > 12 %) in the outer 2.5 m of a green outline are not putting surface
     # (photo outlines can include a mown bank); tilted greens and interior tier slopes are left alone
@@ -806,13 +963,8 @@ def main():
     final["semirough"] = semi.intersection(aoi)
 
     # drop slivers / specks; whatever is dropped becomes rough so the partition stays gap-free
-    def keep_part(p, n):
-        if p.area < MIN_AREA.get(n, 0.5) * (0.25 if n in ("fringe", "semirough") else 1.0):
-            return False
-        thin = {"fringe": 0.1, "semirough": 0.15, "cartpath": 0.3, "road": 0.8, "building": 0.8}.get(n, 0.3)
-        return not p.buffer(-thin).is_empty
     for n in list(final):
-        final[n] = unary_union([p for p in polys_of(final[n]) if keep_part(p, n)])
+        final[n] = unary_union([p for p in polys_of(final[n]) if keep_part(p, n, small_fw_area)])
     final["rough"] = aoi.difference(unary_union(list(final.values())))
     # tiny rough / semirough islands (< 15 m2) inside other surfaces render as odd patches: merge each into the
     # neighbouring surface it shares the most boundary with
@@ -839,6 +991,7 @@ def main():
     print(f"merged {merged_n} tiny rough/semirough islands into their surroundings", flush=True)
 
     # hole assignment
+    cards = {h: v[1:] for h, v in C.SCORECARD.items()}   # yardages per tee set
     pins = [g for _, t, g in G if t.get("golf") == "pin" and g.geom_type == "Point"]
     green_hole = split_shared_greens(polys_of(final["green"]), {ref: Point(l.coords[-1]) for ref, l in holes.items()}, pins)
     def nearest_green(p, maxd):
@@ -851,7 +1004,7 @@ def main():
     def assign(p, n):
         if n == "cartpath":
             return 98
-        if n in ("rough", "road", "building", "court", "native", "semirough", "water", "deeprough"):
+        if n in ("rough", "road", "building", "court", "native", "water", "deeprough"):
             return 99
         if n == "green":
             return next(h for g, h in green_hole if g.equals(p))   # (greens are emitted from green_hole below)
@@ -860,21 +1013,25 @@ def main():
             return h if h is not None else 99
         if n == "bunker":
             h = nearest_green(p, 20)
-            return h if h is not None else nearest_line(p, 45)
+            return h if h is not None else nearest_line(p, holes, 45)
         if n == "tee":
-            return nearest_line(p, 40, "start")
-        return nearest_line(p, 45)
+            h = nearest_line(p, holes, 40, "start")
+            return card_tee_hole(p, holes, cards) if h == 99 and mapped_tee(p) else h
+        return nearest_line(p, holes, 45)
     # a fairway several lines of play run through is split between their corridors (the rest: nearest line)
-    fairway_hole = split_shared_fairways(polys_of(final["fairway"]), holes)
+    fairway_hole = [(p, assign(p, "fairway") if h is None else h)
+                    for p, h in split_shared_fairways(polys_of(final["fairway"]), holes)]
+    # fringe and semirough adopt the hole of the green / fairway they surround
+    semi_hole = ring_holes(polys_of(final["semirough"]), [(p, h) for p, h in fairway_hole if p.area >= 1e-6])
+    split = {"green": green_hole, "fairway": fairway_hole, "semirough": semi_hole}
     feats = []
     for n, g in final.items():
-        for p, h in (green_hole if n == "green" else fairway_hole if n == "fairway" else [(q, None) for q in polys_of(g)]):
+        for p, h in split.get(n) or [(q, None) for q in polys_of(g)]:
             if p.area < 1e-6:
                 continue
             h = assign(p, n) if h is None else h
             feats.append({"type": "Feature", "geometry": mapping(p),
                           "properties": {"surface": n, "hole": h, "area": round(p.area, 2), "stroke": STROKE.get(n, "#ff00ff")}})
-    # fringe/semirough adopt the hole of the green/fairway they surround
     out = {"type": "FeatureCollection", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::" + C.CRS.split(":")[1]}}, "features": feats}
     C.FEATURES.mkdir(exist_ok=True)
     json.dump(out, open(C.FEATURES / "auto_core.geojson", "w"))

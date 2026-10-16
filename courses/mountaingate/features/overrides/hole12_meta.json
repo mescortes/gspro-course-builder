@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "forward": [
+   363459.71,
+   3774524.44
+  ]
+ },
+ "notes": "Forward (White) marker on the small round OSM tee pad 1157465526 (west of the line of play, on the green side of the canyon). It measures ~96 yd against the 97 card; the QA verifier's alternative (plateau rim on the line) measured 89 yd. Lead decision 2026-10-10."
+}

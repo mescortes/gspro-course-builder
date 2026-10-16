@@ -597,3 +597,189 @@ def test_classifier_greens_are_kept_only_on_the_course_or_a_mapped_green():
     assert keep.contains(Point(615, 12))                                           # the mapped practice green
     assert V.green_keep_area(Polygon(), [practice]) is None
     assert not V.green_keep_area(course, [], margin=5.0).contains(Point(410, 150))
+
+
+def test_a_mapped_forward_tee_off_the_line_goes_to_the_hole_whose_card_it_fits():
+    """Deer Ridge: OSM forward tees 42-46 m beside the golf=hole line (holes 1, 3, 8), and a par 3's forward deck past
+    FORWARD_TEE_FRAC of its line (13), were background (hole 99); so were three par-3 forward tees on Whistle Bear and
+    one on Brambles. A mapped tee no line claims goes to the hole whose line is within FORWARD_TEE_REACH m and whose
+    card it plays (play distance within FORWARD_TEE_CARD_TOL yd of the hole's yardages), if that hole is clearly the
+    nearest such line; a tee that fits no card, or two holes alike, stays background."""
+    from shapely.geometry import LineString, box
+    holes = {1: LineString([(0, 0), (0, 200), (40, 400)]),         # a par 4 with a dogleg
+             2: LineString([(300, 0), (300, 380)]),
+             3: LineString([(0, 1000), (0, 1180)])}                 # a par 3
+    cards = {1: (445, 400, 360, 330), 2: (420, 400, 380), 3: (197, 160, 114)}
+    pad = lambda x, y: box(x - 5, y - 4, x + 5, y + 4)
+    fwd = pad(45, 90)                                                # 45 m beside hole 1's line, 353 yd to play
+    par3 = pad(6, 1082)                                              # 57 % up hole 3's line, 107 yd to play
+    assert V.nearest_line(fwd, holes, 40, "start") == 99 and V.nearest_line(par3, holes, 40, "start") == 99
+    assert V.card_tee_hole(fwd, holes, cards) == 1
+    assert V.card_tee_hole(par3, holes, cards) == 3
+    assert V.card_tee_hole(pad(0, -8), holes, cards) == 1, "behind the back tee, 451 yd: within the card's reach"
+    assert V.card_tee_hole(pad(-250, 100), holes, cards) == 99, "a range tee far from every line"
+    assert V.card_tee_hole(pad(85, 390), holes, cards) == 99, "beside hole 1's green: plays no card of hole 1"
+    twins = {5: LineString([(0, 0), (0, 400)]), 6: LineString([(100, 0), (100, 400)])}
+    assert V.card_tee_hole(pad(50, 80), twins, {5: (360,), 6: (360,)}) == 99, "half way between two holes it plays alike"
+    assert V.card_tee_hole(pad(50, 80), twins, {5: (360,), 6: (250,)}) == 5, "the one whose card it plays"
+    assert V.card_tee_hole(fwd, holes, {2: cards[2]}) == 99, "a hole without a card takes no tee"
+    assert V.card_tee_hole(fwd, holes, cards, reach=40) == 99
+    assert V.nearest_line(pad(2, -10), holes, 40, "start") == 1, "the back tee is still the line's"
+
+
+def test_semirough_takes_the_hole_of_the_fairway_it_rings():
+    """Deer Ridge QA: every semirough polygon was background (hole 99), the rings round the fairways too, though fringe
+    and semirough are to adopt the hole of the green / fairway they surround. A ring takes its fairway's hole; one round
+    the fairways of two holes (a shared fairway split between their corridors) is cut between them, each part to the
+    hole of the fairway it lies by; a ring round a fairway of no hole (a practice ground) stays 99."""
+    from shapely.geometry import Point, box
+    from shapely.ops import unary_union
+    f3, f4 = box(0, 0, 30, 200), box(30, 0, 60, 200)                  # one fairway split between holes 3 and 4
+    f7, f99 = box(200, 0, 230, 150), box(400, 0, 440, 60)
+    ring = lambda f: f.buffer(1.5, join_style=1).difference(f)
+    joined, own, practice = ring(box(0, 0, 60, 200)), ring(f7), ring(f99)
+    out = V.ring_holes([joined, own, practice], [(f3, 3), (f4, 4), (f7, 7), (f99, 99)])
+    assert {h for _, h in out} == {3, 4, 7, 99}
+    assert abs(sum(p.area for p, _ in out) - joined.area - own.area - practice.area) < 1e-6, "the parts tile the rings"
+    assert next(p for p, h in out if h == 7) is own and next(p for p, h in out if h == 99) is practice
+    part3 = unary_union([p for p, h in out if h == 3]); part4 = unary_union([p for p, h in out if h == 4])
+    assert part3.distance(Point(-1, 100)) < 1e-9 and part4.distance(Point(61, 100)) < 1e-9
+    assert abs(part3.area - part4.area) < 1.0 and not part3.intersects(Point(45, 201))
+    assert min(p.area for p, _ in out) >= 0.25 * V.MIN_AREA["semirough"]
+    assert V.ring_holes([ring(box(600, 0, 640, 60))], [(f3, 3)])[0][1] == 99, "no fairway by it"
+
+
+def test_a_wetland_hazard_is_a_penalty_area_on_its_own_ground_not_water():
+    """Deer Ridge's reedbed (relation 11198160: golf=lateral_water_hazard + natural=wetland + wetland=reedbed) was water:
+    a water training label, a water surface and a flat WaterPlane carved 0.3-1.5 m below the reed ground, so it looked
+    like a pond. A golf water hazard mapped as a wetland (natural=wetland, no natural=water) is no water: its ground is
+    what the photo and the LiDAR show (reeds: deep rough); it stays a penalty area (hole_data.penalty_areas). A golf
+    water hazard with no natural tag (a pond) and natural=water stay water; a wetland that is no golf hazard is
+    neither."""
+    from shapely.geometry import box
+    from surface_classify import is_water, is_penalty_wetland
+    reed = {"golf": "lateral_water_hazard", "natural": "wetland", "wetland": "reedbed"}
+    assert not is_water(reed) and is_penalty_wetland(reed)
+    assert is_penalty_wetland({"golf": "water_hazard", "natural": "wetland"})
+    for t in ({"golf": "lateral_water_hazard"}, {"golf": "water_hazard", "natural": "water"}, {"natural": "water"}):
+        assert is_water(t) and not is_penalty_wetland(t), t
+    assert not is_water({"natural": "wetland"}) and not is_penalty_wetland({"natural": "wetland"})
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 400, 400)), (2, reed, box(100, 100, 200, 160)),
+         (3, {"golf": "water_hazard", "natural": "water"}, box(300, 300, 320, 330))]
+    vector, _, _ = V.osm_vectors(G)
+    assert [g.area for g in vector["water"]] == [600.0]
+
+
+def test_cycle_trails_are_paths_unless_mapped_as_turf(monkeypatch):
+    """Deer Ridge: OSM highway=cycleway trails (the Walter Bean Grand River Trail, fine gravel; the Trans-Canada Trail;
+    asphalt links) were not modelled: neither road nor path, rough on the trail. A cycleway is a path like a footway (a
+    cart path on the course, concrete road past it; the cart-path class in the training labels), except one mapped as
+    grass or earth (TURF_TRACK: turf), or one a course sizes as a road ([tuning.road_half_width] cycleway)."""
+    import rasterio
+    from shapely.geometry import LineString, box
+    import surface_classify as S
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 100, 100)),
+         (2, {"highway": "footway"}, LineString([(10, 10), (90, 10)])),
+         (3, {"highway": "cycleway", "surface": "fine_gravel", "name": "Walter Bean Grand River Trail"},
+          LineString([(10, 30), (90, 30)])),
+         (4, {"highway": "cycleway", "surface": "asphalt"}, LineString([(10, 50), (90, 50)])),
+         (5, {"highway": "cycleway", "surface": "grass"}, LineString([(10, 70), (90, 70)])),
+         (6, {"highway": "cycleway", "surface": "wood", "bridge": "yes"}, LineString([(10, 90), (40, 90)])),
+         (7, {"highway": "residential"}, LineString([(60, 90), (90, 90)]))]
+    ys = lambda lines: sorted(round(g.coords[0][1]) for g in lines)
+    assert ys(V.path_lines(G)) == [10, 30, 50, 90]
+    assert ys(V.path_lines(G, bridges=False)) == [10, 30, 50]
+    T = rasterio.transform.from_origin(0.0, 100.0, 0.25, 0.25)
+    monkeypatch.setattr(S, "osm_geoms", lambda: G)
+    lab, _ = S.osm_label_raster(400, 400, T, np.zeros((400, 400), np.float32))
+    row = lambda y: int((100 - y) / 0.25)
+    assert lab[row(30), 200] == CID["cartpath"] and lab[row(50), 200] == CID["cartpath"]
+    assert lab[row(70), 200] == CID["rough"]
+    monkeypatch.setitem(S.ROAD_HALF_WIDTH, "cycleway", 1.5)
+    assert not S.is_trail(G[2][1]) and ys(V.path_lines(G)) == [10]
+
+
+def test_small_mapped_fairways_are_kept_as_mapped():
+    """Deer Ridge maps collection areas and drop zones as golf=fairway (66-238 m2, by the greens of 6, 14, 16 and 18;
+    ways 891742653, 892441100): the classifier holds none of them, or pieces under MIN_AREA["fairway"] (150 m2) that
+    vectorize drops, so they were rough. A mapped fairway under SMALL_OSM_FAIRWAY m2 is fairway as mapped, and its
+    parts are kept down to the speck limit (a quarter of MIN_AREA); a larger one is left to the classifier, and a
+    drafted one (draft=yes: photo-derived, no survey) is not kept."""
+    from shapely.geometry import box
+    G = [(1, {"golf": "fairway"}, box(0, 0, 10, 7)),                              # 70 m2: a drop zone
+         (2, {"golf": "fairway"}, box(100, 0, 120, 12)),                          # 240 m2: a collection area
+         (3, {"golf": "fairway"}, box(200, 0, 260, 100)),                         # 6,000 m2: the classifier's
+         (4, {"golf": "fairway", "draft": "yes"}, box(300, 0, 310, 10)),
+         (5, {"golf": "green"}, box(400, 0, 410, 10))]
+    small = V.small_osm_fairways(G)
+    assert sorted(g.area for g in small) == [70.0, 240.0]
+    assert V.SMALL_OSM_FAIRWAY == 300.0 and len(V.small_osm_fairways(G, limit=100.0)) == 1
+    mapped = box(0, 0, 10, 7)
+    assert not V.keep_part(box(0, 0, 10, 6), "fairway")                           # 60 m2 of classifier fairway
+    assert V.keep_part(box(0, 0, 10, 6), "fairway", mapped)                       # ... on a mapped one
+    assert not V.keep_part(box(0, 0, 5, 6), "fairway", mapped)                    # 30 m2: a speck
+    assert V.keep_part(box(0, 0, 20, 10), "fairway") and not V.keep_part(box(0, 0, 0.5, 1.5), "semirough")
+
+
+def test_a_classifier_green_in_the_woods_is_not_a_green():
+    """Leaf-off photo: the classifier's labels stand under the bare crowns, and woodland floor in the trees' shadow
+    came out green: four 61-94 m2 hole-99 greens in Deer Ridge's woods, two on Whistle Bear (157 and 64 m2), every one
+    of them entirely under the closed canopy, while no real green on the four courses has more than 2 % of it there.
+    A green component lying GREEN_CANOPY_MAX or more under the closed canopy is no green (rough); one with an edge
+    under an overhanging crown is kept whole."""
+    green = np.zeros((60, 60), bool); canopy = np.zeros((60, 60), bool)
+    green[5:15, 5:15] = True; canopy[0:20, 0:20] = True                 # a green patch in the woods
+    green[30:50, 30:50] = True; canopy[30:50, 46:60] = True             # a green, one crown over its edge (20 %)
+    out = V.drop_greens_under_canopy(green, canopy)
+    assert not out[5:15, 5:15].any() and out[30:50, 30:50].all() and out.sum() == 400
+    assert V.GREEN_CANOPY_MAX == 0.5
+    assert V.drop_greens_under_canopy(green, canopy, share=0.1).sum() == 0
+    assert V.drop_greens_under_canopy(np.zeros((4, 4), bool), canopy[:4, :4]).sum() == 0
+
+
+def test_a_rejected_tee_on_a_small_mapped_fairway_is_fairway():
+    """Deer Ridge way 892441100 (a 66 m2 drop zone mapped golf=fairway) stayed rough with the small mapped fairways
+    kept: the classifier called 55 % of it tee, a tee outranks fairway, and the LiDAR rejected the deck. A rejected
+    classifier tee is fairway when fairway rings it (as before) or when it lies on a small mapped fairway; otherwise
+    rough."""
+    from shapely.geometry import box
+    tee = box(0, 0, 8, 5)
+    assert V.rejected_tee_is_fairway(tee, box(-10, -10, 20, 20), None)                 # fairway all round
+    assert not V.rejected_tee_is_fairway(tee, box(100, 100, 120, 120), None)           # rough all round
+    assert V.rejected_tee_is_fairway(tee, box(100, 100, 120, 120), box(-1, -1, 9, 6))  # on a mapped drop zone
+    assert not V.rejected_tee_is_fairway(tee, box(100, 100, 120, 120), box(6, 0, 30, 5))
+
+
+def test_small_mapped_fairways_fill_the_ground_rejected_tees_leave():
+    """The small mapped fairways are laid down again after the tee and bunker validation (burn_small_fairways), under
+    the surfaces that outrank fairway and survived it: a rejected classifier tee on a drop zone (Deer Ridge way
+    892441100) leaves fairway, not a 30 m2 remnant under the speck limit."""
+    from shapely.geometry import box
+    from shapely.geometry import Polygon
+    drop = box(0, 0, 11, 6)                                                      # 66 m2, mapped
+    final = {"water": Polygon(), "green": box(10, 0, 11, 6), "bunker": Polygon(), "tee": Polygon(),   # tee rejected
+             "cartpath": Polygon(), "road": Polygon(), "building": Polygon(), "court": Polygon(),
+             "fairway": box(6, 0, 10, 6), "native": box(-5, -5, 0, 0), "deeprough": Polygon()}
+    V.burn_small_fairways(final, [drop])
+    assert abs(final["fairway"].area - 60.0) < 1e-9 and final["green"].area == 6.0
+    assert V.keep_part(final["fairway"], "fairway", drop)
+    before = dict(final)
+    V.burn_small_fairways(final, [])
+    assert final == before
+
+
+def test_burning_small_fairways_leaves_untouched_layers_as_they_are():
+    """Westmount's clean rebuild: burn_small_fairways re-differenced the whole native layer though no small mapped
+    fairway touched it, so a native-area hazard's ring started at another vertex in holes.json. A layer the small
+    fairways do not change is left as it is (the same geometry object)."""
+    from shapely.geometry import Polygon, box
+    drop = box(0, 0, 10, 8)
+    final = {n: Polygon() for n in ("water", "green", "bunker", "tee", "cartpath", "road", "building", "court", "deeprough")}
+    final["fairway"] = box(-5, -5, 20, 20)                                         # already holds the drop zone
+    final["native"] = box(100, 100, 120, 130)                                      # far from it
+    before = dict(final)
+    V.burn_small_fairways(final, [drop])
+    assert all(final[n] is before[n] for n in final)
+    final["fairway"] = box(5, 0, 20, 20); final["native"] = box(-10, 0, 2, 8)      # half of it native, half not yet fairway
+    V.burn_small_fairways(final, [drop])
+    assert abs(final["fairway"].area - (300.0 + 40.0)) < 1e-9 and abs(final["native"].area - 80.0) < 1e-9

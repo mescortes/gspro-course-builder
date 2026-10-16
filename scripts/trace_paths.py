@@ -172,14 +172,14 @@ def write(lines):
 def masks(G, W, H, T):
     """(inside the course, excluded) on the grid: the course outline + 5 m, and the ground no path is traced on
     (mapped greens, bunkers, water, buildings, parking, roads, fairway interiors, sports pitches and their rims)."""
-    from surface_classify import is_water   # a pond mapped golf=lateral_water_hazard only is water too
+    from surface_classify import is_water, is_penalty_wetland   # a pond mapped golf=lateral_water_hazard only is water too
     def burn(geoms):
         geoms = [g for g in geoms if not g.is_empty]
         return rasterize([(g, 1) for g in geoms], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) \
             if geoms else np.zeros((H, W), bool)
     course = burn([g.buffer(5) for _, t, g in G if t.get("leisure") == "golf_course"])
     excl = burn([g.buffer(3.0) for _, t, g in G if t.get("golf") == "green" and g.geom_type == "Polygon"])
-    excl |= burn([g.buffer(2.0) for _, t, g in G if (t.get("golf") == "bunker" or is_water(t)
+    excl |= burn([g.buffer(2.0) for _, t, g in G if (t.get("golf") == "bunker" or is_water(t) or is_penalty_wetland(t)
                                                         or "building" in t or t.get("amenity") == "parking") and g.geom_type != "LineString"])
     excl |= burn([g.buffer(4.0) for _, t, g in G if t.get("highway") and t.get("highway") not in ("path", "footway", "track")
                   and g.geom_type == "LineString"])

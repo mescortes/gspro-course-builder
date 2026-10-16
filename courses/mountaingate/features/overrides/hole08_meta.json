@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "championship": [
+   362382.9,
+   3775190.01
+  ]
+ },
+ "notes": "R2: Championship marker pinned to its current spot (sunlit west end of the deck, 438.0 yd = card) so that extending the Championship pad to the full OSM/LiDAR deck (proposal_r2) does not slide the automatic marker 5 m east under the pines. Middle and Forward stay automatic. (verified round 2: the automatic marker on the extended pad would move to 362386.9, 3775188.1 under the pine canopy at the same 438 yd.)"
+}

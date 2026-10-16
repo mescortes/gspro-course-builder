@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "forward": [
+   362949.25,
+   3774943.6
+  ]
+ },
+ "notes": "Forward (White) tee pinned to the small forward tee pad at the east end of the 10th tee complex (flat LiDAR deck at ~376.3 m, ~4% slope, inside the tee/10 pad polygon). It measures 359.9 yd against the 366 card (~6 yd short), but no pad delivers 366: the flat middle deck ends at E ~362932 (~376 yd), a ~30% bank separates the decks, and the square deck north of the path gives 373-378 yd. Without this pin the automatic fairway-marker fallback puts the forward tee at 362944.0, 3774970.9: in rough on a ~20% slope north of the cart path. (verified)"
+}

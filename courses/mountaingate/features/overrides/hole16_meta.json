@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "championship": [
+   363072.25,
+   3774529.0
+  ]
+ },
+ "notes": "Championship marker pinned to the NE (back) end of the long hole 16 tee deck (darker back box, next to OSM tee 1157470219), 1.5+ m inside the pad on a flat LiDAR deck at 377.2 m (+-0.03 m): 202.0 yd to green centre = card. The automatic marker was clipped to the pad axis at 193.5 yd. Middle (190) and Forward (180) stay automatic on the same deck. (verified)"
+}

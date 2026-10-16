@@ -1,0 +1,18 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "championship": [
+   362924.57,
+   3774383.25
+  ],
+  "middle": [
+   362939.75,
+   3774390.0
+  ],
+  "forward": [
+   362974.5,
+   3774416.5
+  ]
+ },
+ "notes": "Hole 17 has three built tee decks (flat raised decks in LiDAR, exactly OSM tees 1157472354/55/56; OSM hole line starts on deck A): A at ~377.6 m, B at ~376.5 m, D at ~372.6 m. A = Championship, B = Middle, D = Forward (deck spacing matches the card spacing). Round 2: the round-1 markers were shifted +2.75 m east with the imagery, but the decks come from OSM/LiDAR and did not move, so the markers drifted 2.2-3.4 m forward inside their decks. They are put back at the back of each deck, 1.5 m inside the pad edge (inside the OSM tee too), on the flat deck: Championship 434.8 yd (card 450), Middle 416.6 (430), Forward 370.1 (382), measured tee -> dogleg aim -> green centre. All three are still 12-15 yd short of the card: documented gap (research found the OSM tees 8-13 yd short too). The bogus automatic Championship 'tee' in hole 14 rough is removed in hole17.geojson. (verified r2)"
+}

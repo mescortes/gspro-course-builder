@@ -1,0 +1,199 @@
+{
+ "1": {
+  "nine_hole": "North 1",
+  "shape": "unknown (not described in any source)",
+  "elevation": "unknown (not described in any source)",
+  "hazards": [
+   "very small green (reviewer comment); no other hazards described"
+  ],
+  "description": "Par 4, 342/323/307 yd. Men's 9-hole handicap 8 (18-hole HCP 16 on the North/South card). The only hole-specific note is from a Greenskeeper.org reviewer (roarksown1, 02/22/21) who played 'a twilight nine at the Mountaingate North course'. While complaining that the greens were quick and hard to hold, they wrote 'Some are also very small, like the first hole.' So the source supports only one thing: the green is very small. No source describes the hole's shape, elevation or hazards. Caveat: the reviewer probably started on North 1, but the review does not say so.",
+  "confidence": "sourced"
+ },
+ "2": {
+  "nine_hole": "North 2",
+  "shape": "straight par 3 (no dogleg applies)",
+  "elevation": "Steep hillside behind the green, so a long miss leaves a downhill chip or putt running fast toward the front. The green tilts away from a player above and behind it, i.e. back-to-front toward the tee.",
+  "hazards": [
+   "very deep front greenside bunker that the green horseshoes (wraps) around",
+   "steep bank or hill behind (long) the green",
+   "green very wide but shallow (not deep)"
+  ],
+  "description": "Par 3, 189/169/153 yd, men's 9-hole HCP 5. Golf Top 18's North/South review (last reviewed 2004) describes it as a par three with 'a very wide green that seems to horseshoe around a very deep and unforgiving bunker'. Any shot hit long ends up on a steep hill, pitching to a green that runs severely away from the player. A Greenskeeper.org North 9 tip (Daddy_IRS) agrees: the green is wide but not deep, so a high shot helps it stop; a deep bunker guards the front; from long, the chip or putt is downhill and fast; distance control is essential. WARNING: a search-engine summary wrongly tied a 'hidden lake to the right of the fairway about 80 yards from the green' to this hole. On the Golf Top 18 page that sentence belongs to SOUTH hole 2, not North 2.",
+  "confidence": "sourced"
+ },
+ "3": {
+  "nine_hole": "North 3",
+  "shape": "unknown from sources (the tip only says to favour the middle-right of the fairway off the tee)",
+  "elevation": "unknown (not described in any source)",
+  "hazards": [
+   "trouble left off the tee (type not specified)",
+   "bunkers around the green",
+   "small green"
+  ],
+  "description": "Par 4, 346/323/298 yd, men's 9-hole HCP 3. Greenskeeper.org North 9 tip (Daddy_IRS): 'Tee shot don't go left stay middle-right.' Bunkers surround the green and the green is small, so check your distance and keep the approach below the hole. The source does not say what the trouble on the left is (it gives no type for the left-side hazard). 'Keep it below the hole' suggests a back-to-front sloping green, but that is an inference, not stated.",
+  "confidence": "sourced"
+ },
+ "4": {
+  "nine_hole": "North 4",
+  "shape": "",
+  "elevation": "",
+  "hazards": [],
+  "description": "No hole-specific description found. Scorecard facts only: Par 4, 299/289/266 yd, men's 9-hole HCP 9 (easiest on the North nine; 18-hole HCP 18).",
+  "confidence": "unknown"
+ },
+ "5": {
+  "nine_hole": "North 5",
+  "shape": "",
+  "elevation": "",
+  "hazards": [],
+  "description": "No hole-specific description found. Scorecard facts only: Par 5, 516/498/467 yd (longest on the North), men's 9-hole HCP 4 (18-hole HCP 8).",
+  "confidence": "unknown"
+ },
+ "6": {
+  "nine_hole": "North 6",
+  "shape": "",
+  "elevation": "",
+  "hazards": [],
+  "description": "No hole-specific description found. Scorecard facts only: Par 4, 434/408/366 yd, men's and women's 9-hole HCP 1 (hardest hole on the North; 18-hole HCP 2 on North/South). The GolfPass photo caption 'hole #6 at Lake/North Course' does not apply here: on the Lake/North card the Lake nine is the front nine, so hole 6 there is Lake 6.",
+  "confidence": "unknown"
+ },
+ "7": {
+  "nine_hole": "North 7",
+  "shape": "",
+  "elevation": "",
+  "hazards": [],
+  "description": "No hole-specific description found. Scorecard facts only: Par 3, 172/154/131 yd (shortest on the North), men's 9-hole HCP 7 (18-hole HCP 14).",
+  "confidence": "unknown"
+ },
+ "8": {
+  "nine_hole": "North 8",
+  "shape": "",
+  "elevation": "",
+  "hazards": [],
+  "description": "No hole-specific description found. Scorecard facts only: Par 4 for men and PAR 5 for women, 438/420/401 yd, men's 9-hole HCP 2 (18-hole HCP 4).",
+  "confidence": "unknown"
+ },
+ "9": {
+  "nine_hole": "North 9",
+  "shape": "",
+  "elevation": "",
+  "hazards": [],
+  "description": "No hole-specific description found. Scorecard facts only: Par 5, 466/453/403 yd (Greenskeeper card), men's 9-hole HCP 6 (18-hole HCP 12). OpenGolfAPI lists hole 9 at 502 yd, which conflicts with 466 on the Greenskeeper and golfingrecord cards. The OSM centerline measures about 469 yd, which supports 466.",
+  "confidence": "unknown"
+ },
+ "10": {
+  "nine_hole": "South 1",
+  "shape": "not sourced; OSM line bends slightly right (~16 deg)",
+  "elevation": "not sourced; photo shows an elevated tee looking down; DEM about 35 m (~115 ft) downhill tee to green",
+  "hazards": [
+   "trees lining both sides (photo)",
+   "OSM: fairway bunker right ~175 yd",
+   "OSM: fairway bunkers left ~235 yd and ~388 yd",
+   "OSM: 1 greenside bunker right",
+   "houses north of hole (possible OB, unverified)"
+  ],
+  "description": "Card: Par 4, 417/391/366 yd, SI 15 (Golfify and golfingrecord cards, which match the 6,719-yd rating). I found no written description of this hole. A captioned SkyGolf blog photo (2013, 'South Course: #1 Hole 417 yds Par 4') looks from a raised tee down a tree-lined fairway that drops into a valley. The cart path is on the left and a bunkered green is in the distance. Not from a written source (OSM + project DEM): the hole line plays east and bends slightly right (+16 deg) about 260 yd out. It falls about 35 m tee to green on build/backdrop_dem.tif (2 m). OSM bunkers: fairway right about 175 yd, left about 235 yd, left near the green about 388 yd, and 1 greenside right. Houses sit north of the hole past the cart path, so OB is possible there but unverified.",
+  "confidence": "unknown"
+ },
+ "11": {
+  "nine_hole": "South 2",
+  "shape": "dogleg left, sharp (OSM ~60 deg; GolfTop18 'winds left around a canyon'); SkyGolf says right, which conflicts with the geometry",
+  "elevation": "tee and green about level (DEM ~351 -> ~353 m); the canyon drops away left of the fairway (line skirts the canyon edge, DEM dips ~10 m) and short/left/long of the green",
+  "hazards": [
+   "canyon/barranca along the left of the fairway (carry needed to cut the corner)",
+   "canyon short, left and long of the peninsula green (GolfTop18), ravine carry on approach (SkyGolf)",
+   "hidden lake right of fairway ~80 yd from green (GolfTop18); matches a pond OSM does not map",
+   "bunkers surrounding green (GolfTop18; OSM 3 greenside: 1 L, 2 R; SkyGolf photo shows 3 across the front)",
+   "OSM: fairway bunker right ~243 yd"
+  ],
+  "description": "Card: Par 4, 400/387/359 yd, SI 1 (hardest hole on the N/S card). GolfTop18 (last reviewed 2004) calls it the best hole on the course. It is a par 4 that winds left around a canyon from tee to green, and the player has to cut off some of the canyon to leave a reasonable approach. The green sits out on a peninsula with bunkers around it and canyon short, left and long. A hidden lake lies right of the fairway about 80 yd from the green, so even a layup has to avoid it. SkyGolf blog (2013) describes a 400-yd par 4: a severe, almost U-shaped dogleg with a ravine to carry on the second shot to a well-protected green. CONFLICT: SkyGolf calls it a dogleg RIGHT. The GolfTop18 text, the OSM hole line (-59 deg turn) and aerial imagery all show it turning LEFT: the tee is at the north, the fairway runs south beside a wooded canyon on the player's left (east), then turns left (east) to the green. Treat it as a dogleg left. SkyGolf photos: from the tee, a brushy ravine and trees are on the left and the fairway is on the right; the approach photo shows the green beyond a brush-filled ravine with three bunkers across its front. The 'hidden lake' matches a triangular pond that OSM does not map. It sits about 80 yd short of the green and about 45-65 yd right of the line, at roughly UTM11N 363397E 3774557N (lon -118.48095, lat 34.10291). A second pond, which OSM does map (way 950199971), lies about 100 yd right, further south. OSM bunkers: 3 greenside (1 left, 2 right) and 1 fairway bunker right about 243 yd.",
+  "confidence": "sourced"
+ },
+ "12": {
+  "nine_hole": "South 3",
+  "shape": "straight par 3",
+  "elevation": "tee at or slightly above green (DEM ~-3 m); forced carry over a canyon ~13-16 m below; ground right of the green falls downhill to the pond",
+  "hazards": [
+   "canyon short, left and long (GolfTop18) - forced carry over native brush",
+   "pond (hidden lake) right of and below the green (GolfTop18; OSM way 950199971)",
+   "greenside bunkers (OSM 3: 2 L, 1 R; photos show bunkers front-left and on both sides)"
+  ],
+  "description": "Card: Par 3, 174/153/97 yd, SI 13. GolfTop18 (2004): a par 3 with a nerve-racking approach that puts a premium on accuracy. Canyon lies short, left and long. Right looks safe, but a ball that goes too far right runs down a hill into the hidden lake. The green is relatively flat. SkyGolf blog (2013) has photos taken from the 3rd tee that look down on the I-405 and out to Westwood and the Getty Center, so the tee sits high on the canyon rim. Its photos of the hole show the green across a brush-covered canyon, with bunkers on the front-left and a large tree behind. A GolfNow/GolfPass photo ('hole #3 at South Course') shows the green on a ridge with bunkers on both sides and a drop-off with city views beyond. OSM: the line plays straight SSW. There are 3 greenside bunkers (2 left, 1 right). The OSM-mapped pond (way 950199971) is about 39 yd right of the line near the green (about 163 yd from the tee) and downhill. DEM: tee about 356 m, green about 353 m, canyon floor about 340 m between them.",
+  "confidence": "sourced"
+ },
+ "13": {
+  "nine_hole": "South 4",
+  "shape": "dogleg (GolfTop18: 'bite off more of the corner'); direction from OSM: left, ~28 deg",
+  "elevation": "elevated green (GolfTop18); DEM ~+3 m tee to green",
+  "hazards": [
+   "corner of native brush/ravine to cut (GolfTop18, SkyGolf photo)",
+   "pond directly in front of the back tee, ~39-56 yd carry (OSM)",
+   "OSM: fairway bunkers L ~188/234 yd and R ~197/222 yd around the corner",
+   "greenside bunker (front per photo; right per OSM)"
+  ],
+  "description": "Card: Par 4, 365/356/224 yd, SI 9. The 224-yd forward tee suggests it sits past the pond and the corner. GolfTop18 (2004): a pretty tee shot where the player can cut off more of the corner to leave a shorter, better-angled approach to an elevated green. GolfTop18 does not say which way it bends; the OSM line bends LEFT about 28 deg about 180 yd out. SkyGolf photos (2013): the tee shot crosses native brush and a ravine to a fairway beyond. The green photo shows a large shaped front bunker, the cart path on the left and pampas grass on the right. OSM: the back-tee line crosses the mapped pond (way 950199971) about 39-56 yd from the tee, a short forced carry. Fairway bunkers frame the corner: left about 188 and 234 yd, right about 197 and 222 yd. There is 1 greenside bunker on the right. DEM: green about 3 m above the tee.",
+  "confidence": "sourced"
+ },
+ "14": {
+  "nine_hole": "South 5",
+  "shape": "not sourced; OSM nearly straight with a gentle S-bend",
+  "elevation": "not sourced; DEM ~+28 m uphill tee to green (photo looking back from green is consistent)",
+  "hazards": [
+   "OSM: fairway bunkers R ~232 yd, L ~257 yd, R ~314 yd",
+   "OSM: 3 greenside bunkers (2 L, 1 R)",
+   "brush/wooded hillsides both sides (imagery, photo)"
+  ],
+  "description": "Card: Par 5, 535/513/460 yd, SI 5 (the SkyGolf caption says 532 yd). I found no written description of this hole. SkyGolf blog (2013) has captioned photos. One shows the green set against a steep brush-covered hillside with a front bunker. One, looking back from the green, shows a bunker right-front and the fairway falling away behind it. A third shows a deer on the hole. Not from a written source (OSM + DEM): the hole plays west and is nearly straight, with a gentle S-bend (+11 / -16 deg). It climbs about 28 m (~92 ft) tee to green. OSM bunkers: fairway right about 232 yd, left about 257 yd, right about 314 yd; 3 greenside (2 left, 1 right). Imagery shows brush and wooded hillsides on both sides.",
+  "confidence": "unknown"
+ },
+ "15": {
+  "nine_hole": "South 6",
+  "shape": "not sourced; OSM dogleg right (~32 deg)",
+  "elevation": "not sourced; DEM ~12 m downhill tee to green",
+  "hazards": [
+   "OSM: fairway bunker R ~268 yd",
+   "OSM: greenside bunkers L and R",
+   "brush hillside left (imagery)"
+  ],
+  "description": "Card: Par 4, 412/361/326 yd, SI 11. I found no written description or captioned photo. Not from a written source (OSM + DEM): the hole plays NE, then bends right (+32 deg) about 300 yd out toward the green. It falls about 12 m tee to green. OSM bunkers: fairway right about 268 yd; greenside left and right. Imagery shows a brush hillside along the left.",
+  "confidence": "unknown"
+ },
+ "16": {
+  "nine_hole": "South 7",
+  "shape": "not sourced; straight par 3",
+  "elevation": "not sourced; DEM roughly level",
+  "hazards": [
+   "OSM: greenside bunkers L and R (photo shows bunkers left)",
+   "OSM: bunker R ~113 yd",
+   "trees/brush hillside behind green (photo)"
+  ],
+  "description": "Card: Par 3, 202/190/180 yd, SI 17. Some older GolfPass and OpenGolfAPI cards list this hole as a 302-yd par 4. The 2013 SkyGolf caption ('#7 Hole 202 yds Par 3'), the current 6,719-yd card and OSM (par 3) all say par 3. I found no written description. The SkyGolf photo shows the green with bunkers on the left, backed by trees and a steep brushy hillside. Not from a written source (OSM + DEM): a straight par 3 playing SW, level tee to green. OSM bunkers: greenside left and right, plus one right about 113 yd from the tee.",
+  "confidence": "unknown"
+ },
+ "17": {
+  "nine_hole": "South 8",
+  "shape": "not sourced; OSM nearly straight, slight bend left",
+  "elevation": "not sourced; photo shows a downhill tee shot; DEM ~13 m downhill",
+  "hazards": [
+   "OSM: fairway bunker R ~224 yd",
+   "OSM: 4 greenside bunkers (2 L, 2 R)",
+   "trees along right side (imagery)"
+  ],
+  "description": "Card: Par 4, 450/430/382 yd, SI 7. I found no written description. The SkyGolf photo (2013) is taken from the tee: the fairway runs downhill with a cart path to a bunkered green, and homes sit on the far ridge. Not from a written source (OSM + DEM): the hole plays ENE with a slight bend left (-11 deg) about 300 yd out. It falls about 13 m tee to green. OSM bunkers: fairway right about 224 yd; 4 greenside (2 left, 2 right). Trees line the right side (imagery). OSM drain lines run about 56-79 yd left near the green.",
+  "confidence": "unknown"
+ },
+ "18": {
+  "nine_hole": "South 9",
+  "shape": "severe dogleg (SkyGolf: ~90 deg); direction from OSM/imagery: LEFT (SkyGolf says right - conflicts with geometry and its own photo)",
+  "elevation": "uphill finish: DEM ~+23 m tee to green, slight drop in the drive zone; fairway slopes away from the hillside (SkyGolf); drives run down a hill (Greenskeeper)",
+  "hazards": [
+   "hillside (brush, houses above) along the left - possible OB/penalty area along the houses, unverified",
+   "fairway sloping away toward the right/outside of the corner (SkyGolf)",
+   "greenside bunkers left and right (photo; OSM 2)",
+   "fairway bunkers right at the corner and on the second leg (imagery only; not in OSM)",
+   "OSM drain ~57-77 yd left near the tee"
+  ],
+  "description": "Card: Par 5, 562/540/481 yd, SI 3, the longest hole on N/S. Older GolfPass and OpenGolfAPI cards list a 412-yd par 4; the 2013 SkyGolf caption, the current card and OSM all say par 5. SkyGolf blog (2013): a 562-yd par 5 with a severe 90-degree dogleg. The side of the hill runs along one side of the fairway and the fairway slopes away on the other. CONFLICT: SkyGolf says dogleg RIGHT with the hill on the right. Its own tee photo shows the brushy hill (houses on top) on the LEFT. OSM (-40 deg on the line; the fairway bends harder) and imagery show the hole turning LEFT, with the hillside and houses on the left/SW. Treat it as a dogleg left. Greenskeeper reviewer roarksown1 (Aug 2016) played South first and then North. While criticising the South nine (sloping fairways, awkward tee angles, lost-ball areas), he complained about finishing a nine on a par 5 where a perfectly struck driver rolls down a hill. That almost certainly means this hole, but he does not number it. SkyGolf approach photo: green with bunkers left and right, buildings (clubhouse area) behind. The photo looking back from the green shows the fairway falling away, so the green sits well above the landing area. DEM: tee about 365 m, dips slightly about 140 yd out, then climbs to the green at about 388 m (+23 m). OSM maps only 2 greenside bunkers (left, right). Imagery shows about 3 fairway bunkers on the outside (right) of the corner and about 2 more on the right of the second leg, none of them in OSM.",
+  "confidence": "sourced"
+ }
+}

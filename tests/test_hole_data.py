@@ -137,3 +137,79 @@ def test_fairway_marker_never_lands_on_another_marker():
     tees = HD.place_tees([back, middle], [], GREEN, [_yd(298.5), _yd(260.0)])
     HD.fairway_markers(tees, [], GREEN)
     assert tees[1]["source"] == "fairway_marker" and abs(tees[1]["measured"] - _yd(260.0)) < 0.5
+
+
+def test_a_deckless_forward_marker_goes_on_mown_ground_away_from_hazards():
+    """Deer Ridge QA: deckless forward markers (Copper) went on the back tee's first leg at the card distance whatever
+    lay there: a lake bank (hole 10), rough (12), beside bunkers (1-3), a pond (6). The marker keeps the card distance
+    and takes the best ground within FAIRWAY_MARKER_OFFSET m of that leg: the hole's fairway, then its tee decks, then
+    semirough, then rough; never a path or a green, nor within FAIRWAY_MARKER_CLEARANCE m of a bunker, water or a
+    native area; the nearest the leg among equals. With no such spot the set stays on its pad, its gap reported."""
+    from shapely.geometry import LineString
+    back = box(-5, 0, 5, 20)                                          # 280-300 m from the green: no 200 m deck
+    area = box(-150, -50, 150, 350)
+    def course(*feats):
+        rough = area.difference(unary_union([g for g, _, _ in feats]))
+        return [(g, {"surface": s, "hole": h}) for g, s, h in feats] + [(rough, {"surface": "rough", "hole": 99})]
+    def marker(feats, offset=None):
+        tees = HD.place_tees([back], [], GREEN, [_yd(290.0), _yd(200.0)])
+        HD.fairway_markers(tees, [], GREEN, ground=None if feats is None else HD.marker_ground(feats, 1),
+                           offset=offset)
+        return tees[1]
+    on_line = np.array([0.0, 100.0])                                  # 200 m out on the leg
+    fw = box(6, 60, 40, 200)                                          # the hole's fairway, right of the leg
+    pond, bunker = box(-60, 70, -15, 130), box(-12, 94, -6, 106)      # the leg passes 6 m from the bunker
+    t = marker(course((fw, "fairway", 1), (pond, "water", 99), (bunker, "bunker", 1)))
+    p = Point(t["pos"])
+    assert t["source"] == "fairway_marker" and abs(t["measured"] - _yd(200.0)) < 0.5
+    assert fw.contains(p) and p.x < 8, "on the fairway, as near the leg as it can be"
+    fw_bunker = box(6, 94, 12, 106)                                   # a bunker on the fairway's near edge
+    t = marker(course((fw.difference(fw_bunker), "fairway", 1), (fw_bunker, "bunker", 1), (pond, "water", 99)))
+    p = Point(t["pos"])
+    assert fw.contains(p) and p.distance(fw_bunker) >= HD.FAIRWAY_MARKER_CLEARANCE - 1e-6
+    path = LineString([(0, 0), (0, 300)]).buffer(1.2)                 # a cart path along the leg, no fairway
+    t = marker(course((path, "cartpath", 98), (box(-30, 90, -2, 110), "semirough", 1)))
+    assert t["source"] == "fairway_marker" and -30 < t["pos"][0] < -2, "semirough beats rough; never the path"
+    t = marker(course())                                              # rough all round: the spot on the leg
+    assert t["source"] == "fairway_marker" and np.allclose(t["pos"], on_line)
+    t = marker(course((box(-40, 60, 40, 140), "water", 99)))          # a lake across the leg
+    assert t["source"] == "pad" and t["pad"] is back
+    t = marker(course((box(-40, 60, 40, 140), "water", 99)), offset=60.0)
+    assert t["source"] == "fairway_marker" and abs(t["pos"][0]) > 45
+    t = marker(None)                                                   # no surfaces: the old rule
+    assert t["source"] == "fairway_marker" and np.allclose(t["pos"], on_line)
+
+
+def test_a_wetland_hazard_stays_a_penalty_area_in_the_hole_data():
+    """A golf water hazard mapped as a wetland has no water surface any more (it is not to be carved as a pond), but it
+    is still a penalty area: the holes whose corridor it reaches list it among their hazards (GreenKeeper), lateral or
+    not as OSM maps it, clipped to the build area."""
+    from shapely.geometry import LineString
+    G = [(1, {"golf": "lateral_water_hazard", "natural": "wetland", "wetland": "reedbed"}, box(20, 100, 120, 160)),
+         (2, {"golf": "water_hazard", "natural": "wetland"}, box(-300, 0, -200, 50)),             # outside the build
+         (3, {"golf": "water_hazard", "natural": "water"}, box(60, 200, 90, 230)),         # a pond: a water surface
+         (4, {"natural": "wetland"}, box(-40, 100, -20, 140)),                             # no golf hazard
+         (5, {"golf": "lateral_water_hazard", "natural": "wetland"}, box(390, 0, 500, 40))]
+    areas = HD.penalty_areas(G, aoi=box(-150, -50, 450, 350))
+    assert sorted((round(g.area), k) for g, k in areas) == [(2400, "lateral_water"), (6000, "lateral_water")]
+    assert HD.penalty_areas([(2, {"golf": "water_hazard", "natural": "wetland"}, box(0, 0, 10, 10))])[0][1] == "water"
+    play = LineString([(0, 0), (0, 300)])
+    hz = HD.penalty_hazards(areas, play.buffer(40))
+    assert [(z["type"], z["area_m2"]) for z in hz] == [("lateral_water", 6000.0)]
+    assert hz[0]["polygon_utm"][0] == hz[0]["polygon_utm"][-1] and len(hz[0]["utm_centroid"]) == 2
+
+
+def test_ground_inside_a_penalty_area_is_not_a_second_hazard():
+    """The reedbed's own ground is native area and deep rough: the native polygons inside it were listed as native-area
+    hazards inside the lateral hazard's ring (Deer Ridge holes 7, 8, 11, 12: 2-5 more each). Water and native surfaces
+    over 50 m2 in the corridor are hazards, except those lying mostly inside a penalty area."""
+    from shapely.geometry import LineString
+    corridor = LineString([(0, 0), (0, 300)]).buffer(40)
+    reed = box(10, 100, 60, 160)
+    feats = [(box(15, 110, 30, 130), {"surface": "native", "hole": 99}),       # reeds' ground, inside the reedbed
+             (box(-30, 10, -10, 30), {"surface": "native", "hole": 99}),       # a native area elsewhere
+             (box(-20, 200, 10, 230), {"surface": "water", "hole": 99}),
+             (box(0, 50, 5, 55), {"surface": "native", "hole": 99})]           # under 50 m2
+    hz = HD.surface_hazards(feats, corridor, [(reed, "lateral_water")])
+    assert sorted((z["type"], z["area_m2"]) for z in hz) == [("native_area", 400.0), ("water", 900.0)]
+    assert len(HD.surface_hazards(feats, corridor)) == 3
