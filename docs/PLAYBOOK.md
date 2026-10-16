@@ -4,8 +4,9 @@ From nothing to a GSPro hand-off package and a reviewed model, the way Westmount
 built. Each phase ends with a checkpoint; do not move on until it holds. Commands run from the repository root. Times
 are for an Apple M-series laptop; the downloads depend on the servers.
 
-The multi-agent steps (research, QA) use Claude Code workflows (`workflows/*.js`). Everything else is plain Python and
-can be run by hand.
+The multi-agent steps (research, QA) use Claude Code workflows (`workflows/*.js`). They run only when you ask for
+them, and they cost far more than the rest (§0, Multi-agent workflows). Everything else is plain Python and can be
+run by hand. Branches and pull requests: [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## 0. Setup (once)
 
@@ -49,8 +50,34 @@ and 30 GB of disk, and no GPU (code.claude.com/docs/en/cloud-environments). For 
   machine (or Remote Control to it) for full builds when a course peaks above about 14 GB.
 * **Long steps**: run builds as background commands with an explicit timeout (a background command gets 30 min by
   default and up to 2 h); run `build_all.py` in ranges of steps rather than all at once.
-* **Commit attribution**: cloud sessions add a session link to commits and PR bodies; the `attribution` settings
-  (settings reference) turn it off.
+* **Commit attribution**: cloud sessions add a session link to commits and PR bodies, and this repository's commits
+  carry no AI attribution ([CONTRIBUTING.md](../CONTRIBUTING.md)). The `attribution` setting turns it off, but a
+  cloud session reads only the repository's `.claude/settings.json`, not your `~/.claude/settings.json`. This
+  repository has no such file yet, so check each commit message and PR body before you push.
+
+### Multi-agent workflows (research and QA)
+
+Two steps run as Claude Code workflows: scripts in `workflows/` that start several Claude agents at once.
+
+| Workflow | Agents | When |
+|---|---|---|
+| `workflows/course_research.js` | 8: a researcher and a verifier for each of the scorecard, the holes, the history and the data sources | once per course (§1) |
+| `workflows/hole_qa.js` | 9 per round on 18 holes: 6 inspectors of three holes each, 3 verifiers of two groups each | two rounds per course (§7) |
+
+Claude Code starts a workflow only when you ask it to in your own words. It does not start one by itself. Each
+agent is a full Claude session that reads images and rasters and runs scripts. One QA round is nine of them, so it
+uses far more of your Claude plan than an ordinary session. Two rounds with their rebuilds take about 3-4 hours.
+Start one only when its inputs are ready: the build, the QA images and `research/qa_brief.md` for QA. Type the
+request in Claude Code, with the absolute path of your checkout as `root`:
+
+```
+Run the workflow workflows/course_research.js with args {"name": "<course name>", "location": "<address, city, state, country>", "slug": "<slug>", "root": "<absolute repo path>"}
+Run the workflow workflows/hole_qa.js with args {"root": "<absolute repo path>", "course": "<slug>", "round": 1}
+```
+
+`notes` (research) passes what you already know: the architect, the OSM outline id, a scorecard URL. `groups` (QA)
+sets other hole groups, e.g. `[[1, 2, 3], [4, 5, 6], [7, 8, 9]]` for nine holes (3 inspectors, 2 verifiers).
+`/workflows` shows a running workflow's progress.
 
 ## 1. Is the course buildable?
 
@@ -67,10 +94,11 @@ Before any work, find out what public data covers it. This decides everything el
 Data from somewhere the providers do not cover needs a new provider in `scripts/sources/` (see the four existing
 ones: each is a few functions; `__init__.provider(kind)` picks them by the `provider` key of `[sources.*]`).
 
-Run the research workflow for the facts (scorecard, holes, history, data), each claim re-checked by a verifier:
+Run the research workflow for the facts (scorecard, holes, history, data), each claim re-checked by a verifier (8
+agents, §0). In Claude Code, type:
 
 ```
-Workflow workflows/course_research.js, args {name, location, slug, root: <absolute repo path>, notes?}
+Run the workflow workflows/course_research.js with args {"name": "<course name>", "location": "<address, city, state, country>", "slug": "<slug>", "root": "<absolute repo path>"}
 ```
 
 **Checkpoint:** LiDAR, photo and DEM sources named with their dates; scorecard found; you know whether OSM maps the
@@ -290,8 +318,10 @@ labels, what the LiDAR and the photo look like (season, resolution, NIR), what O
 open card questions. Then:
 
 ```
-Workflow workflows/hole_qa.js, args {root: <absolute repo path>, course: <slug>, round: 1}
+Run the workflow workflows/hole_qa.js with args {"root": "<absolute repo path>", "course": "<slug>", "round": 1}
 ```
+
+That is 9 agents per round on 18 holes (§0).
 
 Inspectors propose overrides per hole; adversarial verifiers keep what the photo and the LiDAR support and write
 `courses/<slug>/features/overrides/holeNN.geojson` (and `holeNN_meta.json` for tee markers and aim points).
@@ -337,6 +367,49 @@ Fly every hole. `docs/LESSONS.md` (Viewer) explains the capture helpers for head
   and `output/` are not tracked.
 * An engine change (`scripts/`, `regions/`) is tested first, keeps course facts out of the code, and must rebuild
   Westmount to `courses/westmount/fingerprint.json` (`scripts/fingerprint.py check`) or explain each difference.
+* Branches, pull requests and what each PR reports are in [CONTRIBUTING.md](../CONTRIBUTING.md). Use one branch per
+  course, put engine fixes on their own branches, open draft PRs, and expect merge commits, never squashes.
+
+### Engine changes from another machine
+
+The golden fingerprint was written on the owner's MacBook Pro: Apple M5 Max, macOS 27.0.1, Python 3.12.15, GDAL
+3.12.2, PROJ 9.8.1, numpy on Accelerate, Blender 4.2.23 LTS, with the packages of `requirements-lock.txt`.
+`fingerprint.py` records all of this in the file's `env`. Floating-point products (rasters, surfaces, the mesh, the
+glTF) are only expected to reproduce byte for byte there. On another machine `check` prints each environment
+difference as a `note:` line, then fails on the products that differ. On your machine, run:
+
+1. **The unit tests**: `COURSE= .venv/bin/python -m pytest -q tests --ignore=tests/test_course.py`. CI runs them on
+   every push.
+2. **Your course**: rebuild from the first step the change affects (`build_all.py <step> ...`), then
+   `.venv/bin/python -m pytest -q --course <slug> tests/test_course.py`. Compare with its results before the change.
+3. **Westmount, if you have its data**: 590 MB of LiDAR and 250 MB of photo, plus textures and the backdrop
+   ([courses/westmount/README.md](../courses/westmount/README.md)). Do a clean build: keep the downloads and delete
+   everything derived. Then run the check:
+
+   ```bash
+   export COURSE=westmount
+   rm -rf build/westmount output/westmount data/westmount/textures_gen data/westmount/trees
+   rm -f data/westmount/imagery/*_reg.tif data/westmount/imagery/backdrop_*_summer.tif data/westmount/imagery/backdrop_*.jpg
+   BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py
+   .venv/bin/python scripts/fingerprint.py check
+   ```
+
+   Under each `FAIL:` line, `check` prints the entries of that artefact's summary that changed: surface counts and
+   areas, trees per archetype, hole yardages, glTF object counts, the heightmap's range, CSV rows. A `FAIL:` line with
+   nothing under it is floating-point noise from your machine. Changed summary entries are a real difference, and the
+   PR must explain it. Rasters and arrays have no summary. Artefacts are listed in pipeline order, so a real change to
+   one of them (a DEM) shows in the summaries below it. A `DATA/` input that differs means the server sent other data
+   than the golden build got. Say so in the PR.
+
+   To see only what your change does, compare two builds on your own machine. Clean-build `main`, then save its
+   fingerprint with `fingerprint.py write /tmp/westmount-main.json`. Clean-build your branch and run
+   `fingerprint.py check /tmp/westmount-main.json`. On the owner's Mac two clean builds of the same commit match
+   each other exactly. If two builds of `main` differ on your machine, say so in the PR.
+
+Before merging an engine PR, the owner rebuilds Westmount clean on the golden machine and runs `fingerprint.py check`.
+When a change is meant to alter Westmount, the owner writes the new golden file there with `fingerprint.py write`,
+after two clean builds match each other, and commits it in the same PR, as for
+[#11](https://github.com/mescortes/gspro-course-builder/pull/11).
 
 ## Definition of done
 
