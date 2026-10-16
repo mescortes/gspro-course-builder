@@ -30,6 +30,7 @@ BUNKER_CLEARANCE = C.tuning("bunker_clearance", (1.0, 10.0))  # unmapped bunkers
 SHARED_FAIRWAY_MIN_PART = C.tuning("shared_fairway_min_part", 150.0)  # m2: smallest part of a shared fairway a hole takes
 SHARED_FAIRWAY_MIN_RUN = C.tuning("shared_fairway_min_run", 80.0)     # m of a line inside a fairway it runs along ...
 SHARED_FAIRWAY_GREEN_REACH = C.tuning("shared_fairway_green_reach", 30.0)  # ... or m from it to the line's green end
+GREEN_OFF_COURSE = C.tuning("green_off_course", 15.0)  # m: a classifier green farther off the course outline is a lawn
 MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 150, "cartpath": 6, "native": 25, "road": 25,
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
 # Photo colour rules SAND, SHADOW_SAND and TURF ([tuning.sand], [tuning.shadow_sand], [tuning.turf]): surface_classify.py
@@ -420,6 +421,17 @@ def split_shared_fairways(fairways, lines, min_part=None, step=2.0, min_run=None
     return out
 
 
+def green_keep_area(course_area, osm_greens, margin=None):
+    """Where the classifier's greens are kept: within `margin` m (GREEN_OFF_COURSE) of the course outline, or on an
+    OSM-mapped green (a practice green off the outline). Off the course its "green" is a lawn, a sports field or a
+    driving range: Deer Ridge's spring photo made 18 ha of park lawn round the course green, Whistle Bear's 5 ha. None
+    (keep every green) for a course without an outline."""
+    if course_area.is_empty:
+        return None
+    margin = GREEN_OFF_COURSE if margin is None else margin
+    return unary_union([course_area.buffer(margin)] + [g for g in osm_greens if not g.is_empty])
+
+
 def is_court(t):
     """OSM tags of a sports pitch or a tennis court (the court surface). A golf feature mapped as a pitch is not one:
     Deer Ridge maps hole 1's green and four tees golf=green / golf=tee + leisure=pitch + sport=golf, and a court erases
@@ -618,6 +630,10 @@ def main():
                 small = np.zeros(hn + 1, bool); small[1:] = ha <= fill_holes
                 m = m | small[hl]
         return m
+    keep = green_keep_area(course_area, [g for g in osm(lambda t: t.get("golf") == "green")
+                                         if g.geom_type in ("Polygon", "MultiPolygon")])
+    if keep is not None:
+        surf["green"] &= burn_mask([keep])
     surf["green"] = clean(surf["green"], MIN_AREA["green"], fill_holes=1e9, open_px=2)
     surf["bunker"] = clean(surf["bunker"], MIN_AREA["bunker"], fill_holes=1e9, open_px=1)
     surf["tee"] = clean(surf["tee"], MIN_AREA["tee"], fill_holes=1e9, open_px=2)

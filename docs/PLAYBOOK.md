@@ -308,6 +308,7 @@ Engine settings for problems QA finds on many holes (`course.toml [tuning]`, def
 | A shared fairway split badly between holes | A fairway several lines of play run along is split between their corridors. `shared_fairway_min_part` (150 m2): the smallest part a hole takes; `shared_fairway_min_run` (80 m) and `shared_fairway_green_reach` (30 m): a line runs along a fairway when that much of it lies inside, or its green end is that close (a par 3's green surround); a line that only crosses it (a tee shot over another hole's fairway or green surround) takes none |
 | Two tee sets on one marker | `tee_marker_gap` (2 m): a set never takes a spot this close to another set's while another pad is free, unless their cards are this close too (two sets with the same yardage share a box); the gap is reported |
 | Holes in the terrain at tees, steps around greens | `[tuning.level_tees] enabled = false` when the LiDAR shows every tee (§2) |
+| Lawns, sports fields or a driving range round the course built as greens (hole 99) | `green_off_course` (15 m): a classifier green farther than this outside the course outline (`leisure=golf_course`) is rough; OSM-mapped greens stay wherever they are |
 
 Tracks and service ways inside the course mapped `surface=grass / ground / dirt / earth / mud` or
 `tracktype=grade4 / grade5` are turf (mown maintenance routes; the classifier's training labels never call them

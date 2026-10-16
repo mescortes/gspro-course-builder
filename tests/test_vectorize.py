@@ -580,3 +580,20 @@ def test_golf_features_mapped_as_pitches_are_not_courts():
     for p in ((20, 105), (140, 140), (215, 115), (310, 115)):
         assert courts.contains(Point(p)), p
     assert len(vector["court"]) == 4
+
+
+def test_classifier_greens_are_kept_only_on_the_course_or_a_mapped_green():
+    """Deer Ridge's spring photo made 18 ha of park lawn and sports fields round the course "green" (Whistle Bear's
+    5 ha): every hole-99 green past the outline, and a 980 k-vertex Hole99_Green mesh. A classifier green is kept within
+    GREEN_OFF_COURSE m of the course outline, or on an OSM-mapped green anywhere (a practice green off the outline); a
+    course with no outline keeps them all."""
+    from shapely.geometry import Point, Polygon, box
+    course = box(0, 0, 400, 300)
+    practice = box(600, 0, 630, 25)                                   # mapped golf=green, off the outline
+    keep = V.green_keep_area(course, [practice])
+    assert V.GREEN_OFF_COURSE == 15.0
+    assert keep.contains(Point(200, 150)) and keep.contains(Point(410, 150))        # on the course, at its edge
+    assert not keep.contains(Point(450, 150)) and not keep.contains(Point(200, 400))  # a lawn 50 / 100 m off it
+    assert keep.contains(Point(615, 12))                                           # the mapped practice green
+    assert V.green_keep_area(Polygon(), [practice]) is None
+    assert not V.green_keep_area(course, [], margin=5.0).contains(Point(410, 150))
