@@ -597,3 +597,31 @@ def test_classifier_greens_are_kept_only_on_the_course_or_a_mapped_green():
     assert keep.contains(Point(615, 12))                                           # the mapped practice green
     assert V.green_keep_area(Polygon(), [practice]) is None
     assert not V.green_keep_area(course, [], margin=5.0).contains(Point(410, 150))
+
+
+def test_a_mapped_forward_tee_off_the_line_goes_to_the_hole_whose_card_it_fits():
+    """Deer Ridge: OSM forward tees 42-46 m beside the golf=hole line (holes 1, 3, 8), and a par 3's forward deck past
+    FORWARD_TEE_FRAC of its line (13), were background (hole 99); so were three par-3 forward tees on Whistle Bear and
+    one on Brambles. A mapped tee no line claims goes to the hole whose line is within FORWARD_TEE_REACH m and whose
+    card it plays (play distance within FORWARD_TEE_CARD_TOL yd of the hole's yardages), if that hole is clearly the
+    nearest such line; a tee that fits no card, or two holes alike, stays background."""
+    from shapely.geometry import LineString, box
+    holes = {1: LineString([(0, 0), (0, 200), (40, 400)]),         # a par 4 with a dogleg
+             2: LineString([(300, 0), (300, 380)]),
+             3: LineString([(0, 1000), (0, 1180)])}                 # a par 3
+    cards = {1: (445, 400, 360, 330), 2: (420, 400, 380), 3: (197, 160, 114)}
+    pad = lambda x, y: box(x - 5, y - 4, x + 5, y + 4)
+    fwd = pad(45, 90)                                                # 45 m beside hole 1's line, 353 yd to play
+    par3 = pad(6, 1082)                                              # 57 % up hole 3's line, 107 yd to play
+    assert V.nearest_line(fwd, holes, 40, "start") == 99 and V.nearest_line(par3, holes, 40, "start") == 99
+    assert V.card_tee_hole(fwd, holes, cards) == 1
+    assert V.card_tee_hole(par3, holes, cards) == 3
+    assert V.card_tee_hole(pad(0, -8), holes, cards) == 1, "behind the back tee, 451 yd: within the card's reach"
+    assert V.card_tee_hole(pad(-250, 100), holes, cards) == 99, "a range tee far from every line"
+    assert V.card_tee_hole(pad(85, 390), holes, cards) == 99, "beside hole 1's green: plays no card of hole 1"
+    twins = {5: LineString([(0, 0), (0, 400)]), 6: LineString([(100, 0), (100, 400)])}
+    assert V.card_tee_hole(pad(50, 80), twins, {5: (360,), 6: (360,)}) == 99, "half way between two holes it plays alike"
+    assert V.card_tee_hole(pad(50, 80), twins, {5: (360,), 6: (250,)}) == 5, "the one whose card it plays"
+    assert V.card_tee_hole(fwd, holes, {2: cards[2]}) == 99, "a hole without a card takes no tee"
+    assert V.card_tee_hole(fwd, holes, cards, reach=40) == 99
+    assert V.nearest_line(pad(2, -10), holes, 40, "start") == 1, "the back tee is still the line's"

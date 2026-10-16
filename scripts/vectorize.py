@@ -26,6 +26,8 @@ STROKE = {"green": "#BCE5A4", "fringe": "#A4C88F", "fairway": "#43E561", "semiro
           "deeprough": "#164B20", "tee": "#A0E5B8", "bunker": "#E5E5AA", "cartpath": "#BEBEBB", "native": "#BE751D",
           "road": "#555555", "building": "#C83C3C", "court": "#3355AA", "water": "#0000C0"}
 FORWARD_TEE_FRAC = C.tuning("forward_tee_frac", 0.45)   # tee pads past this fraction of a hole are not its tees (Westmount <= 0.35)
+FORWARD_TEE_REACH = C.tuning("forward_tee_reach", 60.0)        # m: a mapped tee no line claims, off its hole's line ...
+FORWARD_TEE_CARD_TOL = C.tuning("forward_tee_card_tol", 10.0)  # yd: ... playing the hole's card within this (card_tee_hole)
 BUNKER_CLEARANCE = C.tuning("bunker_clearance", (1.0, 10.0))  # unmapped bunkers: m clear of roads / of buildings
 SHARED_FAIRWAY_MIN_PART = C.tuning("shared_fairway_min_part", 150.0)  # m2: smallest part of a shared fairway a hole takes
 SHARED_FAIRWAY_MIN_RUN = C.tuning("shared_fairway_min_run", 80.0)     # m of a line inside a fairway it runs along ...
@@ -421,6 +423,55 @@ def split_shared_fairways(fairways, lines, min_part=None, step=2.0, min_run=None
     return out
 
 
+def nearest_line(p, holes, lim, end=None):
+    """The hole whose line of play ({hole: LineString}) is nearest p's representative point, or 99 when none is within
+    `lim` m. end="start": tee pads, which sit behind / along the first part of the line (forward tees can be far up it):
+    the line is extended 35 m back past its tee, and a pad past FORWARD_TEE_FRAC of it counts 400 m further per unit
+    of the fraction past it (a pad that far up a hole is not its tee)."""
+    c = p.representative_point(); best, bd = 99, 1e9
+    for ref, line in holes.items():
+        if end == "start":
+            a = np.asarray(line.coords[0]); b = np.asarray(line.coords[1]); u = (b - a) / np.linalg.norm(b - a)
+            ext = LineString([a - 35 * u] + list(line.coords))
+            d = c.distance(ext)
+            frac = ext.project(c) / ext.length
+            d += max(0.0, frac - FORWARD_TEE_FRAC) * 400
+        else:
+            d = c.distance(line)
+        if d < bd:
+            best, bd = ref, d
+    return best if bd < lim else 99
+
+
+def card_tee_hole(p, holes, cards, reach=None, tol=None, clear=0.5):
+    """The hole of a mapped tee pad p that nearest_line leaves to no hole (99): an OSM forward tee beside the line of
+    play (Deer Ridge holes 1, 3 and 8: 42-46 m off it) or a par 3's forward deck past FORWARD_TEE_FRAC of its line
+    (Deer Ridge 13, Whistle Bear 5, 14 and 17, Brambles 12). A hole may take it when its line, extended 35 m back
+    past the tee, is within `reach` m (FORWARD_TEE_REACH) of p's representative point, and p plays its card: the play
+    distance (hole_data.play_distance, to the line's end) is within `tol` yd (FORWARD_TEE_CARD_TOL) of the hole's
+    shortest to longest yardage (cards: {hole: yardages}; a hole without a card takes no tee). The nearest such hole
+    takes it if every other one is more than 1 / `clear` times as far; otherwise, or with none, it stays 99 (a
+    driving-range tee, a pad that plays no hole's card)."""
+    from hole_data import play_distance, YD
+    reach = FORWARD_TEE_REACH if reach is None else reach
+    tol = FORWARD_TEE_CARD_TOL if tol is None else tol
+    c = p.representative_point(); xy = c.coords[0]
+    fits = []
+    for ref, line in holes.items():
+        card = cards.get(ref)
+        if not card or ref == 99:
+            continue
+        a = np.asarray(line.coords[0]); b = np.asarray(line.coords[1]); u = (b - a) / np.linalg.norm(b - a)
+        d = c.distance(LineString([a - 35 * u] + list(line.coords)))
+        yards = play_distance(xy, [tuple(q) for q in line.coords[1:-1]], line.coords[-1]) * YD
+        if d <= reach and min(card) - tol <= yards <= max(card) + tol:
+            fits.append((d, ref))
+    fits.sort()
+    if not fits or (len(fits) > 1 and fits[0][0] > clear * fits[1][0]):
+        return 99
+    return fits[0][1]
+
+
 def green_keep_area(course_area, osm_greens, margin=None):
     """Where the classifier's greens are kept: within `margin` m (GREEN_OFF_COURSE) of the course outline, or on an
     OSM-mapped green (a practice green off the outline). Off the course its "green" is a lawn, a sports field or a
@@ -683,27 +734,14 @@ def main():
     for _, t, g in G:
         if t.get("golf") == "hole" and t.get("ref") and g.geom_type == "LineString":
             holes[C.course_hole(t["ref"])] = g
-    def nearest_line(p, lim, end=None):
-        c = p.representative_point(); best, bd = 99, 1e9
-        for ref, line in holes.items():
-            if end == "start":
-                # tee pads sit behind / along the first part of the line of play (forward tees can be far up it)
-                a = np.asarray(line.coords[0]); b = np.asarray(line.coords[1]); u = (b - a) / np.linalg.norm(b - a)
-                ext = LineString([a - 35 * u] + list(line.coords))
-                d = c.distance(ext)
-                frac = ext.project(c) / ext.length
-                d += max(0.0, frac - FORWARD_TEE_FRAC) * 400  # a pad past this fraction of the hole is not its tee
-            else:
-                d = c.distance(line)
-            if d < bd:
-                best, bd = ref, d
-        return best if bd < lim else 99
     # LiDAR / OSM validation of the small features the photo classifier over-predicts (QA round 1 found many):
     # a tee must overlap a mapped tee or be a built, flat deck; a bunker must overlap a mapped bunker or be a hollow.
     osm_tees = unary_union(osm(lambda t: t.get("golf") == "tee")).buffer(2.0)
     osm_bunk = survey_bunkers(G)   # drafted bunkers (draft=yes) are not survey data: they get the LiDAR test
+    def mapped_tee(p):
+        return p.intersection(osm_tees).area >= 0.25 * p.area
     def tee_ok(p):
-        if p.intersection(osm_tees).area >= 0.25 * p.area:
+        if mapped_tee(p):
             return True
         if p.area < 40:
             return False
@@ -732,7 +770,7 @@ def main():
     keep_t, to_fair, keep_b, to_path, dropped = [], [], [], [], 0
     for p in polys_of(final["tee"]):
         # a flat deck that is no hole's tee (lawn, terrace, court apron) is not a tee (QA round 2)
-        if tee_ok(p) and (p.intersection(osm_tees).area >= 0.25 * p.area or nearest_line(p, 40, "start") != 99):
+        if tee_ok(p) and (mapped_tee(p) or nearest_line(p, holes, 40, "start") != 99):
             keep_t.append(p); continue
         ring = p.buffer(1.5).difference(p)
         (to_fair if ring.intersection(fair).area > 0.5 * ring.area else []).append(p); dropped += 1
@@ -839,6 +877,7 @@ def main():
     print(f"merged {merged_n} tiny rough/semirough islands into their surroundings", flush=True)
 
     # hole assignment
+    cards = {h: v[1:] for h, v in C.SCORECARD.items()}   # yardages per tee set
     pins = [g for _, t, g in G if t.get("golf") == "pin" and g.geom_type == "Point"]
     green_hole = split_shared_greens(polys_of(final["green"]), {ref: Point(l.coords[-1]) for ref, l in holes.items()}, pins)
     def nearest_green(p, maxd):
@@ -860,10 +899,11 @@ def main():
             return h if h is not None else 99
         if n == "bunker":
             h = nearest_green(p, 20)
-            return h if h is not None else nearest_line(p, 45)
+            return h if h is not None else nearest_line(p, holes, 45)
         if n == "tee":
-            return nearest_line(p, 40, "start")
-        return nearest_line(p, 45)
+            h = nearest_line(p, holes, 40, "start")
+            return card_tee_hole(p, holes, cards) if h == 99 and mapped_tee(p) else h
+        return nearest_line(p, holes, 45)
     # a fairway several lines of play run through is split between their corridors (the rest: nearest line)
     fairway_hole = split_shared_fairways(polys_of(final["fairway"]), holes)
     feats = []
