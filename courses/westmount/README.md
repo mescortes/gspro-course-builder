@@ -197,7 +197,7 @@ rm -rf data/textures_gen data/trees build output features   # derived; the build
   instead (hole 8 Blue to the White deck, +1.8 m; hole 17 and hole 14 Gold too). Their real heights are unknown, and
   some banks are 1-2 m. The 2018 trees the 2025 photo shows cleared for the hole 5 and hole 8 Blue tees are removed
   (`features/trees_cleared.geojson`). The hole 12 tees were rebuilt after 2018 too (one long two-terrace box
-  in the 2025 photo); the model keeps the four 2018 LiDAR decks, which still give the card yardages (see [TODO.md](../../TODO.md)).
+  in the 2025 photo); the model keeps the four 2018 LiDAR decks, which still give the card yardages (see [TODO.md](TODO.md)).
 * **Closest tees to the card.**
   * Hole 5 Blue is 600 against 605. The marker is at the back of the 2023 deck, and the Blue box was confirmed
     in review; only an aim point hugging the fairway's west edge would reach 605, so the card is rounded or
@@ -217,10 +217,10 @@ rm -rf data/textures_gen data/trees build output features   # derived; the build
   (`build_backdrop.summer_grade`), for the glTF drape and the GSPro outer-plot overlay. GSPro assigns its own turf
   materials by object name.
 * **Cart paths** are traced automatically from the near-infrared photo and corrected in two QA rounds. A few short
-  segments under evergreens are missing or interpolated (see [TODO.md](../../TODO.md)).
+  segments under evergreens are missing or interpolated (see [TODO.md](TODO.md)).
 * **Structures** OSM lacks are curated by hand (`features/structures.geojson`). The #4 / #13 shelter is newer than
   the LiDAR, so its footprint is approximate (+/- 1 m). The patio outline is traced from the photo (+/- 1 m); its
   furniture layout is generic, not a survey.
 * **Windows side not run here.** Unity, OPCD and GreenKeeper steps cannot run on this Linux build host. The Unity
   helper is syntax-checked (tree-sitter), not compiled. `grass_3dg.json` values are starting estimates. Open
-  hand-off items are in [TODO.md](../../TODO.md).
+  hand-off items are in [TODO.md](TODO.md).
