@@ -3,7 +3,8 @@
   LiDAR    classified point-cloud tiles covering config.FETCH_CORE + 15 m, from the course's [sources.lidar] provider
            (scripts/sources), into data/<slug>/lidar, listed in data/<slug>/lidar/tiles.json
   OSM      golf / building / road features via Overpass, or the OSM API when Overpass is down
-           (courses/<slug>/research/osm_all.json, osm_golf.json, both in Overpass 'out geom' JSON)
+           (courses/<slug>/research/osm_all.json, osm_golf.json, both in Overpass 'out geom' JSON); `osm-relations`
+           completes the multipolygons of a snapshot the OSM API fallback left without their members outside the box
   Imagery  the [sources.imagery] orthophoto (R, G, B, NIR) over FETCH_CORE + 20 m (config.IMAGERY_RAW)
   Backdrop handled by fetch_backdrop.py / build_backdrop.py
 
@@ -24,6 +25,7 @@ from sources.http import UA, permanent
 OVERPASS = ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
             "https://overpass.private.coffee/api/interpreter")
 OSM_API = "https://api.openstreetmap.org/api/0.6/map"
+OSM_API_RELATION = "https://api.openstreetmap.org/api/0.6/relation/{}/full"
 # Overpass remarks of a query too big for it ('Query timed out in "query" ...', 'Query run out of memory ...'), unlike
 # a busy server's ('Dispatcher_Client::request_read_and_idx::timeout. The server is probably too busy ...')
 TOO_BIG = ("timed out", "out of memory")
@@ -155,9 +157,52 @@ def osm_api_tile(t, depth=0):
     raise RuntimeError(f"OSM API failed for tile {t} ({err}); Overpass failed too: rerun fetch_data.py osm later")
 
 
+def osm_api_relation(rid):
+    """The OSM API /relation/<rid>/full XML document (the relation, its member ways and their nodes), retried on network
+    errors and 5xx / 429; None, with a warning, when the API cannot give it."""
+    err = None
+    for attempt in range(5):
+        try:
+            r = requests.get(OSM_API_RELATION.format(rid), headers=UA, timeout=300)
+        except requests.RequestException as ex:
+            err = ex.__class__.__name__
+        else:
+            if r.status_code == 200:
+                return r.text
+            err = f"HTTP {r.status_code} {r.text[:120]}"
+            if permanent(r.status_code):
+                break
+        print("  osm api relation", rid, err, flush=True); time.sleep(10 * (attempt + 1))
+    print(f"  osm api: relation {rid} left without the members outside the box ({err})", flush=True)
+    return None
+
+
+def complete_multipolygons(elements, full=None):
+    """In place (and returned): the OSM API's /map gives a relation with the geometry of only its member ways inside the
+    box, so a multipolygon reaching past it (Deer Ridge: the Grand River, 5 of its 47 members) is never polygonised.
+    Each multipolygon with a member way lacking geometry gets its members' geometry from full(id) (the
+    /relation/<id>/full XML: osm_api_relation), as Overpass 'out geom' gives it; those ways are not added as features.
+    A relation full() cannot give (None) stays as it was."""
+    full = osm_api_relation if full is None else full
+    for e in elements:
+        if e["type"] != "relation" or e.get("tags", {}).get("type") != "multipolygon":
+            continue
+        if all(m.get("geometry") for m in e["members"] if m["type"] == "way"):
+            continue
+        doc = full(e["id"])
+        if doc is None:
+            continue
+        ways = {x["id"]: x for x in osm_xml_to_elements([doc]) if x["type"] == "way"}
+        for m in e["members"]:
+            if m["type"] == "way" and not m.get("geometry") and ways.get(m["ref"], {}).get("geometry"):
+                m["geometry"] = ways[m["ref"]]["geometry"]
+    return elements
+
+
 def osm_api_map(bb, step=0.012):
-    """All OSM data in a lon/lat box from the main API, tile by tile (fallback when Overpass is down)."""
-    return osm_xml_to_elements([d for t in split_bbox(bb, step) for d in osm_api_tile(t)])
+    """All OSM data in a lon/lat box from the main API, tile by tile (fallback when Overpass is down), with the
+    multipolygons that reach past the box completed (complete_multipolygons)."""
+    return complete_multipolygons(osm_xml_to_elements([d for t in split_bbox(bb, step) for d in osm_api_tile(t)]))
 
 
 def osm_snapshot():
@@ -179,6 +224,48 @@ def osm_problems(bbox=None):
     return out
 
 
+def incomplete_multipolygons(elements):
+    """{relation id: (a main tag, member ways with geometry, member ways)} of the multipolygons in `elements` that lack
+    the geometry of a member way."""
+    out = {}
+    for e in elements:
+        if e["type"] == "relation" and e.get("tags", {}).get("type") == "multipolygon":
+            ways = [m for m in e["members"] if m["type"] == "way"]
+            n = sum(1 for m in ways if m.get("geometry"))
+            if n < len(ways):
+                t = e["tags"]
+                k = next((k for k in ("natural", "water", "golf", "leisure", "landuse", "building", "amenity") if k in t), "type")
+                out[e["id"]] = (f"{k}={t[k]}", n, len(ways))
+    return out
+
+
+def osm_incomplete():
+    """The multipolygons of the OSM snapshot that lack member ways (a snapshot from the OSM API fallback before it
+    completed them: complete_multipolygons), as "relation <id> (<tag>): <n> of <m> member ways"."""
+    found = {}
+    for p in osm_snapshot():
+        if p.exists():
+            found.update(incomplete_multipolygons(json.load(open(p))["elements"]))
+    return [f"relation {i} ({t}): {n} of {m} member ways" for i, (t, n, m) in sorted(found.items())]
+
+
+def complete_snapshot():
+    """`fetch_data.py osm-relations`: complete the multipolygons of the OSM snapshot that lack member ways
+    (osm_incomplete) from the OSM API, in place: only their members' geometry is added, every other element stays as
+    it was, so the course's QA overrides still fit it."""
+    for p in osm_snapshot():
+        if not p.exists():
+            continue
+        d = json.load(open(p))
+        before = incomplete_multipolygons(d["elements"])
+        if not before:
+            continue
+        after = incomplete_multipolygons(complete_multipolygons(d["elements"]))
+        store.write_text(p, json.dumps(d))
+        print(f"osm: {p.name}: {len(before) - len(after)} of {len(before)} multipolygons completed"
+              + (f" ({', '.join(f'relation {i} {t}' for i, (t, _, _) in after.items())} still lack members)" if after else ""))
+
+
 def fetch_osm():
     """courses/<slug>/research/osm_all.json + osm_golf.json. An existing snapshot is kept (the model and its QA
     overrides were built from it); delete both files to refresh. A snapshot recorded for a box that no longer reaches
@@ -191,6 +278,8 @@ def fetch_osm():
             sys.exit("osm: " + "; ".join(problems) + f". Delete osm_all.json and osm_golf.json in {C.RESEARCH} (and their "
                      ".source.json) to fetch a snapshot of the new extent, then check the course's overrides against it")
         print(f"osm: keeping the snapshot in {C.RESEARCH} (delete osm_all.json and osm_golf.json to refresh)")
+        for x in osm_incomplete():
+            print(f"!! osm: {x}, the rest outside the box: fetch_data.py osm-relations completes it", flush=True)
         return
     bb = f"{s},{w},{n},{e}"
     C.RESEARCH.mkdir(parents=True, exist_ok=True)
@@ -273,5 +362,7 @@ if __name__ == "__main__":
         fetch_lidar()
     if "osm" in what:
         fetch_osm()
+    if "osm-relations" in what:
+        complete_snapshot()
     if "imagery" in what:
         fetch_imagery()

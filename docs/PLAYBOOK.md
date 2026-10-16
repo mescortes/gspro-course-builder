@@ -362,7 +362,10 @@ can take an hour on a slow server); first build 0.5-1 h; two QA rounds with rebu
   step outside the sandbox.
 * **Overpass is down or busy** (HTTP 429 / 504, or a "too busy" remark): fetch_data tries the three mirrors for up to
   three rounds, then falls back to the OSM API. A query that every answering mirror says is too big (it timed out or
-  ran out of memory) goes to the OSM API at once.
+  ran out of memory) goes to the OSM API at once. The API gives a relation with only its member ways inside the box,
+  so the fallback fetches each multipolygon that reaches past it whole (`/relation/<id>/full`). A snapshot fetched
+  before it did (check_course: "relation ... of ... member ways") is completed in place by
+  `fetch_data.py osm-relations` (Deer Ridge: the Grand River had 5 of its 47 members and was rough).
 * **An image server is slow or times out**: the downloads are chunked and retried; rerun the step to resume. A service
   error about a parameter (bands, the mosaic rule's where clause) stops the fetch at once and names it: fix
   `[sources.imagery]`.
