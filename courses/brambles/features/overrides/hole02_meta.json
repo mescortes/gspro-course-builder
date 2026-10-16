@@ -1,0 +1,11 @@
+{
+ "frame": "lidar",
+ "aim_points_utm": [],
+ "notes": "Straight hole (all sources): the automatic aim point sat on the far bank of the drive-zone barranca at the fairway edge, within 8 m of the straight tee-green line; removed (no aim points). The Middle tee is the mown two-deck strip E 536673-536702, N 4291625-4291650 (392 as on the card); Front the deck at the north end of the upper fairway (339). QA round 2: the Back tee is the flat deck in the zoysia SW of the 1st green (E 536635-536649, N 4291670-4291686, dem_raw 301.1-301.3 m), 4-5 m SW of the 18Birdies Back point, which falls on the 8 % bank between the deck and the 1st green (the old pad, now the 1st green apron). The Back marker is pinned at the deck back (north) end, 445 yd vs card 450: no spot on the deck reaches 450 and the automatic marker (1.5 m inside the edge) gives 444.",
+ "tees_utm": {
+  "back": [
+   536638.0,
+   4291685.0
+  ]
+ }
+}

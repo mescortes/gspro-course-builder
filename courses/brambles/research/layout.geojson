@@ -1,0 +1,1740 @@
+{
+ "type": "FeatureCollection",
+ "name": "Brambles GPS layout points (tees per set: 18Birdies; green front / centre / back: GolfNow GPS), EPSG:6339",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::6339"
+  }
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 1,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 531,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537133.32,
+     4291714.66
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 1,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 496,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537104.7,
+     4291730.66
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 1,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 414,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537034.23,
+     4291779.52
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 1,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536693.95,
+     4291692.07
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 1,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536676.93,
+     4291686.71
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 1,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536661.29,
+     4291682.29
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 2,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 450,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536643.39,
+     4291689.15
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 2,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 392,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536675.88,
+     4291643.12
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 2,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 339,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536705.33,
+     4291598.24
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 2,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536749.55,
+     4291311.63
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 2,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536746.46,
+     4291290.32
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 2,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536745.57,
+     4291274.13
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 3,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 155,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536788.94,
+     4291286.24
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 3,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 142,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536781.82,
+     4291277.21
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 3,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 100,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536753.69,
+     4291251.15
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 3,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536712.92,
+     4291187.9
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 3,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536704.44,
+     4291174.35
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 3,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536697.69,
+     4291162.31
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 4,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 471,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536676.86,
+     4291186.69
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 4,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 440,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536648.03,
+     4291173.68
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 4,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 351,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536565.97,
+     4291180.73
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 4,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536296.03,
+     4291077.18
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 4,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536279.26,
+     4291067.19
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 4,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536267.61,
+     4291057.91
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 5,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 335,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536358.13,
+     4291049.23
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 5,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 295,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536387.95,
+     4291025.35
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 5,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 261,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536380.93,
+     4290980.06
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 5,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536555.06,
+     4290841.04
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 5,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536567.17,
+     4290834.3
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 5,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536578.58,
+     4290826.41
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 6,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 493,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536579.83,
+     4290812.59
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 6,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 454,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536614.84,
+     4290800.91
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 6,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 301,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536751.16,
+     4290751.18
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 6,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536971.21,
+     4290803.73
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 6,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536993.49,
+     4290813.41
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 6,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537015.55,
+     4290821.46
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 7,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 611,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537071.16,
+     4290831.57
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 7,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 572,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537105.48,
+     4290843.33
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 7,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 449,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537211.8,
+     4290905.79
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 7,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537547.59,
+     4290878.7
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 7,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537564.81,
+     4290876.06
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 7,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537581.1,
+     4290871.78
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 8,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 182,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537589.09,
+     4290871.79
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 8,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 148,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537610.16,
+     4290900.09
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 8,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 118,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537598.35,
+     4290934.49
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 8,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537631.29,
+     4291011.51
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 8,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537633.72,
+     4291031.07
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 8,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537638.61,
+     4291046.7
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 9,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 399,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537631.48,
+     4291072.28
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 9,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 374,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537609.77,
+     4291081.92
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 9,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 358,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537596.45,
+     4291088.82
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 9,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537310.43,
+     4291167.72
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 9,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537285.98,
+     4291180.08
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 9,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537260.51,
+     4291185.24
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 10,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 441,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537251.48,
+     4291188.23
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 10,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 410,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537238.14,
+     4291164.21
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 10,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 341,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537204.31,
+     4291111.2
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 10,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537064.34,
+     4290858.06
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 10,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537049.7,
+     4290840.64
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 10,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537036.56,
+     4290825.32
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 11,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 336,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537031.49,
+     4290808.61
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 11,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 300,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537019.81,
+     4290839.89
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 11,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 264,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537006.61,
+     4290872.32
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 11,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536946.53,
+     4291081.04
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 11,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536945.72,
+     4291096.17
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 11,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536943.38,
+     4291113.97
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 12,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 206,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537001.88,
+     4291097.94
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 12,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 163,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536973.33,
+     4291124.38
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 12,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 110,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536945.57,
+     4291169.27
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 12,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536903.03,
+     4291237.88
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 12,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536890.94,
+     4291248.32
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 12,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536876.27,
+     4291262.24
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 13,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 513,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536866.9,
+     4291226.72
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 13,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 478,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536854.91,
+     4291198.36
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 13,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 360,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536782.61,
+     4291111.69
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 13,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536633.27,
+     4290837.38
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 13,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536621.27,
+     4290828.21
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 13,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536608.91,
+     4290820.9
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 14,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 325,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536591.26,
+     4290862.82
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 14,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 279,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536612.07,
+     4290899.29
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 14,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 248,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536639.93,
+     4290920.01
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 14,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536685.8,
+     4291131.19
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 14,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536686.99,
+     4291141.7
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 14,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536687.95,
+     4291152.09
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 15,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 448,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536679.78,
+     4291178.25
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 15,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 429,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536665.64,
+     4291188.16
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 15,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 379,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536639.9,
+     4291235.62
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 15,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536344.69,
+     4291383.7
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 15,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536334.92,
+     4291397.52
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 15,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536324.69,
+     4291408.67
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 16,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 242,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536378.51,
+     4291417.84
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 16,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 226,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536393.6,
+     4291417.62
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 16,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 130,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536479.49,
+     4291400.67
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 16,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536574.98,
+     4291390.08
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 16,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536598.25,
+     4291387.0
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 16,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536621.29,
+     4291384.84
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 17,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 542,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536634.02,
+     4291395.66
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 17,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 514,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536632.04,
+     4291422.57
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 17,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 468,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536624.03,
+     4291465.11
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 17,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536530.84,
+     4291859.27
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 17,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536529.21,
+     4291875.44
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 17,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536529.31,
+     4291895.34
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 18,
+    "kind": "tee",
+    "tee": "back",
+    "yards": 510,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536582.51,
+     4291870.46
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 18,
+    "kind": "tee",
+    "tee": "middle",
+    "yards": 467,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536625.98,
+     4291841.88
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 18,
+    "kind": "tee",
+    "tee": "front",
+    "yards": 327,
+    "source": "18Birdies"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     536754.85,
+     4291837.37
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 18,
+    "kind": "green_front",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537011.45,
+     4291808.05
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 18,
+    "kind": "green_center",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537041.76,
+     4291795.37
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "hole": 18,
+    "kind": "green_back",
+    "source": "GolfNow GPS"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     537068.57,
+     4291783.26
+    ]
+   }
+  }
+ ]
+}
