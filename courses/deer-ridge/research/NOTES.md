@@ -38,6 +38,9 @@ Phase 0 research of 2026-10-14: researchers, then independent verifiers re-check
   south bank (about E 546230-546310, N 4805600-4805640) are dark brown or open water on the photo: they are turf or
   rough on the ground. A pond at about E 547136-547260, N 4806309-4806428 (6700 m2) is brown (turbid) on the photo.
 * Backdrop: HRDEM 1 m DTM and DSM; the 5 km square is half Lake_Erie_2018 and half Lake_Erie_Fall_2017.
+* Registration (measure_registration.py, 2026-10-16): the photo sits 0.25 m west and 0.25 m north of the LiDAR, so
+  `[imagery] shift = [0.25, -0.25]`. 70 bunkers; the north, south and west halves agree exactly, the east half
+  (23 bunkers) says +0.50 m east, within its 0.25 m spread. OSM buildings: +0.50 m east, 0.00 m north.
 
 ## OSM
 
