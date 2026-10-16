@@ -127,3 +127,55 @@ def test_grass_masks_clear_sand_and_paths_and_thin_under_canopy():
     assert at(10.0, 5.0)[0] == 1.0                # open rough
     assert abs(at(18.0, 5.0)[0] - grass_spec.CANOPY[1]) < 1e-6   # under the tree
     assert 0.0 < at(5.5, 5.0)[0] < 1.0            # ramp next to the sand
+
+
+def _valley(length=600.0, fall=2.0, res=0.5, half=30.0):
+    """A river 20 m wide along x (y in -10..10), its banks at the water's edge falling `fall` m over `length` m and
+    rising 0.5 m per m away from it; the LiDAR over the water 5 cm below the edge (Deer Ridge's river: the DEM over it
+    has the median of its shoreline)."""
+    nx, ny = int(length / res), int(2 * half / res)
+    T = from_origin(0.0, half, res, res)
+    X, Y = np.meshgrid((np.arange(nx) + 0.5) * res, half - (np.arange(ny) + 0.5) * res)
+    edge = 100.0 - fall * X / length
+    dem = edge + 0.5 * np.maximum(0.0, np.abs(Y) - 10.0) - 0.05 * (np.abs(Y) < 10.0)
+    return dem, T, box(0.0, -10.0, length, 10.0), lambda x: 100.0 - fall * x / length
+
+
+def test_a_river_falls_in_reaches_each_flat_at_its_own_level():
+    """Deer Ridge: the Grand River falls 1.4-2.2 m across the course (a Whistle Bear creek 1.65 m), and a water body had
+    one flat level at its lowest 20 % shoreline: the water 1.9 m below the upper bank, a levee along the lower. A body
+    whose local level (the 20th percentile of the shoreline within 60 m) falls more than WATER_STEP is cut across into
+    reaches falling at most that much, each flat at the local level of its lower end; a pond keeps its one level."""
+    from shapely.ops import unary_union
+    dem, T, river, bank = _valley()
+    reaches = edges.water_reaches(river, dem, T)
+    assert len(reaches) >= 6
+    assert abs(sum(r.area for r, _ in reaches) - river.area) < 1e-6 and abs(unary_union([r for r, _ in reaches]).area - river.area) < 1e-6
+    by_x = sorted(reaches, key=lambda r: r[0].centroid.x)
+    assert all(a[1] > b[1] for a, b in zip(by_x[:-1], by_x[1:])), "the levels fall downstream"
+    for r, lv in reaches:
+        x0, _, x1, _ = r.bounds
+        assert lv <= bank(x1) + 0.01, "never above its banks"
+        assert bank(x0) - lv < edges.WATER_STEP + 0.25, "no trench deeper than a step"
+    bowl, Tb, c = _bowl()
+    pond = Point(c, c).buffer(10.0)
+    ((p, lv),) = edges.water_reaches(pond, bowl, Tb)
+    assert p is pond and lv == edges.water_levels([(pond, "water", 99)], bowl, Tb)[0][1]
+
+
+def test_a_river_is_carved_reach_by_reach_with_no_dam_and_no_spill():
+    """The bed under each reach is below that reach's level (no ridge where reaches meet), each reach's WaterPlane
+    covers no other reach's water, and the land under every plane's outset stays above it."""
+    from rasterio.features import rasterize
+    dem, T, river, _ = _valley()
+    out = blended_dem(dem, T, [(river, "water", 99)])
+    reaches = edges.water_reaches(river, dem, T)
+    for r, lv in reaches:
+        m = rasterize([(r.buffer(-0.3), 1)], out_shape=dem.shape, transform=T).astype(bool)
+        assert m.any() and out[m].max() < lv
+    planes = edges.water_planes(river, reaches, out, T)
+    assert len(planes) >= len(reaches)
+    for g, lv in planes:
+        assert sum(g.intersection(r).area for r, l2 in reaches if l2 != lv) < 0.5
+        bank = rasterize([(g.difference(river.buffer(0.3)), 1)], out_shape=dem.shape, transform=T).astype(bool)
+        assert out[bank].min() >= lv - 1e-6, f"land {lv - out[bank].min():.3f} m below a water plane"

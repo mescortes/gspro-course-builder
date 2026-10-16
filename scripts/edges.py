@@ -27,6 +27,7 @@ WATER_EDGE_W = 0.15    # OPCD Water_Edge inset
 PLANE_OUTSET = 2.0     # OPCD WaterPlane outset under the banks
 BED_SHORE, BED_SLOPE, BED_MAX = 0.08, 0.35, 1.2   # bed depth below the water level: shore, gradient, maximum (m)
 BERM = 0.08            # land inside the plane's outset is kept at least this much above the water (no spill; 2 cm z-fought)
+WATER_STEP = C.tuning("water_step", 0.3)  # m: a water body whose shoreline falls more than this (a river) is cut in reaches
 
 
 def _polys(g):
@@ -120,18 +121,77 @@ def label_rings(cent, surf, hole, rings, sid):
     return surf, hole
 
 
+def _shoreline(p, dem, T):
+    """Points every 0.5 m round p's outline and the DEM under them."""
+    ring = np.asarray(p.exterior.segmentize(0.5).coords)
+    cc = (ring[:, 0] - T.c) / T.a - 0.5; rr = (ring[:, 1] - T.f) / T.e - 0.5
+    return ring, ndimage.map_coordinates(dem, [rr, cc], order=1, mode="nearest")
+
+
 def water_levels(feats, dem, T):
     """[(polygon, level, hole)]: a flat water level per water body at its lowest ~20 % shoreline (LiDAR has few
-    returns on water) minus 5 cm."""
-    out = []
-    for g, s, h in feats:
-        if s != "water":
+    returns on water) minus 5 cm; a body that falls more than WATER_STEP, per reach (water_bodies)."""
+    return [(r, lv, h) for _, reaches, h in water_bodies(feats, dem, T) for r, lv in reaches]
+
+
+def water_bodies(feats, dem, T):
+    """[(polygon, [(reach, level)], hole)] for every water polygon of feats (water_reaches)."""
+    return [(p, water_reaches(p, dem, T), h) for g, s, h in feats if s == "water" for p in _polys(g)]
+
+
+def water_reaches(p, dem, T, step=None, radius=60.0, cell=1.0, min_piece=50.0):
+    """[(reach, level)] of water body p. A pond: [(p, its lowest ~20 % shoreline minus 5 cm)]. A body whose local
+    level - the 20th percentile of the shoreline within `radius` m of a point on it - falls more than `step` m
+    (WATER_STEP; Deer Ridge's Grand River 1.7-3.8 m across the course, a Whistle Bear creek 1.65 m) is cut across into
+    reaches falling at most that much: each cell of a `cell` m grid takes the local level of the shoreline point
+    nearest it, banded; each reach is flat at its band's lower end minus 5 cm, so its water is never above its banks.
+    Pieces under `min_piece` m2 join the neighbour they share the longest edge with. The reaches tile p."""
+    from scipy.spatial import cKDTree
+    from rasterio.features import rasterize, shapes
+    from rasterio.transform import from_origin
+    from shapely.geometry import shape
+    step = WATER_STEP if step is None else step
+    ring, z = _shoreline(p, dem, T)
+    level = float(np.percentile(z, 20)) - 0.05
+    tree = cKDTree(ring[:, :2])
+    L = np.array([np.percentile(z[i], 20) for i in tree.query_ball_point(ring[:, :2], radius)])
+    lo, span = float(L.min()), float(L.max() - L.min())
+    if step <= 0 or span <= step:
+        return [(p, level)]
+    n = int(np.ceil(span / step)); w = span / n
+    band = np.minimum(n - 1, ((L - lo) / w).astype(np.int32))
+    x0, y0, x1, y1 = p.buffer(2 * cell).bounds
+    tw = from_origin(x0, y1, cell, cell)
+    sh = (int(np.ceil((y1 - y0) / cell)), int(np.ceil((x1 - x0) / cell)))
+    cover = rasterize([(p.buffer(2 * cell), 1)], out_shape=sh, transform=tw, fill=0, dtype="uint8").astype(bool)
+    rr, cc = np.nonzero(cover)
+    _, near = tree.query(np.c_[x0 + (cc + 0.5) * cell, y1 - (rr + 0.5) * cell])
+    lab = np.zeros(sh, np.int32); lab[rr, cc] = band[near] + 1
+    pieces = [[q, int(v) - 1] for g, v in shapes(lab, mask=cover, transform=tw) for q in _polys(shape(g).intersection(p))
+              if q.area > 0]
+    pieces.sort(key=lambda x: -x[0].area)
+    keep = [x for x in pieces if x[0].area >= min_piece]
+    for q, k in pieces:
+        if q.area >= min_piece:
             continue
-        for p in _polys(g):
-            ring = np.asarray(p.exterior.segmentize(0.5).coords)
-            cc = (ring[:, 0] - T.c) / T.a - 0.5; rr = (ring[:, 1] - T.f) / T.e - 0.5
-            z = ndimage.map_coordinates(dem, [rr, cc], order=1, mode="nearest")
-            out.append((p, float(np.percentile(z, 20)) - 0.05, h))
+        edge = max(((q.boundary.intersection(o[0].boundary).length, i) for i, o in enumerate(keep)), default=(0.0, 0))
+        if edge[0] > 0:
+            keep[edge[1]][0] = keep[edge[1]][0].union(q)
+        else:
+            keep.append([q, k])
+    return [(q, lo + k * w - 0.05) for q, k in keep]
+
+
+def water_planes(p, reaches, dem_out, T):
+    """[(WaterPlane outline, level)] of water body p cut in `reaches` (water_reaches): one per reach, outset
+    PLANE_OUTSET under the banks (water_plane_polygon) but not over another reach's water, which is higher or lower."""
+    if len(reaches) == 1:
+        return [(water_plane_polygon(p, dem_out, T, reaches[0][1]), reaches[0][1])]
+    out = []
+    for i, (r, lv) in enumerate(reaches):
+        others = unary_union([q for j, (q, _) in enumerate(reaches) if j != i])
+        g = water_plane_polygon(r, dem_out, T, lv).difference(others)
+        out += [(q, lv) for q in _polys(g) if q.area >= 1.0]
     return out
 
 
@@ -142,9 +202,12 @@ def _window(T, shape, bounds, pad):
     return r0, r1, c0, c1
 
 
-def carve_water(out, T, p, level):
+def carve_water(out, T, p, level, reaches=None):
     """In place: a shelving bed under the water (BED_* below the level), the shoreline band at the level, and a berm so
-    no land inside the plane's outset lies below the water (it would show the plane = spilled water)."""
+    no land inside the plane's outset lies below the water (it would show the plane = spilled water). A body cut in
+    several `reaches` (water_reaches) is carved at each cell's own level (carve_reaches)."""
+    if reaches is not None and len(reaches) > 1:
+        return carve_reaches(out, T, p, reaches)
     from rasterio.features import rasterize
     from rasterio.windows import Window, transform as wtransform
     r0, r1, c0, c1 = _window(T, out.shape, p.bounds, PLANE_OUTSET + 2.0)
@@ -162,6 +225,37 @@ def carve_water(out, T, p, level):
     sub[inside] = bed[inside]
     sub[shore] = level - BED_SHORE
     sub[berm] = np.maximum(sub[berm], level + BERM)
+    return out
+
+
+def carve_reaches(out, T, p, reaches):
+    """carve_water for a body cut in reaches: the bed deepens from the body's own shore (no ridge where reaches meet)
+    below each cell's reach level; the shoreline band takes the level of the reach nearest it; the berm keeps the land
+    under every reach's WaterPlane outset (water_planes) above the highest plane over it."""
+    from rasterio.features import rasterize
+    from rasterio.windows import Window, transform as wtransform
+    r0, r1, c0, c1 = _window(T, out.shape, p.bounds, PLANE_OUTSET + 2.0)
+    if r1 <= r0 or c1 <= c0:
+        return out
+    tw = wtransform(Window(c0, r0, c1 - c0, r1 - r0), T)
+    sh = (r1 - r0, c1 - c0)
+    sub = out[r0:r1, c0:c1]
+    burn = lambda g: rasterize([(g, 1)], out_shape=sh, transform=tw, fill=0, dtype="uint8").astype(bool)
+    inside = burn(p)
+    shore = burn(p.buffer(0.3)) & ~inside
+    berm = burn(p.buffer(PLANE_OUTSET + 0.5)) & ~inside & ~shore
+    lab = rasterize([(r, i + 1) for i, (r, _) in enumerate(reaches)], out_shape=sh, transform=tw, fill=0, dtype="int32")
+    levels = np.array([0.0] + [lv for _, lv in reaches])
+    iy, ix = ndimage.distance_transform_edt(lab == 0, return_distances=False, return_indices=True)
+    lvl = levels[lab[iy, ix]]
+    top = lvl.copy()
+    for g, lv in sorted(water_planes(p, reaches, out, T), key=lambda x: x[1]):
+        m = burn(g.buffer(0.5)); top[m] = np.maximum(top[m], lv)
+    d = ndimage.distance_transform_edt(inside) * abs(T.a)
+    bed = lvl - np.minimum(BED_MAX, BED_SHORE + BED_SLOPE * d)
+    sub[inside] = bed[inside]
+    sub[shore] = lvl[shore] - BED_SHORE
+    sub[berm] = np.maximum(sub[berm], top[berm] + BERM)
     return out
 
 

@@ -385,8 +385,8 @@ def blended_dem(dem, T, feats):
     # water: a flat water level per body (lowest ~20 % of the shoreline); under it a shelving bed (OPCD Water_Base),
     # and the banks inside the WaterPlane's outset kept above the water
     import edges
-    for p, level, _ in edges.water_levels(feats, dem, T):
-        edges.carve_water(out, T, p, level)
+    for p, reaches, _ in edges.water_bodies(feats, dem, T):
+        edges.carve_water(out, T, p, reaches[0][1], reaches)
     return out
 
 
@@ -439,9 +439,9 @@ def main(features_path=None):
     dem, T = height_field()
     demb = blended_dem(dem, T, feats0)
     # water planes (flat, outset under the banks) for the export
-    planes = [{"hole": int(h), "level": round(lv, 3), "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in
-               edges.water_plane_polygon(p, demb, T, lv).exterior.coords]}
-              for p, lv, h in edges.water_levels(feats0, dem, T) if p.area >= 20]
+    planes = [{"hole": int(h), "level": round(lv, 3), "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]}
+              for p, reaches, h in edges.water_bodies(feats0, dem, T) if p.area >= 20
+              for g, lv in edges.water_planes(p, reaches, demb, T)]
     json.dump(planes, open(C.BUILD / "water_planes.json", "w"))
     H, W = dem.shape
     del dem   # the vertices are sampled from demb
