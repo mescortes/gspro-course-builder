@@ -420,6 +420,15 @@ def split_shared_fairways(fairways, lines, min_part=None, step=2.0, min_run=None
     return out
 
 
+def is_court(t):
+    """OSM tags of a sports pitch or a tennis court (the court surface). A golf feature mapped as a pitch is not one:
+    Deer Ridge maps hole 1's green and four tees golf=green / golf=tee + leisure=pitch + sport=golf, and a court erases
+    the greens and tees under it."""
+    if "golf" in t or t.get("sport") == "golf":
+        return False
+    return t.get("leisure") == "pitch" or t.get("sport") == "tennis"
+
+
 def osm_vectors(G):
     """OSM-authoritative non-golf surfaces ({road, building, court, water: [polygons]}), the service roads and tracks
     that run inside the golf course, which are cart paths (GSPro surface: cart path, hole 98), and the course area.
@@ -440,7 +449,7 @@ def osm_vectors(G):
     vector = {
         "road": [g for g in roads if g.geom_type in ("Polygon", "MultiPolygon")],
         "building": [g for g in osm(lambda t: "building" in t) if g.geom_type in ("Polygon", "MultiPolygon")],
-        "court": [g for g in osm(lambda t: t.get("leisure") in ("pitch",) or t.get("sport") == "tennis") if g.geom_type in ("Polygon", "MultiPolygon")],
+        "court": [g for g in osm(is_court) if g.geom_type in ("Polygon", "MultiPolygon")],
         "water": [g for g in osm(lambda t: t.get("leisure") == "swimming_pool" or is_water(t))
                   if g.geom_type in ("Polygon", "MultiPolygon")],
     }

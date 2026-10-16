@@ -557,3 +557,26 @@ def test_a_fairway_split_survives_voronoi_cells_on_an_exact_lattice():
     lines = {4: LineString([(0, -20), (0, 320)]), 9: LineString([(-150, 150), (49, 150)])}
     out = V.split_shared_fairways([fw], lines, min_run=30.0)
     assert abs(sum(p.area for p, _ in out) - fw.area) < 1.0 and {h for _, h in out} <= {4, 9}
+
+
+def test_golf_features_mapped_as_pitches_are_not_courts():
+    """Deer Ridge's OSM maps hole 1's green and four tees golf=green / golf=tee + leisure=pitch + sport=golf. Every
+    leisure=pitch was a court, and courts erase the greens and tees under them: hole 1 had no green ("no green polygon
+    assigned"). A golf feature (any golf=* tag, or sport=golf) is not a court; sports pitches and tennis courts are."""
+    from shapely.geometry import Point, box
+    from shapely.ops import unary_union
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 400, 400)),
+         (2, {"golf": "green", "landuse": "grass", "leisure": "pitch", "sport": "golf"}, box(10, 10, 40, 40)),
+         (3, {"golf": "tee", "landuse": "grass", "leisure": "pitch", "sport": "golf"}, box(100, 10, 110, 20)),
+         (4, {"leisure": "pitch", "sport": "golf"}, box(150, 10, 170, 30)),              # a practice green
+         (5, {"leisure": "pitch", "sport": "tennis"}, box(10, 100, 34, 111)),
+         (6, {"leisure": "pitch", "sport": "baseball"}, box(100, 100, 180, 180)),
+         (7, {"leisure": "pitch"}, box(200, 100, 230, 130)),
+         (8, {"sport": "tennis", "amenity": "community_centre"}, box(300, 100, 320, 130))]
+    vector, _, _ = V.osm_vectors(G)
+    courts = unary_union(vector["court"])
+    for p in ((25, 25), (105, 15), (160, 20)):
+        assert not courts.contains(Point(p)), p
+    for p in ((20, 105), (140, 140), (215, 115), (310, 115)):
+        assert courts.contains(Point(p)), p
+    assert len(vector["court"]) == 4
