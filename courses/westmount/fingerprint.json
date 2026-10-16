@@ -1,8 +1,8 @@
 {
  "course": "westmount",
- "created": "2026-10-16T10:50:18+00:00",
+ "created": "2026-10-16T14:45:38+00:00",
  "build": {
-  "commit": "ae6ef4d68c53f9b6886a3d97a0179e649b5d6afd",
+  "commit": "57c58804bd944e7131043f6fe9201648328ceda6",
   "dirty": []
  },
  "env": {
@@ -625,9 +625,9 @@
    "bytes": 377487488
   },
   "FEATURES/auto_core.geojson": {
-   "sha256": "535812fff6d8808836e3fa931896661ff504070681ca2aed02225a32dbdc674d",
+   "sha256": "6b63b3191e0f6722e820c6ad5c7ccdf092338f46b33650ffd5f15dc8768a360c",
    "kind": "bytes",
-   "bytes": 36903846,
+   "bytes": 36903836,
    "summary": {
     "features": 2550,
     "by_surface": {
@@ -691,9 +691,9 @@
    }
   },
   "FEATURES/course_surfaces.geojson": {
-   "sha256": "cd3a83af541beff19237e0710df2c97e38cc54b3e94e411975bff56c1624a83a",
+   "sha256": "4323be09e8c56ecd4212c8f9b6600a899f64be0b6f1e0a63f39467f983057d19",
    "kind": "bytes",
-   "bytes": 36203968,
+   "bytes": 36203948,
    "core": true,
    "summary": {
     "features": 2720,
@@ -1284,9 +1284,9 @@
    "bytes": 77811879
   },
   "BUILD/terrain_mesh.npz": {
-   "sha256": "a65bad1ef20890ff5ccd674edb6383200515c5f2316a69ef89ea10c8cf0cec86",
+   "sha256": "39bd149b576eff4ce7ae7c570be8cc698d4c75f4bcedc9cdaa21d47943d8c769",
    "kind": "arrays",
-   "bytes": 55857748
+   "bytes": 55860407
   },
   "BUILD/water_planes.json": {
    "sha256": "51c5c0c8bc6e23c0c757e6a272e426e970fbd510161331132c8a8f08f2ed33e9",
@@ -1324,9 +1324,9 @@
    "bytes": 10254516
   },
   "BUILD/backdrop_mesh.npz": {
-   "sha256": "d5baf8892ae1484a52a2e4785ad44ca8b9a3fec6d7141b62819f2a98cce98bf1",
+   "sha256": "302dc3bb898303a15cc1cd9f9e3133b52d5d8ee7be82322287c762af4b8fe461",
    "kind": "arrays",
-   "bytes": 6110862
+   "bytes": 6121763
   },
   "OUTPUT/holes.json": {
    "sha256": "4c64a27c52237ec6ffa2f8ca7e471fc8ae4654bc9a0203f4280294061ff948bc",
@@ -1519,20 +1519,20 @@
    }
   },
   "OUTPUT/westmount.glb": {
-   "sha256": "cdf5fa445e10d79eaf3ba6f47cfc5c25cd2ed698733154247982590edfb21ca1",
+   "sha256": "3d0c7374be079ca1a17830de548a1e2f41b08600eb15dfbe4e178e2e0024e928",
    "kind": "bytes",
-   "bytes": 299864088,
+   "bytes": 299911124,
    "core": true,
    "summary": {
-    "nodes": 3239,
-    "meshes": 1287,
+    "nodes": 3247,
+    "meshes": 1295,
     "materials": 56,
     "textures": 75,
     "images": 73,
-    "accessors": 18436,
-    "primitives": 2525,
-    "vertices": 3531738,
-    "triangles": 5817078,
+    "accessors": 18484,
+    "primitives": 2533,
+    "vertices": 3532370,
+    "triangles": 5818064,
     "instances": 47095,
     "node_names": {
      "Backdrop_Buildings": 1,
@@ -1560,7 +1560,8 @@
      "Hole#_GreenFringe": 19,
      "Hole#_Pinestraw_t#_#": 17,
      "Hole#_Rough_t#_#": 30,
-     "Hole#_SemiRough_t#_#": 13,
+     "Hole#_SemiRough": 16,
+     "Hole#_SemiRough_t#_#": 5,
      "Hole#_Tee": 18,
      "Hole#_TeeMarkers_blue": 18,
      "Hole#_TeeMarkers_gold": 18,
@@ -1594,24 +1595,24 @@
      "VegetationLOD#": 1,
      "Westmount_GandCC": 1
     },
-    "json_sha256": "dac733da99c6d64bd2b309030c39a4b85851a13a671e084a93b69e77353bc052",
-    "bin_sha256": "0596b8cb1d69f6818e40b182a1a71a4cfffad8e4c1e17d9949f662dafd7ab294"
+    "json_sha256": "78461ea04d21688d39e2112527fba6465e4a3eba8bae49df19a086d161a8c90d",
+    "bin_sha256": "3c40369515a94a21c82442449d5d062e00365dcf4617a0d80dd885bb1201ecb1"
    }
   },
   "OUTPUT/westmount_noveg.glb": {
-   "sha256": "d6a5f4bc739ea45b54466e998183e2bb2b41fa26b408e660957eb931c90f2224",
+   "sha256": "7c900e209b5428bb6639169326a8bf1b974baf7d22afd0f1f82b558669f0823f",
    "kind": "bytes",
-   "bytes": 281033428,
+   "bytes": 281080464,
    "summary": {
-    "nodes": 1239,
-    "meshes": 1212,
+    "nodes": 1247,
+    "meshes": 1220,
     "materials": 46,
     "textures": 58,
     "images": 56,
-    "accessors": 11767,
-    "primitives": 2390,
-    "vertices": 3321294,
-    "triangles": 5644324,
+    "accessors": 11815,
+    "primitives": 2398,
+    "vertices": 3321926,
+    "triangles": 5645310,
     "instances": 14896,
     "node_names": {
      "Backdrop_Buildings": 1,
@@ -1639,7 +1640,8 @@
      "Hole#_GreenFringe": 19,
      "Hole#_Pinestraw_t#_#": 17,
      "Hole#_Rough_t#_#": 30,
-     "Hole#_SemiRough_t#_#": 13,
+     "Hole#_SemiRough": 16,
+     "Hole#_SemiRough_t#_#": 5,
      "Hole#_Tee": 18,
      "Hole#_TeeMarkers_blue": 18,
      "Hole#_TeeMarkers_gold": 18,
@@ -1656,8 +1658,8 @@
      "Terrain": 1,
      "Westmount_GandCC": 1
     },
-    "json_sha256": "5cbee6ea4de8ce9e858680b80f6dec1a2fabb1e369e518aeee0cedd7c7485953",
-    "bin_sha256": "e7b1221408c0511d927f74ef13104efd6bbe4418c93a6f95bf67d7f9a0455510"
+    "json_sha256": "320410802758ca3f2a217217224362677c1af8c8cb40c702269aaa99cc3ff6e7",
+    "bin_sha256": "9f38fe09235db69794148e7a6a97cc2268829f2a2e479cd7da39e193c60b000b"
    }
   },
   "OUTPUT/gspro/heightmap_4097.raw": {
@@ -1687,32 +1689,32 @@
    }
   },
   "OUTPUT/gspro/backdrop.fbx": {
-   "sha256": "b72994ef08338f3d5b353394761779b89f5164f37a3cb4d085b1d6db4f759a77",
+   "sha256": "a8b2175fe29e512b39d7174589ce1fbea0a0e8168f3f72ac444a46db1c250aae",
    "kind": "bytes",
-   "bytes": 14629484,
+   "bytes": 14636380,
    "enforced": false
   },
   "OUTPUT/gspro/course.blend": {
-   "sha256": "802e3cc04bf76f07cb09b20a4cb3d8ac9adca951cc90a9e6fc61b9552111bd28",
+   "sha256": "c8acd115f2cd58487d3a1d26ce535646a86e45a6ebae422562d142eff7e8d4ec",
    "kind": "bytes",
-   "bytes": 326872627,
+   "bytes": 326971576,
    "enforced": false
   },
   "OUTPUT/gspro/course_meshes.fbx": {
-   "sha256": "bae4ff87dac9693eb828c535cfaa40c261a6756c912bfeaaf8108e56b50729a6",
+   "sha256": "0fc143c42e11b7b96fab4d3c11138b043646c9e6c6413be54e88d4d6f51906de",
    "kind": "bytes",
-   "bytes": 144012988,
+   "bytes": 144072812,
    "enforced": false
   },
   "OUTPUT/gspro/course_opcd.svg": {
-   "sha256": "db0183e6604f6ab659e1c62a1ba78ab92edabdf33400bdd19254dcca7bbab812",
+   "sha256": "0477998cad7cf548729842f931ee5a156fd8ed0c76392a7f9f8bea001af88ff7",
    "kind": "bytes",
-   "bytes": 1339421
+   "bytes": 1339359
   },
   "OUTPUT/gspro/fbx_manifest.json": {
-   "sha256": "1a0f33c3f6f4dfa62fdc9b581f76dab5c64e31a167097ffcc63f2b57c4a1d2f8",
+   "sha256": "b88dbc1289118e74a3ac88f22d944f645c48a6a5a0ea9e600cd13dc306d60dff",
    "kind": "bytes",
-   "bytes": 166881
+   "bytes": 167923
   },
   "OUTPUT/gspro/grass_3dg.json": {
    "sha256": "95f65dfab57e73cfa1b56a461ab9062701bf8675ab9b982cc0dbdc153bf47da9",
@@ -1750,9 +1752,9 @@
    "bytes": 18266805
   },
   "OUTPUT/gspro/structures.fbx": {
-   "sha256": "bc413c700120283767a55259f1346065eb8c4f454073cde6b12591d0984467cd",
+   "sha256": "3406c7186aa22ac5d89d5f446cdddd0d6f5484e92967ffabafb151cc90bb7419",
    "kind": "bytes",
-   "bytes": 42663068,
+   "bytes": 42663276,
    "enforced": false
   },
   "OUTPUT/gspro/terrain.json": {
@@ -2041,9 +2043,9 @@
    "bytes": 2589812
   },
   "OUTPUT/gspro/tree_prefabs.fbx": {
-   "sha256": "cb25be68ffe9afc883371de51bc3108fd9a78f4a1b9635db454030a5d1158739",
+   "sha256": "16fd52a1674b1b270a08d545683b50275ad6afe192ac636e5c3313363e22ba8e",
    "kind": "bytes",
-   "bytes": 9982972,
+   "bytes": 9983244,
    "enforced": false
   },
   "OUTPUT/gspro/tree_prefabs.glb": {
