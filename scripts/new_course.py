@@ -52,46 +52,104 @@ def utm_crs(lon, lat, datum, template=None):
         "[scaffold] crs to an EPSG code or a name with {zone} / {hemisphere} (e.g. \"GDA2020 / MGA zone {zone}\").")
 
 
-def check_frame_crs(crs, lon=None, lat=None):
-    """`crs` as EPSG:<code>, or exit: the engine reads every course coordinate as metres east / north and names the
-    frame by its EPSG code (the photo request, the feature files' crs). With the course's lon / lat, the grid's metres
-    must also be ground metres there, within MAX_SCALE_ERROR."""
-    from pyproj import CRS, Proj
-    from pyproj.exceptions import CRSError
-    where = f"frame CRS {crs} (--crs or the region's [scaffold] crs)"
+def zone_crs(zone, lat, datum, template=None):
+    """'EPSG:<code> (<name>)' of `datum` / UTM zone `zone` (or the region's [scaffold] crs name template, as utm_crs)
+    for messages, or None: EPSG names no such CRS, or the template is a fixed code."""
+    from pyproj.database import query_crs_info
+    from pyproj.enums import PJType
+    if template and template.upper().startswith("EPSG:"):
+        return None
+    name = (template or "{datum} / UTM zone {zone}{hemisphere}").format(datum=datum, zone=zone,
+                                                                        hemisphere="N" if lat >= 0 else "S")
+    return next((f"EPSG:{c.code} ({c.name})" for c in query_crs_info(auth_name="EPSG", pj_types=PJType.PROJECTED_CRS)
+                 if c.name == name and not c.deprecated), None)
+
+
+def neighbour_zone(lon, zone):
+    """The UTM zone across the boundary of `zone` nearer to lon (zones 60 and 1 are neighbours)."""
+    return zone % 60 + 1 if lon > (zone - 1) * 6 - 177 else (zone - 2) % 60 + 1
+
+
+FRAME_FIX = "use the course's UTM zone or the national metre grid the LiDAR is delivered in"
+
+
+def frame_crs_problems(crs, lon=None, lat=None, xy=None, where=None, fix=FRAME_FIX, set_as="--crs {}"):
+    """([message], None) when `crs` cannot be the course frame, else ([], "EPSG:<code>"). The engine reads every course
+    coordinate as metres east / north and names the frame by its EPSG code (the photo request, the feature files'
+    crs). At the course (lon / lat, or xy: a point in `crs`) the grid's metres must also be ground metres, within
+    MAX_SCALE_ERROR. where names the CRS and where it came from, fix says what to do instead and set_as how a CRS is
+    given ("--crs {}" here, check_course.py: course.toml [frame] crs = "{}")."""
+    from pyproj import CRS, Proj, Transformer
+    from pyproj.exceptions import CRSError, ProjError
+    where = where or f"frame CRS {crs}"
     try:
         c = CRS(crs)
     except CRSError:
-        sys.exit(f"{where}: not a CRS pyproj knows (an EPSG code such as EPSG:2958)")
+        return [f"{where}: not a CRS pyproj knows (an EPSG code such as EPSG:2958): {fix}"], None
     if c.is_compound:
         h = c.sub_crs_list[0].to_epsg()
-        sys.exit(f"{where} ({c.name}) is a compound CRS (position and heights): the frame is the horizontal part"
-                 + (f", --crs EPSG:{h}" if h else "") + " (the heights stay as the LiDAR gives them)")
+        return [f"{where} ({c.name}) is a compound CRS (position and heights): the frame is the horizontal part"
+                + (f", {set_as.format(f'EPSG:{h}')}" if h else "") + " (the heights stay as the LiDAR gives them)"], None
     if not c.is_projected:
-        sys.exit(f"{where} ({c.name}) is not a projected CRS: the course frame is a map grid in metres")
+        return [f"{where} ({c.name}) is not a projected CRS: the course frame is a map grid in metres: {fix}"], None
     if any(a.unit_conversion_factor != 1.0 for a in c.axis_info):
         units = sorted({a.unit_name for a in c.axis_info})
-        sys.exit(f"{where} ({c.name}) is in {', '.join(units)}: the engine reads the frame as metres, so use a "
-                 "metre CRS of the same datum (a UTM zone or the national metre grid) and reproject the LiDAR to it")
-    fix = ("use the course's UTM zone (leave out --crs: new_course.py picks the region datum's zone) or the national "
-           "metre grid the LiDAR is delivered in")
+        here = zone_crs(int((lon + 180) // 6) + 1, lat, c.name.split(" / ")[0]) if lon is not None else None
+        todo = "leave out --crs (new_course.py picks the region datum's UTM zone)" if fix is FRAME_FIX else fix
+        return [f"{where} ({c.name}) is in {', '.join(units)}: the course frame must be a metre grid (the engine reads "
+                "every course coordinate as metres). LiDAR delivered in feet or in another zone is reprojected as it is "
+                f"read, so frame the course in a metre CRS of the same datum: {todo}" + (f"; here {here}" if here else "")], None
+    if lon is None and xy is not None:
+        try:
+            lon, lat = Transformer.from_crs(c, "EPSG:4326", always_xy=True).transform(*xy)
+        except ProjError:
+            lon = lat = float("inf")
+        if not (math.isfinite(lon) and math.isfinite(lat)):
+            return [f"{where} ({c.name}): the frame's centre E {xy[0]:.0f} N {xy[1]:.0f} is not a place on this grid: "
+                    f"{fix}"], None
     method = (c.coordinate_operation.method_name if c.coordinate_operation else "").lower()
     if "pseudo mercator" in method or ("mercator" in method and "spherical" in method):
-        sys.exit(f"{where} ({c.name}) is Web Mercator, a map-tile projection whose metres are not ground metres "
-                 f"(a metre on the ground is 1.38 of its metres at 43 N): {fix}")
+        at = (f"a metre on the ground is {1 / math.cos(math.radians(lat)):.2f} of its metres at {abs(lat):.1f} "
+              f"{'N' if lat >= 0 else 'S'}" if lat is not None else
+              "a metre on the ground is 1/cos(latitude) of its metres: 1.15 at 30 degrees, 1.41 at 45")
+        return [f"{where} ({c.name}) is Web Mercator, a map-tile projection whose metres are not ground metres "
+                f"({at}): {fix}"], None
     code = c.to_epsg()
     if code is None:
-        sys.exit(f"{where} ({c.name}) has no EPSG code: the engine names the frame EPSG:<code>, so pass the EPSG code "
-                 "of this CRS (--crs EPSG:<code>)")
+        return [f"{where} ({c.name}) has no EPSG code: the engine names the frame EPSG:<code>, so give the EPSG code "
+                f"of this CRS ({set_as.format('EPSG:<code>')})"], None
     if lon is not None and lat is not None:
         f = Proj(c).get_factors(lon, lat)
         k = max((f.meridional_scale, f.parallel_scale), key=lambda s: abs(s - 1))
         if not math.isfinite(k):
-            sys.exit(f"{where} ({c.name}) does not reach the course at {lon:.4f}, {lat:.4f}: {fix}")
+            return [f"{where} ({c.name}) does not reach the course at {lon:.4f}, {lat:.4f}: {fix}"], None
         if abs(k - 1) > MAX_SCALE_ERROR:
-            sys.exit(f"{where} ({c.name}): a metre on the ground is {k:.4f} of its metres at the course "
-                     f"({abs(k - 1):.1%} off: a 400-yard hole would measure {400 * k:.0f} yards): {fix}")
-    return f"EPSG:{code}"
+            return [f"{where} ({c.name}): a metre on the ground is {k:.4f} of its metres at the course "
+                    f"({abs(k - 1):.2%} off, {MAX_SCALE_ERROR:.1%} at most: a 400-yard hole would measure "
+                    f"{400 * k:.0f} yards): {fix}"], None
+    return [], f"EPSG:{code}"
+
+
+def check_frame_crs(crs, lon=None, lat=None, where=None, fix=FRAME_FIX):
+    """`crs` as EPSG:<code>, or exit with what frame_crs_problems() finds wrong with it."""
+    p, code = frame_crs_problems(crs, lon, lat, where=where, fix=fix)
+    if p:
+        sys.exit(p[0])
+    return code
+
+
+def frame_crs_source(a_crs, sc, region_name, crs):
+    """(where, fix) for check_frame_crs: the frame CRS named with where it came from (--crs, the region's [scaffold]
+    crs, or the region datum's UTM zone), and the way out for that source."""
+    datum, grid = sc["datum"], "the course's UTM zone or the national metre grid the LiDAR is delivered in"
+    if a_crs:
+        return (f"--crs {a_crs}", f"leave out --crs (new_course.py then takes the {datum} UTM zone of "
+                "the course), or pass the national metre grid the LiDAR is delivered in")
+    if sc.get("crs"):
+        return (f"frame CRS {crs} (regions/{region_name}.toml [scaffold] crs = {sc['crs']!r})",
+                f"fix regions/{region_name}.toml [scaffold] crs (without it new_course.py takes the {datum} UTM zone "
+                f"of the course), or give this course's frame with --crs EPSG:<code>: {grid}")
+    return f"frame CRS {crs} (the {datum} UTM zone of the course)", f"give the frame with --crs EPSG:<code>: {grid}"
 
 
 def frame(outline_xy, median_ground):
@@ -294,20 +352,26 @@ def discover_sources(sc, fr, bbox_ll, crs, zone):
     provider, notes = sc["lidar"]["provider"], []
     if provider == "nrcan_copc":
         province = sc["lidar"]["province"]
+        lon, lat = (bbox_ll[0] + bbox_ll[2]) / 2, (bbox_ll[1] + bbox_ll[3]) / 2
+        code = lambda z: zone_crs(z, lat, sc["datum"], sc.get("crs")) or f"that zone's {sc['datum']} / UTM EPSG code"
         if zone is None:  # tile names are the tiles' UTM coordinates in their zone, read from the frame's
+            own = int((lon + 180) // 6) + 1
             sys.exit(f"frame CRS {crs} is not a UTM zone, but NRCan names its 1 km tiles by UTM zone and their "
-                     f"coordinates in that zone: the frame must be a {sc['datum']} / UTM zone CRS (leave --crs out for "
-                     "the course's own zone, or pass the neighbouring zone's EPSG code)")
+                     f"coordinates in that zone: the frame must be a {sc['datum']} / UTM zone CRS. Leave out --crs (and "
+                     f"the region's [scaffold] crs) for the course's own zone, {code(own)}; near a zone boundary the "
+                     f"project may be delivered in the neighbouring zone: --crs {code(neighbour_zone(lon, own))}")
         projects = nrcan_projects(fr["core"], zone, province)
         if not projects:
             sys.exit(f"no NRCan point-cloud folder under pointclouds_nuagespoints/{province}/ holds the course's 1 km "
                      f"tiles (zone {zone}): check --osm / --bbox, or the region's [scaffold] lidar; near a zone "
-                     f"boundary the project may be delivered in the neighbouring zone: --crs with that zone's "
-                     f"{sc['datum']} / UTM EPSG code")
+                     f"boundary the project may be delivered in the neighbouring zone: --crs "
+                     f"{code(neighbour_zone(lon, zone))}")
         lidar = {"provider": "nrcan_copc", "zone": zone, "projects": projects}
-        dtm = [sc["backdrop"]["url"].format(province=province, project=p["folder"].split("/", 1)[1], kind="dtm")
-               for p in projects]
-        backdrop = {"provider": "cog_dem", "dtm": dtm, "dsm": [u.replace("-1m-dtm.tif", "-1m-dsm.tif") for u in dtm]}
+        # [scaffold] backdrop url names a project's 1 m DTM ({kind} = dtm) and its DSM ({kind} = dsm)
+        url = lambda p, kind: sc["backdrop"]["url"].format(province=province, project=p["folder"].split("/", 1)[1],
+                                                           kind=kind)
+        dtm = [url(p, "dtm") for p in projects]
+        backdrop = {"provider": "cog_dem", "dtm": dtm, "dsm": [url(p, "dsm") for p in projects]}
         notes.append("LiDAR folders: " + ", ".join(p["folder"] for p in projects) +
                      " (folder names do not tell the flight date: read the points' GPS times)")
     elif provider == "usgs_3dep":
@@ -355,7 +419,8 @@ def main(argv=None):
     else:
         sys.exit("--osm or --bbox")
     lon = sum(p[0] for p in ll) / len(ll); lat = sum(p[1] for p in ll) / len(ll)
-    crs = check_frame_crs(a.crs or utm_crs(lon, lat, sc["datum"], sc.get("crs")), lon, lat)
+    crs = a.crs or utm_crs(lon, lat, sc["datum"], sc.get("crs"))
+    crs = check_frame_crs(crs, lon, lat, *frame_crs_source(a.crs, sc, a.region, crs))
     from pyproj import CRS, Transformer
     tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
     xy = [tr.transform(*p) for p in ll]

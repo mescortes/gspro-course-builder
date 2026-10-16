@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "middle": [
+   536858.8,
+   4291198.7
+  ]
+ },
+ "notes": "Middle tee marker moved off the bank onto the level deck. The automatic marker (E 536855.17 N 4291200.42, next to the 18Birdies point E 536854.91 N 4291198.36) sits 1.7 m inside the west edge of the 13th back/middle deck, on the bank down to the meadow: dem_raw plane slope 9.6 % (dem_final 9.1 %), a cross slope to the line of play. Pinned 4 m east, across the line of play on the same yardage arc: E 536858.8 N 4291198.7, z 300.50, slope 1.1 %, 2.1 m inside the pad, 478.0 yd via the aim point E 536761.68 N 4291005.51 (card 478). Back stays automatic (1.4 %)."
+}

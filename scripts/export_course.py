@@ -51,6 +51,7 @@ OBJECT = {"wateredge": "Water_Base", "road": "Concrete_Road", "court": "Custom1_
 # MeshCollider / 3DG cost and is never culled (research/GSPRO_COSMETICS.md 3.1)
 TILED = ("rough", "semirough", "deeprough", "native")
 TINT_FROM = {"bunkerlip": "rough"}   # photo colour source for surfaces with no polygons of their own
+LENT = "lent"   # add_terrain: a TINT_FROM source whose map is gone, its borrowers' colours sampled already
 SHADE = {"bunkerlip": 0.82}          # vertex-colour multiplier (the lip face is in shadow)
 TEX_SIZE = 2048
 CACHE = C.BUILD / "tex_cache"
@@ -95,12 +96,21 @@ def grid_arrays():
     return W, H, T
 
 
+IMG_ROWS = 256  # photo rows converted to linear colour at a time
+
+
 def imagery_linear(W, H):
+    """The course photo over the build extent, (H, W, 3) linear float32, a plane per channel in memory (the layout
+    converting the whole (3, H, W) read at once gave: img @ weights and the turf statistics depend on it). Converted
+    IMG_ROWS rows at a time: the whole image's sRGB curve took four more image-sized float32 arrays."""
     e = C.CORE
     with rasterio.open(C.IMAGERY) as ds:
         a = ds.read([1, 2, 3], window=from_bounds(e["xmin"], e["ymin"], e["xmax"], e["ymax"], transform=ds.transform),
                     out_shape=(3, H, W), resampling=Resampling.average)
-    return srgb_to_lin(np.moveaxis(a, 0, -1).astype(np.float32) / 255)
+    img = np.moveaxis(np.empty((3, H, W), np.float32), 0, -1)
+    for r0 in range(0, H, IMG_ROWS):
+        img[r0:r0 + IMG_ROWS] = srgb_to_lin(np.moveaxis(a[:, r0:r0 + IMG_ROWS], 0, -1).astype(np.float32) / 255)
+    return img
 
 
 def open_mask(W, H):
@@ -117,30 +127,60 @@ def blur(a, sigma):
     f = int(max(2, sigma // 3))
     H, W = a.shape
     Hp, Wp = -(-H // f) * f, -(-W // f) * f
-    ap = np.pad(a, ((0, Hp - H), (0, Wp - W)), mode="edge")
+    # padded to whole blocks (an image of whole blocks is averaged as it is: no image-sized copy)
+    ap = a if (Hp, Wp) == (H, W) else np.pad(a, ((0, Hp - H), (0, Wp - W)), mode="edge")
     small = ap.reshape(Hp // f, f, Wp // f, f).mean((1, 3))
     small = ndimage.gaussian_filter(small, sigma / f)
     up = ndimage.zoom(small, f, order=1)[:H, :W]
     return up
 
 
+def pick(a, m):
+    """a[m] for an (H, W, k) image and an (H, W) mask, a channel at a time: the same pixels in the same order. Indexing
+    with the 2-D mask itself makes numpy build two int64 index arrays first, 16 bytes per selected pixel."""
+    out = np.empty((np.count_nonzero(m), a.shape[-1]), a.dtype)
+    for c in range(a.shape[-1]):
+        out[:, c] = a[..., c][m]
+    return out
+
+
+def put(a, m, v):
+    """a[m] = v (v: one row per selected pixel), a channel at a time (see pick)."""
+    for c in range(a.shape[-1]):
+        a[..., c][m] = v[:, c]
+
+
 GRASS = {"green", "fringe", "fairway", "tee", "semirough", "rough"}
 NO_TINT = {"water", "wateredge"}  # keep their texture colour (the photo shows the water surface, not the bed)
 
 
+LAB_CHUNK = 1 << 20  # turf pixels per Lab round trip in constrain_grass
+
+
+def lab_chunks(n, size):
+    """(start, stop) chunks of range(n): starts at whole multiples of `size`, the last chunk taking the remainder (a
+    chunk is never shorter than `size` unless n is). skimage's colour conversions are matrix products, and a BLAS
+    call can give other bits for the rows it leaves over (Accelerate: an odd last row); chunks like these leave over
+    the same rows as one call over all n."""
+    starts = list(range(0, max(n - size, 0) + 1, size))
+    return list(zip(starts, starts[1:] + [n]))
+
+
 def constrain_grass(res, samples, m):
     """Keep turf tints inside a plausible grass gamut around the surface's median colour (Lab), so paths, dirt,
-    shadows or sand that leak into the photo statistics cannot turn turf grey/pink."""
+    shadows or sand that leak into the photo statistics cannot turn turf grey/pink. Overwrites and returns `res`; the
+    Lab round trip goes LAB_CHUNK pixels at a time (lab_chunks), each pixel's as in one pass over all of them."""
     from skimage.color import rgb2lab, lab2rgb
     med = rgb2lab(lin_to_srgb(np.median(samples, 0))[None, None, :])[0, 0]
-    sub = res[m]
-    lab = rgb2lab(lin_to_srgb(sub)[None])[0]
-    lab[:, 0] = np.clip(lab[:, 0], med[0] - 14, med[0] + 12)
-    lab[:, 1] = np.clip(lab[:, 1], med[1] - 7, min(med[1] + 6, -6))   # stay green (a* negative)
-    lab[:, 2] = np.clip(lab[:, 2], med[2] - 8, med[2] + 9)
-    out = res.copy()
-    out[m] = srgb_to_lin(lab2rgb(lab[None])[0])
-    return out
+    sub = pick(res, m)
+    for a, b in lab_chunks(len(sub), LAB_CHUNK):
+        lab = rgb2lab(lin_to_srgb(sub[a:b])[None])[0]
+        lab[:, 0] = np.clip(lab[:, 0], med[0] - 14, med[0] + 12)
+        lab[:, 1] = np.clip(lab[:, 1], med[1] - 7, min(med[1] + 6, -6))   # stay green (a* negative)
+        lab[:, 2] = np.clip(lab[:, 2], med[2] - 8, med[2] + 9)
+        sub[a:b] = srgb_to_lin(lab2rgb(lab[None])[0])
+    put(res, m, sub)
+    return res
 
 
 def tint_for_surface(s, gs, img, Y, openm, W, H, T):
@@ -167,27 +207,30 @@ def tint_for_surface(s, gs, img, Y, openm, W, H, T):
     for k, sg in enumerate((sigma0, sigma0 * 3, sigma0 * 10, sigma0 * 40, sigma0 * 160)):
         den = blur(vf, sg)
         ok = (den > (0.25 if k == 0 else 0.02)) & ~filled & near_m
-        if not ok.any():
-            continue
-        for c in range(3):
-            num = blur(img[..., c] * vf, sg)
-            res[..., c][ok] = (num[ok] / den[ok])
-        filled |= ok
-    samples = img[valid]
+        if ok.any():
+            for c in range(3):
+                num = blur(img[..., c] * vf, sg)
+                res[..., c][ok] = (num[ok] / den[ok])
+                del num   # each blur's grids are freed before the next one is made
+            filled |= ok
+        del den, ok
+    del vf, near_m
+    samples = pick(img, valid)
     if not filled.all():
-        res[~filled] = np.median(samples, 0)
+        np.copyto(res, np.median(samples, 0), where=~filled[..., None])
     if s in GRASS:
         res = constrain_grass(res, samples, m)
-    stats = np.percentile(res[m], [50, 95], axis=0)
+    stats = np.percentile(pick(res, m), [50, 95], axis=0, overwrite_input=True)   # sorts its own copy of the pixels
     print(f"tint {s}: valid {valid.sum()} px, median {np.round(lin_to_srgb(stats[0]) * 255).astype(int)}", flush=True)
     return res, stats
 
 
-def season_grade(tint, stats, target_srgb):
-    """Move a surface's median tint to target_srgb (0-255), keeping the photo's relative variation per channel."""
+def season_grade(tint, stats, target_srgb, out=None):
+    """Move a surface's median tint to target_srgb (0-255), keeping the photo's relative variation per channel.
+    out=tint grades the tint map in place."""
     tgt = srgb_to_lin(np.asarray(target_srgb, np.float32) / 255.0)
     k = (tgt / np.maximum(stats[0], 1e-4)).astype(np.float32)
-    return tint * k, stats * k
+    return np.multiply(tint, k, out=out), stats * k
 
 
 STRIPES = {  # surface: (stripe width m, contrast, cross-cut contrast)
@@ -317,21 +360,47 @@ def add_terrain(glb, root, feats_path=None):
     materials = {}
     groups = {}
     tint_cache = {}
-    for si in np.unique(surf):
+    sids = np.unique(surf)
+
+    def hole_parts(si):
+        """(hole, vertex ids, face corners as indices into them) of surface si, one per hole."""
+        for h in np.unique(hole[surf == si]):
+            vid, inv = np.unique(F[np.flatnonzero((surf == si) & (hole == h))], return_inverse=True)
+            yield h, vid, inv
+
+    def interpolators(tint):
+        return [RegularGridInterpolator((ys[::-1], xs), tint[::-1, :, c], bounds_error=False, fill_value=None) for c in range(3)]
+
+    def photo_colour(interp, P):
+        return np.stack([f(np.c_[P[:, 1], P[:, 0]]) for f in interp], 1)
+
+    lent = {}   # (surface, hole) -> photo colour at its vertices, for a surface coloured from another's tint (TINT_FROM)
+    for k_si, si in enumerate(sids):
         sname = SURF[si]
         if sname not in MATS:
             continue
         opcd, alb, nrm, orm, tile, nscale, _ = MATS[sname]
         tsrc = TINT_FROM.get(sname, sname)
+        interp = None
         if tsrc in tint_cache:
             tint, stats = tint_cache[tsrc]
         else:
             tint, stats = (tint_for_surface(tsrc, by_surface.get(tsrc, []), img, Y, openm, W, H, T)
                            if tsrc in by_surface and sname not in NO_TINT else (None, None))
             if tint is not None and C.TURF_TINT and tsrc in C.TURF_TINT:
-                tint, stats = season_grade(tint, stats, C.TURF_TINT[tsrc])
+                tint, stats = season_grade(tint, stats, C.TURF_TINT[tsrc], out=tint)
             if tsrc in TINT_FROM.values():
-                tint_cache[tsrc] = (tint, stats)
+                later = [SURF[j] for j in sids[k_si + 1:] if TINT_FROM.get(SURF[j], SURF[j]) == tsrc and SURF[j] in MATS]
+                if later and tint is not None and all(s_ in TINT_FROM for s_ in later):
+                    # only surfaces that borrow this tint come later (the bunker lips): sample their vertices now
+                    # rather than keep the whole map (half a GB) through every surface in between
+                    interp = interpolators(tint)
+                    for s_ in later:
+                        for h, vid, _ in hole_parts(SURF.index(s_)):
+                            lent[s_, h] = photo_colour(interp, V[vid])
+                    tint_cache[tsrc] = (LENT, stats)
+                elif later:
+                    tint_cache[tsrc] = (tint, stats)
         if alb is not None:
             tm = mean_lin(alb)
             if stats is not None:
@@ -354,13 +423,12 @@ def add_terrain(glb, root, feats_path=None):
             materials[key] = (glb.material(opcd, base_factor=(0.18, 0.24, 0.22, 1.0), rough=0.06, metal=0.0,
                                            extras={"surface": sname}), np.array([0.18, 0.24, 0.22], np.float32))
         mat_index, tex_mean = materials[key]
-        interp = [RegularGridInterpolator((ys[::-1], xs), tint[::-1, :, c], bounds_error=False, fill_value=None) for c in range(3)] if tint is not None else None
-        for h in np.unique(hole[surf == si]):
-            fsel = np.flatnonzero((surf == si) & (hole == h))
-            vid, inv = np.unique(F[fsel], return_inverse=True)
+        if interp is None and tint is not None and tint is not LENT:
+            interp = interpolators(tint)
+        for h, vid, inv in hole_parts(si):
             P = V[vid]
-            if interp is not None:
-                col = np.stack([f(np.c_[P[:, 1], P[:, 0]]) for f in interp], 1) / tex_mean
+            if tint is not None:
+                col = (lent.pop((sname, h)) if tint is LENT else photo_colour(interp, P)) / tex_mean
                 col *= stripe_factor(P, sname, h)[:, None] / (1 + STRIPES.get(sname, (1, 0, 0))[1])
                 col *= canopy_ao(P)[:, None] * SHADE.get(sname, 1.0)
                 if sname in GRASS:

@@ -1,0 +1,4 @@
+{
+ "frame": "lidar",
+ "notes": "Black card 468 cannot be reached on the ground: the Black marker sits at the back of the rearmost deck (the shared Black/Gold/Blue deck, E 549021-549036, N 4801908-4801930), which backs onto the bank down to the clubhouse parking lot (dem_raw drops from 304.7 m at the back of the deck to about 301 m 10 m behind it, then the flat paved lot). The 2025 photo and dem_raw show no deck behind or beside it. Measured Black 426 yd vs card 468 (42 yd short); Gold 424, Blue 410, White 388 and Red 342 match the card. Unresolved card question: no tee was invented (needs known_tee_gaps 1.black in course.toml [tests]). Verifier (QA round 1): confirmed on tees.png and the photo: the paved clubhouse lot begins about 10-15 m behind the Black marker, so no deck can add the missing 38 m."
+}

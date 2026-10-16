@@ -1,0 +1,18 @@
+{
+ "type": "FeatureCollection",
+ "name": "Whistle Bear: trees the 2017 LiDAR has that the 2025 photo shows gone (EPSG:2958)",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "note": "conifer grove west of the central pond, stripped to bare soil between 2022-04-28 (Waterloo photo: intact) and 2025-04-07 (SWOOP 2025); a few trees remain at the NW corner (left out); the grove to the south still stands. To check against the detected trees after the first build.",
+    "source": "Phase 0 research, SWOOP 2020 / 2025 and Waterloo 2022 photos"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [[[548510.0, 4801646.0], [548580.0, 4801646.0], [548580.0, 4801711.0], [548525.0, 4801711.0],
+                     [548510.0, 4801696.0], [548510.0, 4801646.0]]]
+   }
+  }
+ ]
+}

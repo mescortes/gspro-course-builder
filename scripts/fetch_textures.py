@@ -57,7 +57,8 @@ def origin(name):
 def fetch(name, folder, listing, record):
     """The files of `name` into `folder`, listed by `listing()` ({file name: url}, from the Poly Haven API) unless the
     record lists them all and they are there. Offline, an asset fetched before the record existed keeps its files. An
-    id Poly Haven does not know (a 4xx, or no 2k maps) stops the fetch naming where the id comes from."""
+    id Poly Haven does not know (a 404 / 410, or no 2k maps) stops the fetch naming where the id comes from; a request
+    it refuses (a 403 from a proxy or a bot block) stops it naming the network, as an outage does."""
     done = record.get(name)
     if not (done and all((folder / f).exists() for f in done)):
         fix = (f"the id comes from {origin(name)}: fix it there (an asset's id is the end of its polyhaven.com/a/<id> "
@@ -67,8 +68,11 @@ def fetch(name, folder, listing, record):
         except RuntimeError as ex:
             have = sorted(p.name for p in folder.glob("*") if p.is_file()) if folder.exists() and not done else []
             if not have:
-                if isinstance(ex, http.PermanentError):
+                if isinstance(ex, http.PermanentError) and ex.missing:
                     sys.exit(f"textures: Poly Haven has no asset {name.removeprefix('leaf_refs/')!r} ({ex}): {fix}")
+                if isinstance(ex, http.PermanentError):
+                    sys.exit(f"textures: Poly Haven refuses the request for {name} ({ex}): a proxy, firewall or bot "
+                             f"block between here and api.polyhaven.com? check the network and rerun fetch_textures.py")
                 sys.exit(f"textures: Poly Haven does not answer for {name} ({ex}): check the network and rerun fetch_textures.py")
             print(f"textures: Poly Haven does not answer for {name}: keeping the {len(have)} files already in {folder}", flush=True)
             return
@@ -76,7 +80,12 @@ def fetch(name, folder, listing, record):
             sys.exit(f"textures: Poly Haven lists no 2k maps for {name!r}: {fix}")
         for f, url in want.items():
             if not (folder / f).exists():
-                http.download(url, folder / f)
+                try:
+                    http.download(url, folder / f)
+                except http.PermanentError as ex:   # the file host refuses, e.g. a cloud allowlist without it
+                    host = url.split("/")[2] if "//" in url else url
+                    sys.exit(f"textures: {host} refuses the download of {name}/{f} ({ex}): a proxy, firewall or "
+                             f"network allowlist between here and {host}? allow it and rerun fetch_textures.py")
         record[name] = done = dict(sorted(want.items()))   # file name: url
     for f in done:
         print(name, f, (folder / f).stat().st_size)

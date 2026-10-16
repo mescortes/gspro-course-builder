@@ -204,7 +204,10 @@ def test_the_suggested_z_offset_counts_the_one_already_set(tmp_path, monkeypatch
     # (z_offset set, backdrop - LiDAR measured, the z_offset that removes it): the raw backdrop is 31.4 m too high
     for now, dz, want in ((31.4, 62.8, -31.4), (-20.0, 11.4, -31.4), (-30.4, 1.0, -31.4), (0.0, 1.0, -1.0)):
         monkeypatch.setattr(B.C, "DATA_SOURCES", {"backdrop": {"provider": "cog_dem", "z_offset": now}})
-        _dem(tmp_path / "bd.tif", 900.0, 2300.0, 2.0, np.full((200, 200), 300.0 + dz))
+        _dem(tmp_path / "bd.tif", 900.0, 2300.0, 2.0, np.full((200, 200), 300.0 + dz - now))   # as downloaded
+        if now:
+            FB.shift(tmp_path / "bd.tif", now)              # as fetch_backdrop moves it (and records the offset)
+            capsys.readouterr()
         if abs(dz) > 3:
             with pytest.raises(SystemExit, match=rf"z_offset = {want:.2f} ") as e:
                 B.check_datum(tmp_path / "dem_final.tif", tmp_path / "bd.tif", core)
@@ -213,6 +216,31 @@ def test_the_suggested_z_offset_counts_the_one_already_set(tmp_path, monkeypatch
             B.check_datum(tmp_path / "dem_final.tif", tmp_path / "bd.tif", core)
             out = capsys.readouterr().out
             assert out.startswith("!!") and f"z_offset = {want:.2f} " in out and "fetch_backdrop.py" in out
+
+
+def test_a_z_offset_set_without_the_refetch_stops_rather_than_suggest_another(tmp_path, monkeypatch, capsys):
+    """check_datum took the DEM on disk to carry course.toml's z_offset. A user who set the suggested -31.4 and ran only
+    build_all.py backdrop (fetch_backdrop is not a build step) measured the unmoved DEM again and was told z_offset =
+    -62.80, 'the offset is measured on the DEM it already moved'. fetch_backdrop now records the offset it applied in
+    the DEM, and a DEM fetched with another one than course.toml's stops and says to refetch."""
+    core = dict(xmin=1000.0, ymin=2000.0, xmax=1200.0, ymax=2200.0)
+    _dem(tmp_path / "dem_final.tif", 1000.0, 2200.0, 0.5, np.full((400, 400), 300.0))
+    _dem(tmp_path / "bd.tif", 900.0, 2300.0, 2.0, np.full((200, 200), 331.4))           # raw: 31.4 m too high
+    monkeypatch.setattr(B.C, "DATA_SOURCES", {"backdrop": {"provider": "cog_dem"}})
+    with pytest.raises(SystemExit, match=r"z_offset = -31\.40 "):                        # the first run: right
+        B.check_datum(tmp_path / "dem_final.tif", tmp_path / "bd.tif", core)
+    monkeypatch.setattr(B.C, "DATA_SOURCES", {"backdrop": {"provider": "cog_dem", "z_offset": -31.4}})
+    with pytest.raises(SystemExit) as e:                                                  # set, not refetched
+        B.check_datum(tmp_path / "dem_final.tif", tmp_path / "bd.tif", core)
+    msg = str(e.value)
+    assert "bd.tif was fetched with z_offset 0" in msg and "course.toml says -31.4" in msg
+    assert "scripts/fetch_backdrop.py" in msg and "62.8" not in msg
+    FB.shift(tmp_path / "bd.tif", -31.4)                                                  # refetched: moved, recorded
+    B.check_datum(tmp_path / "dem_final.tif", tmp_path / "bd.tif", core)
+    assert "!!" not in capsys.readouterr().out
+    monkeypatch.setattr(B.C, "DATA_SOURCES", {"backdrop": {"provider": "cog_dem"}})       # removed, not refetched
+    with pytest.raises(SystemExit, match=r"fetched with z_offset -31\.4, .*course\.toml says 0"):
+        B.check_datum(tmp_path / "dem_final.tif", tmp_path / "bd.tif", core)
 
 
 def test_a_backdrop_dem_with_a_gap_stops_before_it_becomes_nan_vertices(tmp_path):
@@ -227,9 +255,13 @@ def test_a_backdrop_dem_with_a_gap_stops_before_it_becomes_nan_vertices(tmp_path
     _dem(tmp_path / "gap.tif", 1000.0, 2400.0, 2.0, z)
     with pytest.raises(SystemExit, match=r"25\.0% of the far backdrop ring .*\[sources\.backdrop\] dtm"):
         B.require_cover(tmp_path / "gap.tif", ext, "the far backdrop ring")
-    # a gap narrower than require_cover's 20 m samples still stops the backdrop mesh rather than reach its vertices
+    # a gap narrower than the 20 m samples require_cover read: it passed, and export_gspro.sample() filled it with the
+    # DEM's mean, a wall in the GSPro heightmap. Every cell is read now.
     z[:, 150:] = 50.0; z[:, 102] = np.nan
     _dem(tmp_path / "thin.tif", 1000.0, 2400.0, 2.0, z)
+    with pytest.raises(SystemExit, match=r"0\.5% of the far backdrop ring"):
+        B.require_cover(tmp_path / "thin.tif", ext, "the far backdrop ring")
+    # dem_heights still stops a backdrop mesh vertex next to such a gap (a DEM that require_cover did not see)
     o = np.array([1000.0, 2000.0])
     xy = np.c_[np.linspace(5, 395, 50), np.full(50, 200.0)]
     assert np.all(B.dem_heights(tmp_path / "full.tif", xy, o) == 50.0)
@@ -254,6 +286,8 @@ def test_z_offset_moves_the_backdrop_dems_onto_the_lidar_datum(tmp_path, monkeyp
         FB.main()
         for name in ("backdrop_dem.tif", "backdrop_dsm.tif"):
             with rasterio.open(tmp_path / "dem" / name) as ds:
-                z = ds.read(1)
+                z, tags = ds.read(1), ds.tags()
             assert np.isnan(z[0, 0]) and np.all(z.ravel()[1:] == want), (spec, name)
+            # the offset applied is recorded in the DEM (check_datum compares it with course.toml)
+            assert B.applied_z_offset(tmp_path / "dem" / name) == spec.get("z_offset", 0.0), (spec, name, tags)
     assert got[0] == ("dtm", B.FAR, FB.RES) and got[1][0] == "dsm"

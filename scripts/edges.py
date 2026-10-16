@@ -66,6 +66,16 @@ def derive_rings(feats, zone):
     return out, rings
 
 
+QUERY_CHUNK = 1 << 18  # points made into GEOS points at a time (lip_drop, label_rings)
+
+
+def _point_chunks(pts):
+    """(offset, GEOS points) for points (n, 2), QUERY_CHUNK at a time. A GEOS point for each of Whistle Bear's 5.3 M
+    triangle centroids at once was 0.9 GB; an STRtree query gives the same pairs, in the same order, chunk by chunk."""
+    for s in range(0, len(pts), QUERY_CHUNK):
+        yield s, shapely.points(pts[s:s + QUERY_CHUNK])
+
+
 def lip_drop(pts, rings):
     """Sand drop (m, >= 0) at points (n, 2): 0 on the bunker edge, LIP_DEPTH from LIP_W inside, linear across the lip."""
     pts = np.asarray(pts, np.float64)
@@ -73,14 +83,17 @@ def lip_drop(pts, rings):
     outers = [p for _, rs, _, p in rings if rs == "bunkerlip"]
     if not outers or not len(pts):
         return drop
-    P = shapely.points(pts)
     tree = shapely.STRtree(outers)
-    pi, gi = tree.query(P, predicate="intersects")
-    if len(pi):
-        bnd = np.array([outers[i].boundary for i in gi], object)
-        d = shapely.distance(P[pi], bnd)
-        t = np.clip(d / LIP_W, 0.0, 1.0)
-        drop[pi] = np.maximum(drop[pi], LIP_DEPTH * (1.0 - (1.0 - t) ** 2))   # concave lip profile
+    # each bunker's boundary made once: a copy for every point in the bunker was 7.5 GB on Whistle Bear (270 k mesh
+    # vertices in 84 bunkers of ~700 boundary points), half of the mesh step's peak
+    bnd = shapely.boundary(outers)
+    for s, P in _point_chunks(pts):
+        pi, gi = tree.query(P, predicate="intersects")
+        if len(pi):
+            d = shapely.distance(P[pi], bnd[gi])
+            t = np.clip(d / LIP_W, 0.0, 1.0)
+            pi += s
+            drop[pi] = np.maximum(drop[pi], LIP_DEPTH * (1.0 - (1.0 - t) ** 2))   # concave lip profile
     return drop
 
 
@@ -98,11 +111,12 @@ def label_rings(cent, surf, hole, rings, sid):
     surf = np.array(surf, copy=True); hole = np.array(hole, copy=True)
     if not rings:
         return surf, hole
-    geoms = [r for r, _, _, _ in rings]
-    tree = shapely.STRtree(geoms)
-    pi, gi = tree.query(shapely.points(np.asarray(cent)[:, :2]), predicate="within")
-    surf[pi] = np.array([sid[rings[i][1]] for i in gi], surf.dtype)
-    hole[pi] = np.array([rings[i][2] for i in gi], hole.dtype)
+    tree = shapely.STRtree([r for r, _, _, _ in rings])
+    ring_s = np.array([sid[rs] for _, rs, _, _ in rings], surf.dtype)
+    ring_h = np.array([h for _, _, h, _ in rings], hole.dtype)
+    for s, P in _point_chunks(np.asarray(cent)[:, :2]):
+        pi, gi = tree.query(P, predicate="within")
+        surf[pi + s] = ring_s[gi]; hole[pi + s] = ring_h[gi]
     return surf, hole
 
 

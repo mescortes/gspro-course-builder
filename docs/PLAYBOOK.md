@@ -11,8 +11,9 @@ can be run by hand.
 
 * Python 3.12 and [uv](https://github.com/astral-sh/uv); headless Blender 4.2 LTS for the FBX step (`BLENDER=` its
   binary; without it `build_all.py` looks on PATH, then in `/Applications/Blender.app` or the Windows installer's
-  folder). The build prints the Blender it uses, with a `!!` line when it is not 4.2. About 15 GB of RAM at peak and
-  5-10 GB of disk per course.
+  folder). The build prints the Blender it uses, with a `!!` line when it is not 4.2 (the version comes from the macOS
+  app bundle or the install folder's name; elsewhere, such as an apt or snap Blender on Linux, from
+  `blender --version`). About 10 GB of RAM at peak and 5-10 GB of disk per course.
 * `uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements-lock.txt` (the exact
   packages of the golden Westmount build; `requirements.txt` lists the direct dependencies unpinned)
 * `COURSE= .venv/bin/python -m pytest -q tests --ignore=tests/test_course.py` must pass (no data needed).
@@ -38,7 +39,12 @@ and 30 GB of disk, and no GPU (code.claude.com/docs/en/cloud-environments). For 
   `x-deny-reason: host_not_allowed`.
 * **Nothing in `data/`, `build/` or `output/` survives the session** (they are not in git): download and build in one
   session, and commit what the course needs (`courses/<slug>/`) before it ends.
-* **Memory**: 16 GB is at the edge for an 18-hole build; `build_all.py` prints each step's peak memory (e.g.
+* **Memory**: on macOS the mesh step peaks at 4-8 GB (once 15.2 GB on Whistle Bear), the export step at 4-6 GB and
+  the gspro step at 2.4-3.5 GB (Westmount, Whistle Bear, Brambles; they were 6.3-10.5 GB), under a session's 16 GB;
+  Westmount's whole build peaks at 4.6 GB (vectorize). The larger courses' other steps have not been measured again
+  since. macOS keeps freed memory counted until a step ends, so these are high-water marks: with
+  `MallocLargeCache=0` set (freed blocks go back to the system, as on Linux) export and gspro peak at 1.5-3.4 GB. A
+  full 18-hole build has not been measured on Linux yet. `build_all.py` prints each step's peak memory (e.g.
   `rasters done in 312s, peak memory 8.4 GB`) and the highest at the end (not on Windows). Prefer your own
   machine (or Remote Control to it) for full builds when a course peaks above about 14 GB.
 * **Long steps**: run builds as background commands with an explicit timeout (a background command gets 30 min by
@@ -81,10 +87,14 @@ course and what changed on the course since the LiDAR was flown.
 It writes `courses/<slug>/course.toml`: the frame (UTM CRS from the region's datum, origin, base height, build extent
 CORE = outline + 100 m in 256 m tiles, the 2048 m GSPro terrain square) and the likely `[sources]`. `--crs EPSG:<code>`
 sets another frame, such as the national metre grid the LiDAR is delivered in. It is written as its EPSG code. A
-compound CRS, Web Mercator, or a grid whose metres are more than 0.5 % off ground metres at the course is refused
-(`new_course.py` MAX_SCALE_ERROR: yardages would be off by as much). With `nrcan_copc`
+compound CRS, Web Mercator, a grid in feet (the frame is in metres; LiDAR in State Plane feet is reprojected as it is
+read, section 3), or a grid whose metres are more than 0.5 % off ground metres at the course is refused
+(`new_course.py` MAX_SCALE_ERROR: yardages would be off by as much), naming where the CRS came from (`--crs`, the
+region's `[scaffold] crs` or its datum's UTM zone). check_course.py checks `[frame] crs` the same way when you edit it
+by hand, at the centre of `[frame] core`, and asks for the `EPSG:<code>` form the engine reads. With `nrcan_copc`
 the frame must be a UTM zone (NRCan names its tiles by zone): near a zone boundary, `--crs` the neighbouring zone's EPSG
-code if the project is delivered in that zone.
+code if the project is delivered in that zone. When it finds no tiles, `new_course.py` names that code: for a course in
+zone 17 near 78 W, `--crs EPSG:2959` (NAD83(CSRS) / UTM zone 18N).
 
 **A region** (`regions/<name>.toml`) holds what is true of a whole area: tree archetypes and the rules that sort LiDAR
 crowns into them, foliage cards, 3D grass, the turf colour target, building palettes, backdrop vegetation, viewer sky,
@@ -111,7 +121,9 @@ Fill in `course.toml` by hand from the research:
   ground under canopy is treated, and the region's tree classifier expects one of them.
 * `[tuning.level_tees] enabled = false` when the LiDAR was flown after every tee was built (compare the flight date
   with the course's opening and tee works). The engine gives tees with no deck in the LiDAR a synthetic one; on a
-  course whose decks are all in the LiDAR (Brambles) it cuts and fills tee polygons that take in banks instead.
+  course whose decks are all in the LiDAR (Brambles) it cuts and fills tee polygons that take in banks instead. The
+  `mesh` step prints a `level_tees: ... step` line for each synthetic deck that ends in a step of more than
+  `warn_step` (0.1 m) where it meets a path, green, bunker, road, building or water (they keep their height).
 * `[structures] parking`: OSM parking ids that get parked cars.
 
 ```bash
@@ -120,7 +132,9 @@ COURSE=<slug> .venv/bin/python scripts/check_course.py
 
 **Checkpoint:** check_course reports nothing missing in course.toml; every hole has a line, a green and a tee (or the
 course goes the no-OSM route, §4). check_course also names any `[tuning]` key, table or table key (in course.toml or
-the region) that the engine does not read, with the closest name it does read: the build would ignore a misspelt one.
+the region) that the engine does not read, with the closest name it does read: the build would ignore a misspelt one
+(and a misspelt `[tuning.level_tees]` key, which is passed to `build_terrain_mesh.level_tees` as its parameters, would
+stop the build at the mesh step).
 
 ## 3. Download
 
@@ -140,7 +154,9 @@ from. The LiDAR tiles are listed in `data/<slug>/lidar/tiles.json`. A rerun of `
 but first checks it against course.toml:
 
 * If the photo or the OSM snapshot no longer fits `[frame] core`, `[imagery] res` or `[sources.imagery]`, the fetch
-  stops and names the setting. Delete the file and fetch again.
+  stops and names the setting. Delete the file and fetch again. A new photo has its own registration: re-measure
+  `[imagery] shift` (`measure_registration.py`, §5) before building on it, or the build applies the old photo's shift.
+  After a new OSM snapshot, check the course's overrides (`courses/<slug>/features/overrides/`, §7) against it.
 * If the LiDAR tiles were fetched for another `[sources.lidar]` or `[frame] core`, the build stops and names the key.
   Rerun `fetch_data.py lidar` (it needs the network). It moves every tile that is not part of the new fetch into
   `data/<slug>/lidar/unused/`.
@@ -157,10 +173,21 @@ allow it in course.toml. These keys only accept or refuse a fetch, so changing o
 | `[sources.imagery] max_empty` | 0.01 | share of the course photo that the service leaves black |
 | `[sources.backdrop] max_missing` | 0.01 | share of the backdrop square with no DTM (filled from the heights around it) |
 
+The 3DEP message says where the largest gap is. "On its east edge" runs along the extent's edge (open water or ground
+out of play are often there); "across it, south to north" (a strip through the course) or "inside it" (a hole) usually
+means tiles the project does not have, so look for another project before allowing it.
+
 **LiDAR in another CRS.** Tiles need not be in the course frame (`[frame] crs`): a project in State Plane feet (many
 California 3DEP projects, e.g. NAD83(2011) / California zone 2 (ftUS) + NAVD88 height (ftUS)) or in the neighbouring
 UTM zone is reprojected as it is read, heights converted to metres. check_course's data section lists which tiles are
-reprojected and from what. The engine converts height units, not vertical datums: heights on another datum than the
+reprojected and from what. The heights' unit is the vertical CRS's; in GeoTIFF keys (LAS 1.2 tiles) the height-unit key
+(4099) wins over the vertical CRS key (4096), as in GDAL: older USGS tiles name NAVD88 height (metres) with heights in
+US survey feet, and the note says so. A tile in feet that names no vertical CRS has its heights taken in feet too
+(flagged `!!`, with the `[lidar] crs` to set if they are metres). A tile on another horizontal datum than the frame
+(NAD83 (1986) tiles in a NAD83(2011) frame) is shifted with what PROJ has offline, often a null shift good only to
+metres: the note names the operation and its accuracy, flagged (`!!`) when that is unknown or worse than
+`[tuning] lidar_datum_shift_warn_m` (0.1 m), with the PROJ grids a better shift needs (`.venv/bin/pyproj sync --file
+<name>`, then rebuild). The engine converts height units, not vertical datums: heights on another datum than the
 region's `[scaffold] vertical` are read as they are and flagged (`!!`). A tile whose header names no CRS is read as the
 frame, as is one whose CRS record cannot be read (flagged `!!`); for those, or for tiles whose header names a wrong
 CRS, give the project's CRS in course.toml:
@@ -185,7 +212,9 @@ Draw the lines of play and draft the rest (Brambles):
    paths and the course outline into golf.geojson (tagged `draft=yes`; hand-drawn features are kept) and review sheets
    to `build/<slug>/draft/hole_NN.jpg`. Thresholds are in `[draft]` (see `draft_features.DEFAULTS`); tune them on
    the sheets, then commit the draft. It only has to be good enough to train the classifier: the QA rounds correct
-   the model.
+   the model. Drafted bunkers are not survey data: the vectorize step gives them the LiDAR test of unmapped bunkers
+   (a closed hollow, on the course, clear of roads), so bare soil drafted as sand in a channel or a road cut is
+   dropped. Draw a bunker by hand (no `draft` tag) to keep it whatever the LiDAR says.
 4. Set `[tuning] trace_paths = false` if the photo's path tracer follows turf edges instead of paths (look at
    `build/<slug>/paths_detected.geojson` after the paths step).
 
@@ -215,7 +244,8 @@ Whistle Bear: 0.25 m east.
 
 **Tuning for another photo or LiDAR.** The colour rules were tuned on Westmount's 16 cm spring photo. Set only the
 keys that need it in `course.toml` (a region's `[tuning]` tables apply first; the course's keys override them one by
-one). A mistyped key or a value that is not a number stops `check_course.py` with its name.
+one). A mistyped key or a value that is not a number stops `check_course.py` with its name (a
+`[tuning.road_half_width]` key must be an OSM `highway=*` value: a misspelt one stops with the closest).
 
 | Setting | Default | What it fixes |
 |---|---|---|
@@ -223,10 +253,11 @@ one). A mistyped key or a value that is not a number stops `check_course.py` wit
 | `[tuning.shadow_sand]` `ndvi_max`, `L_min`, `a_min`, `b_min` | 0.02, 25, -8, 2 | Sand in shade (NIR photos only). |
 | `[tuning.turf]` `a_max`, `ndvi_min` | -14, 0.25 | Bunkers spilling onto grass faces: what counts as clearly green turf (trimmed off bunkers). |
 | `[tuning.native]` `a_min`, `b_min`, `L_max`, `chm_max`, `ndvi_max` | 3, 11, 55, 1.2, 0.18 | Native / mulch areas: their reddish-brown seed colour. |
-| `[tuning.road_half_width]` `<highway class> = m` | motorway 7 ... service 3, track 1.5 | Road surfaces too narrow or too wide; add a class, or `0` drops one. Inside the course a `highway=track` becomes a 2.8 m cart path: `track = 0` when OSM's tracks there are grass maintenance routes. |
-| `[tuning] lidar_vegetation_classes` | `[1, 3, 4, 5]` | The ASPRS classes of the tree returns (the trees step stops when most crowns have none, listing the classes found). |
+| `[tuning.road_half_width]` `<highway class> = m` | motorway 7 ... service 3, track 1.5 | Road surfaces too narrow or too wide; add a class (any OSM highway value, e.g. `pedestrian`), or `0` drops one. Inside the course a `highway=track` becomes a 2.8 m cart path: `track = 0` when OSM's tracks there are grass maintenance routes. |
+| `[tuning] lidar_vegetation_classes` | `[1, 3, 4, 5]` | The ASPRS classes of the tree returns. The trees step stops when most crowns have none, listing the returns per class and, when a class found may hold trees (0, or a programme's own), the list to set. |
 | `[tuning] lidar_vegetation_min_share` | 0.5 | That stop: the share of crowns that must hold 8 vegetation returns; `0` for sparse LiDAR whose classes are right. |
-| `[tuning] backdrop_datum_warn_m`, `backdrop_datum_max_m` | 0.3, 3 | The backdrop DEM's height offset from the LiDAR round the course: a warning, then a stop. The fix is `[sources.backdrop] z_offset` (the value the message gives); raise the stop only for a real step (a cliff or a quarry at the edge). |
+| `[tuning] lidar_datum_shift_warn_m` | 0.1 | LiDAR on another horizontal datum than the frame: the accuracy of PROJ's shift above which (or unknown) check_course and the rasters step flag it (section 3). |
+| `[tuning] backdrop_datum_warn_m`, `backdrop_datum_max_m` | 0.3, 3 | The backdrop DEM's height offset from the LiDAR round the course: a warning, then a stop. The fix is `[sources.backdrop] z_offset` (the value the message gives), then `fetch_backdrop.py` again: it adds the offset as it writes the DEM and records it there, and the backdrop step stops on a DEM fetched with another z_offset than course.toml's. Raise the stop only for a real step (a cliff or a quarry at the edge). |
 
 **Checkpoint:** `build_all.py` ends without error; `measure_registration.py` shows no shift beyond a pixel.
 
@@ -238,9 +269,12 @@ one). A mistyped key or a value that is not a number stops `check_course.py` wit
 
 Read failures as data: a tee yardage gap means a wrong or missing pad, or a card that disagrees with the ground; a
 green size or slope failure means a green outline that takes in banks or misses half the putting surface; "no
-fairway" means a fairway that carries another hole's number (a fairway polygon several lines of play run through is
-split between their corridors; one that misses its own line goes to the nearest one); a step around a green is
-usually the bank of a synthetic tee deck nearby (§2, `[tuning.level_tees]`). Course-dependent limits go in
+fairway" means a fairway that carries another hole's number (a fairway polygon several lines of play run along is
+split between their corridors, a line that only crosses it takes none unless its green ends within
+`shared_fairway_green_reach` of it; one that misses its own line goes to the
+nearest one); a step around a green is
+usually the bank of a synthetic tee deck nearby (§2, `[tuning.level_tees]`; the `mesh` step's `level_tees: ... step`
+lines say which). Course-dependent limits go in
 `course.toml [tests]` (`green_area`, `min_bunkers`, `green_slope_max`, `known_tee_gaps = { "7.back" = 40 }` with the
 reason in research/NOTES.md); fix the rest. A course with few bunkers needs `min_bunkers` (the bunker tests count
 the bunkers over 20 m2 and the automatic ones over 40 m2).
@@ -269,14 +303,15 @@ Engine settings for problems QA finds on many holes (`course.toml [tuning]`, def
 
 | Problem | Setting |
 |---|---|
-| Bare soil in channels, ditches or path cuts kept as unmapped bunkers | `[tuning.bunker_hollow]`: an unmapped bunker must hold `pond` m (0.05) of water on `pond_frac` (0.2) of its area, or lie `face` m (0.35) below the ground around it; `pond_frac = 0` turns the test off |
+| Bare soil in channels, ditches or path cuts kept as unmapped bunkers | `[tuning.bunker_hollow]`: an unmapped bunker must hold `pond` m (0.05) of water on `pond_frac` (0.2) of its area, or lie `face` m (0.35) below the ground around it without being open at both ends like a channel (an outlet: ground less than `open` m (0.2) above the floor next to it, leading out over `outlet` m2 (4); two outlets on opposite sides); `pond_frac = 0` turns the test off |
 | Bunkers spilling onto their grass faces with a coarse photo | `[tuning.bunker_trim]`: with a photo of `photo_res` m (0.3) or coarser, bunkers are cut to their LiDAR pans (`radius` 5 m rim search, `depth` 0.08 m, `lip` 0.5 m); `photo_res = 100` turns it off |
-| A shared fairway split badly between holes | `shared_fairway_min_part` (150 m2): the smallest part a hole takes from a fairway another line of play also runs through |
-| Two tee sets on one marker | `tee_marker_gap` (2 m): a set never takes a spot this close to another set's while another pad is free; the gap is reported |
+| A shared fairway split badly between holes | A fairway several lines of play run along is split between their corridors. `shared_fairway_min_part` (150 m2): the smallest part a hole takes; `shared_fairway_min_run` (80 m) and `shared_fairway_green_reach` (30 m): a line runs along a fairway when that much of it lies inside, or its green end is that close (a par 3's green surround); a line that only crosses it (a tee shot over another hole's fairway or green surround) takes none |
+| Two tee sets on one marker | `tee_marker_gap` (2 m): a set never takes a spot this close to another set's while another pad is free, unless their cards are this close too (two sets with the same yardage share a box); the gap is reported |
 | Holes in the terrain at tees, steps around greens | `[tuning.level_tees] enabled = false` when the LiDAR shows every tee (§2) |
 
-Tracks inside the course mapped `surface=grass / ground / dirt / earth` or `tracktype=grade4 / grade5` are turf;
-other tracks and service roads there are cart paths.
+Tracks and service ways inside the course mapped `surface=grass / ground / dirt / earth / mud` or
+`tracktype=grade4 / grade5` are turf (mown maintenance routes; the classifier's training labels never call them
+road); other tracks and service roads there are cart paths.
 
 **Checkpoint:** every hole scores at least 8 of 10 from its verifier; the tests pass or each failure is documented.
 
@@ -328,8 +363,18 @@ can take an hour on a slow server); first build 0.5-1 h; two QA rounds with rebu
 * **An image server is slow or times out**: the downloads are chunked and retried; rerun the step to resume. A service
   error about a parameter (bands, the mosaic rule's where clause) stops the fetch at once and names it: fix
   `[sources.imagery]`.
-* **fetch_textures says Poly Haven has no asset**: the id is mistyped. The message says where the id comes from (the
-  region's `[trees] bark` or `[materials]`, or course.toml).
+* **The build stops: the photo is not 8-bit** (a 16-bit or floating-point photo you put in yourself): convert
+  it with `scripts/photo_8bit.py <original> <photo> --bands 1,2,3[,<NIR band>]` (the message gives the paths) and
+  rebuild from `register`. It scales the bands kept by one ratio, from the largest value among them (`--max` for a
+  sensor's range), so NDVI is kept: a ratio from one band's maximum pushes NIR past 255.
+* **The backdrop or gspro step says the backdrop DEM has cells without a height**: every cell of the backdrop square
+  is checked (a strip one cell wide would be a wall in the GSPro heightmaps). Add a DEM that covers it to
+  `[sources.backdrop] dtm` and run `fetch_backdrop.py` again.
+* **fetch_textures says Poly Haven has no asset** (it answered 404 or 410): the id is mistyped. The message says where
+  the id comes from (the region's `[trees] bark` or `[materials]`, or course.toml).
+* **fetch_textures says Poly Haven refuses the request** (HTTP 401, 403, 451): the id is not the problem; a proxy, a
+  firewall or a bot block is. On Claude cloud, add `api.polyhaven.com` and `dl.polyhaven.org` to the network access
+  (§0).
 * **The course is wider than about 1.85 km**: the build extent no longer fits the 2048 m terrain square;
   check_course says so.
 * **`[frame] dem_res`**: the engine builds the DEM at 0.25 m only, so leave it out. check_course flags it, and a

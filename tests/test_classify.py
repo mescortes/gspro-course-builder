@@ -134,6 +134,17 @@ def test_road_widths_take_course_toml_tuning(monkeypatch):
     assert "track" not in w and w["busway"] == 4.0 and w["primary"] == S.ROAD_HALF_WIDTH["primary"]
 
 
+def test_a_misspelt_road_class_stops_with_the_closest_one(monkeypatch):
+    """Any key of [tuning.road_half_width] was taken as a new highway class: residental = 5 changed nothing (the
+    residential roads kept 4 m) and no message said so. A key must be an OSM highway value; check_course, which
+    imports this module, stops on one that is not, with the closest."""
+    monkeypatch.setattr(S.C, "tuning", lambda k, d: {"residental": 5, "busway": 4} if k == "road_half_width" else d)
+    with pytest.raises(SystemExit, match=r"\[tuning\.road_half_width\].*residental.*did you mean residential"):
+        S.road_half_widths()
+    monkeypatch.setattr(S.C, "tuning", lambda k, d: {"pedestrian": 3, "construction": 4} if k == "road_half_width" else d)
+    assert S.road_half_widths()["pedestrian"] == 3.0                       # a class OSM has, not a default one
+
+
 def _native_features(cells):
     """A (30, 30) feature stack with one 10 x 10 block per (A4, B4, L4, chmmax) colour, side by side."""
     names = ["A4", "B4", "L4", "chmmax"]

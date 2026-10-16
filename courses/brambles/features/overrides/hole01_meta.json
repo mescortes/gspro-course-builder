@@ -1,0 +1,14 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "middle": [
+   537106.5,
+   4291735.5
+  ],
+  "front": [
+   537040.5,
+   4291771.0
+  ]
+ },
+ "notes": "Back tee is the flat deck at the east end of the zoysia finger (E 537127-537141, N 4291721-4291734), Middle the flat terrace at its west end (E 537093-537108, N 4291732-4291740), 1 m from the GPS Middle point. Middle is pinned at the east end of its pad: no pad delivers the card 496, and the automatic marker would go on the 5 % slope between the decks. Front: the 18Birdies point falls in the 18th greenside bunker and there is no deck nearby; the marker is pinned on the zoysia apron 9 m south of it (410 yd vs card 414). On the real decks the line of play measures Back about 524 vs 531 and Middle 485 vs 496: the GPS points are consistently about 10 yd short of the card; no aim point within the fairway makes up the difference (unresolved card question)."
+}

@@ -42,10 +42,14 @@ def blender_defaults():
     return ()
 
 
+BLENDER_VERSION_TIMEOUT = 30  # s for `blender --version` (off macOS, when the install does not say the version)
+
+
 def blender_version(exe):
-    """Blender's version from where it is installed, without starting it (a sandboxed macOS shell crashes Blender at
-    start): the macOS app bundle's Info.plist, else a version in the folder names (Windows "Blender 4.2", the Linux
-    archive "blender-4.2.23-linux-x64", also through a symlink); None when neither says."""
+    """Blender's version from where it is installed: the macOS app bundle's Info.plist, else a version in the folder
+    names (Windows "Blender 4.2", the Linux archive "blender-4.2.23-linux-x64", also through a symlink). Off macOS,
+    when neither says (an apt /usr/bin/blender, a snap /snap/bin/blender), `blender --version`; on macOS Blender is
+    not started (a sandboxed shell crashes it at start). None when nothing says."""
     import plistlib
     for p in dict.fromkeys((Path(exe), Path(exe).resolve())):
         app = next((d for d in p.parents if d.suffix == ".app"), None)
@@ -58,14 +62,23 @@ def blender_version(exe):
         m = re.search(r"blender[ _-]?(\d+\.\d+(?:\.\d+)?)", p.as_posix(), re.I)
         if m:
             return m.group(1)
-    return None
+    if platform.system() == "Darwin":
+        return None
+    try:
+        out = subprocess.run([str(exe), "--version"], capture_output=True, text=True,
+                             timeout=BLENDER_VERSION_TIMEOUT).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    m = re.search(r"^Blender (\d+\.\d+(?:\.\d+)?)", out, re.M)
+    return m.group(1) if m else None
 
 
 def blender_note(exe):
     """The line build_all.py prints about the Blender it uses: '!!' when it is not BLENDER_LTS."""
     v = blender_version(exe)
     if v is None:
-        return f"Blender: {exe} (version not known without starting it; the FBX step is made with {BLENDER_LTS} LTS)"
+        why = ("not started on macOS to ask it" if platform.system() == "Darwin" else "blender --version printed none")
+        return f"Blender: {exe} (version not known: {why}; the FBX step is made with {BLENDER_LTS} LTS)"
     if v == BLENDER_LTS or v.startswith(BLENDER_LTS + "."):
         return f"Blender {v}: {exe}"
     return (f"!! Blender {v}: {exe}. The FBX step is made and checked with Blender {BLENDER_LTS} LTS; another "

@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "middle": [
+   536397.0,
+   4291420.0
+  ]
+ },
+ "notes": "Middle marker pinned on the second level deck of the Back/Middle tee strip (deck E 536396-536410 N 4291412-4291425; dem_raw plane slope 1 % at the marker). The automatic marker (E 536393.7 N 4291415.4, where the 18Birdies point also falls) stood on the 0.9 m step between the Back deck and this deck, on a 16 % slope. From the deck the hole measures about 223 yd against the card 226 (within the 6 yd tolerance); the east end of the Back deck would give about 231 and is itself sloping (6-9 %)."
+}

@@ -49,33 +49,53 @@ OPCD = {  # surface -> (OPCD palette name, fill hex, stacking order)
 }
 
 
+SAMPLE_ROWS = 256  # rows of a sample grid interpolated at a time (a 4097^2 grid's coordinates are 0.5 GB of float64)
+
+
 def sample(path, X, Y):
+    """Heights (float64, bilinear, the edge repeated past the raster) of `path` at UTM points X, Y: arrays of one
+    shape, or a grid given by its axes (X a row, Y a column, as xs[None, :], ys[:, None]); cells without data take the
+    raster's mean height. A grid is interpolated SAMPLE_ROWS rows at a time: each point's value is its own, the same as
+    one call over all of them."""
     with rasterio.open(path) as ds:
         z = ds.read(1).astype(np.float64); T = ds.transform
-    cols = (X - T.c) / T.a - 0.5; rows = (Y - T.f) / T.e - 0.5
-    return ndimage.map_coordinates(np.nan_to_num(z, nan=np.nanmean(z)), [rows, cols], order=1, mode="nearest")
+    z = np.nan_to_num(z, copy=False, nan=np.nanmean(z))
+    X, Y = np.broadcast_arrays(X, Y)
+    shape = X.shape
+    X, Y = np.atleast_1d(X, Y)
+    out = np.empty(X.shape)
+    for r0 in range(0, len(X), SAMPLE_ROWS):
+        r = slice(r0, r0 + SAMPLE_ROWS)
+        cols = (X[r] - T.c) / T.a - 0.5; rows = (Y[r] - T.f) / T.e - 0.5
+        out[r] = ndimage.map_coordinates(z, [rows, cols], order=1, mode="nearest")
+    return out.reshape(shape)
+
+
+def edge_distance(xs, ys, e):
+    """Distance (m) inside the box `e` from its nearest side, on the grid of x axis `xs` and y axis `ys` (negative
+    outside): the minimum of the four signed gaps, as np.minimum.reduce over full X, Y grids gave it."""
+    return np.minimum(np.minimum(xs - e["xmin"], e["xmax"] - xs)[None, :], np.minimum(ys - e["ymin"], e["ymax"] - ys)[:, None])
 
 
 def heightmap():
     # Unity heightmap samples sit on the terrain's corners/edges: x_i = xmin + i * size / (N - 1)
     xs = TE["xmin"] + np.arange(N) * (TE["xmax"] - TE["xmin"]) / (N - 1)
     ys = TE["ymax"] - np.arange(N) * (TE["ymax"] - TE["ymin"]) / (N - 1)  # north row first
-    X, Y = np.meshgrid(xs, ys)
-    z = sample(C.BUILD / "dem_final.tif", X, Y)
+    z = sample(C.BUILD / "dem_final.tif", xs[None, :], ys[:, None])
     e = C.CORE
-    inside = (X > e["xmin"]) & (X < e["xmax"]) & (Y > e["ymin"]) & (Y < e["ymax"])
-    if not inside.all() and (C.DATA / "dem/backdrop_dem.tif").exists():
+    d = edge_distance(xs, ys, e)
+    if not (d > 0).all() and (C.DATA / "dem/backdrop_dem.tif").exists():
         from build_backdrop import require_cover
         require_cover(C.DATA / "dem/backdrop_dem.tif", TE, "the GSPro terrain")
-        zb = sample(C.DATA / "dem/backdrop_dem.tif", X, Y)
+        zb = sample(C.DATA / "dem/backdrop_dem.tif", xs[None, :], ys[:, None])
         # feather over 25 m inside the build extent so the seam has no step
-        d = np.minimum.reduce([X - e["xmin"], e["xmax"] - X, Y - e["ymin"], e["ymax"] - Y])
         w = np.clip(d / 25.0, 0, 1)
         z = w * z + (1 - w) * zb
+        del zb, w
     # the surface meshes (course_meshes.fbx) cover the whole build extent; sink the Unity terrain 5 cm below them so the
     # two never z-fight (outside the build extent the terrain itself is the visible ground)
-    dd = np.minimum.reduce([X - e["xmin"], e["xmax"] - X, Y - e["ymin"], e["ymax"] - Y])
-    z = z - SINK * np.clip(dd / 2.0, 0, 1)
+    z = z - SINK * np.clip(d / 2.0, 0, 1)
+    del d
     hmin, hmax = float(np.floor(z.min() - 1)), float(np.ceil(z.max() + 1))
     q = np.round((z - hmin) / (hmax - hmin) * 65535).astype("<u2")
     OUT.mkdir(parents=True, exist_ok=True)
@@ -117,14 +137,13 @@ def outer_terrain(n=4097, px=8192):
     require_cover(C.DATA / "dem/backdrop_dem.tif", oe, "the GSPro outer plot")
     xs = oe["xmin"] + np.arange(n) * (oe["xmax"] - oe["xmin"]) / (n - 1)
     ys = oe["ymax"] - np.arange(n) * (oe["ymax"] - oe["ymin"]) / (n - 1)
-    X, Y = np.meshgrid(xs, ys)
-    z = sample(C.DATA / "dem/backdrop_dem.tif", X, Y)
-    d_in = np.minimum.reduce([X - TE["xmin"], TE["xmax"] - X, Y - TE["ymin"], TE["ymax"] - Y])
-    z = z - OUTER_SINK * np.clip(d_in / 10.0, 0, 1)
+    z = sample(C.DATA / "dem/backdrop_dem.tif", xs[None, :], ys[:, None])
+    z = z - OUTER_SINK * np.clip(edge_distance(xs, ys, TE) / 10.0, 0, 1)
     hmin, hmax = float(np.floor(z.min() - 1)), float(np.ceil(z.max() + 1))
     q = np.round((z - hmin) / (hmax - hmin) * 65535).astype("<u2")
     q.tofile(OUT / f"outer_heightmap_{n}.raw")
     Image.fromarray(q.astype(np.uint16)).save(OUT / f"outer_heightmap_{n}.png")
+    del z, q
     out = np.zeros((px, px, 3), np.uint8)
     from build_backdrop import NEAR_IMG, FAR_IMG, summer_tif
     # the summer-graded backdrop photos (build_backdrop.summer_grade) where built; finer sources on top
@@ -135,6 +154,7 @@ def outer_terrain(n=4097, px=8192):
             a = ds.read([1, 2, 3], window=from_bounds(oe["xmin"], oe["ymin"], oe["xmax"], oe["ymax"], transform=ds.transform),
                         out_shape=(3, px, px), resampling=Resampling.lanczos, boundless=True, fill_value=0)
         paint(out, np.moveaxis(a, 0, -1))
+        del a
     Image.fromarray(out).save(OUT / f"outer_overlay_{px}.jpg", quality=90)
     return {"heightmap": f"outer_heightmap_{n}.raw", "resolution": n, "overlay": f"outer_overlay_{px}.jpg",
             "terrain_size_m": {"width_x": oe["xmax"] - oe["xmin"], "length_z": oe["ymax"] - oe["ymin"], "height_y": hmax - hmin},
@@ -148,16 +168,36 @@ def unity(e_, n_, h_, hmin):
     return [round(e_ - TE["xmin"], 3), round(h_ - hmin, 3), round(n_ - TE["ymin"], 3)]
 
 
+PAINT_ROWS = 256  # image rows blended at a time (an 8192 px image's float64 blend is 1.6 GB an array)
+
+
 def paint(out, a, feather_px=48):
     """Paint a finer image layer over `out`, feathering its edge so tone differences between sources don't show as
-    rectangles."""
+    rectangles. The weight is the distance to the layer's edge (distance_transform_edt's, from its feature transform:
+    sqrt(di^2 + dj^2) of the nearest unpainted pixel) where `out` has a picture, the layer's mask where it has none;
+    weights and blend go PAINT_ROWS rows at a time, each pixel's arithmetic as in one whole-image pass."""
     m = a.max(-1) > 0
     if not m.any():
         return
-    w = np.clip(ndimage.distance_transform_edt(m) / feather_px, 0, 1)[..., None]
-    have = (out.max(-1) > 0)[..., None]
-    w = np.where(have, w, m[..., None].astype(float))
-    out[:] = np.clip(out * (1 - w) + a * w + 0.5, 0, 255).astype(np.uint8)
+    have = out.max(-1) > 0
+    ft = ndimage.distance_transform_edt(m, return_distances=False, return_indices=True) if have.any() else None
+    cols = np.arange(m.shape[1], dtype=np.int32)
+    for r0 in range(0, len(m), PAINT_ROWS):
+        r = slice(r0, r0 + PAINT_ROWS)
+        mw = m[r, :, None].astype(float)
+        if ft is None:   # nothing painted yet: the layer as it is
+            w = mw
+        else:
+            di = (ft[0, r] - np.arange(r0, r0 + len(mw), dtype=np.int32)[:, None]).astype(np.float64)
+            dj = (ft[1, r] - cols).astype(np.float64)
+            di *= di; dj *= dj; di += dj
+            np.sqrt(di, out=di)
+            w = np.where(have[r, :, None], np.clip(di / feather_px, 0, 1)[..., None], mw)
+            del di, dj
+        t = out[r] * (1 - w)
+        t += a[r] * w
+        t += 0.5
+        out[r] = np.clip(t, 0, 255, out=t).astype(np.uint8)
 
 
 def overlay(px=8192):
@@ -170,6 +210,7 @@ def overlay(px=8192):
             a = ds.read([1, 2, 3], window=from_bounds(TE["xmin"], TE["ymin"], TE["xmax"], TE["ymax"], transform=ds.transform),
                         out_shape=(3, px, px), resampling=Resampling.lanczos, boundless=True, fill_value=0)
         paint(out, np.moveaxis(a, 0, -1))
+        del a
     for old in OUT.glob("overlay_*.jpg"):
         old.unlink()
     Image.fromarray(out).save(OUT / "overlay_8192.jpg", quality=88)

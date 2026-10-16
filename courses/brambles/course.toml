@@ -1,0 +1,143 @@
+# Brambles, 18900 Grange Road, Middletown, Lake County, California (Coore & Crenshaw with James Duncan; built 2020-22 on
+# the old Crazy Creek gliderport, opened April 2024). Zoysia tee to green, native meadow rough grazed by sheep,
+# barrancas; one large valley oak in play. Frame and sources from new_course.py (bbox from the GolfNow GPS layout and
+# NAIP 2024); the facts below are from Phase 0 research (2026-10-14), see research/NOTES.md.
+# Not in OSM: holes, greens, tees, fairways, bunkers, water and paths are drawn in features/golf.geojson.
+
+[course]
+name = "Brambles"
+short = "Brambles"
+layout = "18 holes"
+model_name = "brambles"
+region = "northern_california"
+
+[frame]
+# NAD83(2011) / UTM zone 10N, the frame of the 3DEP LiDAR; heights NAVD88 (GEOID18)
+crs = "EPSG:6339"
+crs_label = "NAD83(2011) / UTM zone 10N (EPSG:6339); heights NAVD88 (GEOID18) (m)"
+origin = [536950.0, 4291350.0]
+base_h = 305.0  # metres subtracted from heights in the model frame
+# GolfNow tee / green points E 536268-537639, N 4290729-4291895, NAIP playing area to N 4292020, + >= 100 m: 7 x 7 tiles
+core = { xmin = 536060.0, ymin = 4290460.0, xmax = 537852.0, ymax = 4292252.0 }
+terrain = { xmin = 535932.0, ymin = 4290332.0, xmax = 537980.0, ymax = 4292380.0 }  # 2048 m GSPro terrain square
+
+[osm]
+# OSM has nothing of the course; these elements of the old ranch / gliderport cross the holes
+exclude = [
+    "way/371961043", "way/1034320105",   # aeroway=runway (gliderport strip)
+    "way/10269683",                      # highway=track "Glider Port"
+    "way/10259449", "way/10259516", "way/10260040", "way/371239532", "way/371239533", "way/371680968",
+    "way/371771901", "way/783011021", "way/783011022", "way/784775748", "way/1034320106",   # ranch tracks
+    "way/158012484", "way/158176795", "relation/2118078", "way/1463039891",   # landuse industrial / farmyard / farmland / meadow
+]
+
+[sources.lidar]
+# USGS 3DEP CA_NorthCoastRanges_2_B23, QL1, flown over the course 2023-09-23 and 2023-09-27 (after the shaping and
+# planting, 7 months before the opening); LAS 1.4 LAZ tiles, classes 1 / 2 / 7 / 18. Public domain.
+provider = "usgs_3dep"
+project = "CA_NorthCoastRanges_B23"
+
+[sources.imagery]
+# USDA NAIP 2024 (2024-05-22, 0.6 m, R G B NIR, public domain), pinned to 2024: the service keeps only the latest year.
+# NAIP 2026 (30 cm, flown 2026-06-01) should replace it when published.
+provider = "arcgis_imageserver"
+url = "https://apps.geo.fpac.usda.gov/geo-imagery/rest/services/naip/conus_naip/ImageServer"
+mosaic_rule = { mosaicMethod = "esriMosaicNorthwest", where = "Name LIKE 'm%2024____'" }
+bands = [0, 1, 2, 3]  # R, G, B, NIR
+max_chunk_m = 1500.0
+
+[sources.backdrop]
+# 3DEP 1 m DEM of the same survey; stamped NAD83 (EPSG:26910), made from NAD83(2011) LiDAR. No public DSM.
+provider = "cog_dem"
+dtm = ["https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/CA_NorthCoastRanges_B23/TIFF/USGS_1M_10_x53y429_CA_NorthCoastRanges_B23.tif",
+       "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/CA_NorthCoastRanges_B23/TIFF/USGS_1M_10_x53y430_CA_NorthCoastRanges_B23.tif"]
+src_crs = "EPSG:6339"
+
+[tuning]
+trace_paths = false  # the NDVI-ridge tracer follows the turf and barranca edges here; draft_features drafts the gravel paths
+
+# The 2023 LiDAR was flown after every tee was built (2020-22): no synthetic tee decks (they left 1 m steps by greens)
+[tuning.level_tees]
+enabled = false
+
+# draft_features.py (features/golf.geojson): the meadow between the holes is course (outline closed over 160 m gaps)
+[draft]
+outline = { corridor = 45.0, close = 80.0 }
+
+[lidar]
+leaf_off = false  # late September: the oaks are in leaf
+
+[imagery]
+raw = "naip2024_course.tif"
+registered = "naip2024_course_reg.tif"
+res = 0.6
+# NAIP 2024 vs the 2023 LiDAR (measure_registration.py, 49 bunkers: photo sand vs LiDAR hollows): dx +0.75 m (MAD 1.0),
+# dy 0.00 m (MAD 1.0); north / south / east / west agree within 0.25 m (0.6 m pixels)
+shift = [0.75, 0.0]  # metres +E/+N applied to the photo
+leaf_off = false
+credit = "USDA NAIP 2024 orthoimagery (public domain)"
+
+[holes]
+playable = "1-18"
+nines = { Front = "1-9", Back = "10-18" }
+
+# The club uses no tee markers and names its tees Back, Middle and Front; the colours are ours.
+[[tees]]
+key = "back"
+name = "Back"
+colour = "#2b2b2b"
+gkd_slot = "Black"  # GreenKeeper TeeType (GKD tee slot)
+
+[[tees]]
+key = "middle"
+name = "Middle"
+colour = "#f5f5f5"
+gkd_slot = "White"
+
+[[tees]]
+key = "front"
+name = "Front"
+colour = "#c8102e"
+gkd_slot = "Red"
+
+# GolfPass / 18Birdies feed (GolfNow data, in place by 2026-05-13, unchanged 2026-10-14). The club publishes no par:
+# the par here is the feed's (par 5s 1, 7, 13, 17; par 3s 3, 8, 12, 16), which players' reports support.
+# All 18 Back yardages match an independent playing report (Golfadelphia, 2026-08-20). hole = [par, back, middle, front]
+[scorecard]
+1 = [5, 531, 496, 414]
+2 = [4, 450, 392, 339]
+3 = [3, 155, 142, 100]
+4 = [4, 471, 440, 351]
+5 = [4, 335, 295, 261]
+6 = [4, 493, 454, 301]
+7 = [5, 611, 572, 449]
+8 = [3, 182, 148, 118]
+9 = [4, 399, 374, 358]
+10 = [4, 441, 410, 341]
+11 = [4, 336, 300, 264]
+12 = [3, 206, 163, 110]
+13 = [5, 513, 478, 360]
+14 = [4, 325, 279, 248]
+15 = [4, 448, 429, 379]
+16 = [3, 242, 226, 130]
+17 = [5, 542, 514, 468]
+18 = [4, 510, 467, 327]
+
+# Built-course test limits (tests/test_course.py). Brambles' greens are large (the 6th 1500 m2; the 18th, 1610 m2,
+# takes in the practice putting green). Tee gaps: on the real decks holes 1, 7 and 18 measure short of the feed's card,
+# as the GPS tee and green points do (research/NOTES.md): no deck or line of play reaches the card.
+[tests]
+green_area = [120.0, 2000.0]
+min_bunkers = 20  # few, large bunkers: 25 over 40 m2 after the closed-hollow check (Westmount: 40)
+green_slope_max = [7.0, 15.0]  # bold Coore & Crenshaw tiers: the 3rd green's tier between its south-west lobe and
+                                # the main body gives p95 14.3 % in the LiDAR; 8, 13 and 10 are 13.1-13.5 % (Westmount: 14)
+known_tee_gaps = { "1.back" = 8.0, "1.middle" = 12.0, "7.back" = 40.0, "7.middle" = 57.0, "18.middle" = 10.0 }
+
+[stroke_index]  # the feed's handicap row (the women's row is the same)
+men = [7, 13, 15, 1, 11, 5, 9, 17, 3, 4, 12, 18, 2, 14, 10, 16, 6, 8]
+women = [7, 13, 15, 1, 11, 5, 9, 17, 3, 4, 12, 18, 2, 14, 10, 16, 6, 8]
+
+[ratings]  # unofficial: the feed's values; the USGA rating database could not be checked (reports say "no rating")
+back = { men = [73.1, 141], yards = 7190 }
+middle = { men = [71.7, 132], yards = 6579 }
+front = { women = [71.5, 127], yards = 5318 }

@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "back": [
+   536579.0,
+   4290813.5
+  ]
+ },
+ "notes": "Hole 6 Back marker. The automatic marker (E 536582.05, N 4290817.49) sits on the 1.5 m bank between the back deck and the lower deck east of it (dem_raw slope 21-26 % at the marker): the tee polygon takes in that bank, and the marker was slid onto it to read 493.0. The back deck is the level pad at 319.7 m, E 536574-536581, N 4290806-4290820, which holds the GolfNow back tee point (536579.83, 4290812.59). Pinned on that deck at E 536579.0, N 4290813.5 (slope 1.7 %): Back 494.6 / 493 yd with the current aim point and green centre (+1.6 yd, inside the 6 yd tolerance). Middle and Front unchanged (454.0 / 454, 299.7 / 301)."
+}

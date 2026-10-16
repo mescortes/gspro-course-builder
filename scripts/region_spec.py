@@ -44,7 +44,8 @@ SCAFFOLD_KEYS = ("datum", "vertical", "imagery_res", "lidar_leaf_off", "imagery_
 SCAFFOLD_SEARCH_KEYS = {
     "nrcan_copc": (("lidar", "province", "the province or territory folder of NRCan's point clouds, "
                     "pointclouds_nuagespoints/<province>/", ()),
-                   ("backdrop", "url", "the 1 m DTM file URL of a LiDAR project", ("province", "project", "kind"))),
+                   ("backdrop", "url", "the URL of a LiDAR project's 1 m DEM files, {kind} being dtm or dsm",
+                    ("province", "project", "kind"))),
 }
 
 

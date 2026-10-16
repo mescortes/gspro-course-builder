@@ -98,7 +98,8 @@ species_tint = { broadleaf = [1.0, 1.0, 0.9], conifer = [0.8, 0.9, 0.88], shrub 
 # copies any other provider's table for you to fill in). crs is optional: an EPSG code, or a name with {zone} and
 # {hemisphere} where EPSG does not call the zones "UTM" (e.g. "GDA2020 / MGA zone {zone}").
 # The nrcan_copc search also reads lidar.province (the folder under pointclouds_nuagespoints/ of NRCan's bucket, e.g.
-# "QC") and backdrop.url, the 1 m DTM file URL pattern with {province}, {project} and {kind}, e.g.
+# "QC") and backdrop.url, the URL pattern of a project's 1 m DEM files with {province}, {project} and {kind} ("dtm" for
+# the DTM, "dsm" for the DSM), e.g.
 #   lidar = { provider = "nrcan_copc", province = "QC" }
 #   backdrop = { provider = "cog_dem", url = "https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/{province}-{project}-1m-{kind}.tif" }
 [scaffold]

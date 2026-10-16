@@ -1,0 +1,5 @@
+{
+  "frame": "lidar",
+  "aim_points_utm": [[536440.0, 4291168.0]],
+  "notes": "Hole 4 line of play. The automatic first aim point (E 536680.44, N 4291188.49) is an artefact of the drafted line starting at the 18Birdies Back tee point: it lies 7.9 yd from the Back marker and behind the Middle and Front markers, so the tee headings point backwards (Middle 80.8 deg, Front 87.3 deg, Back 305.9 deg on a hole that plays west). It is dropped. The single dogleg aim is moved from the centre-line fairway bunker (536434.4, 4291163.5) to the fairway 12 m short-right of it (536440, 4291168), the safer line right of the bunker (Golfadelphia), 270 yd from the Back marker. Measured with the current markers: Back 470.9 / 471, Middle 440.4 / 440, Front 348.8 / 351 yd."
+}
