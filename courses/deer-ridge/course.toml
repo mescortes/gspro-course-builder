@@ -1,0 +1,136 @@
+# Deer Ridge Golf Club, 200 Deer Ridge Drive, Kitchener, Ontario (Thomas McBroom, 1991; greens complexes rebuilt
+# 2010-11). Frame from new_course.py, then fitted to the golf features (see [frame]); the facts below are from Phase 0
+# research (2026-10-14), see research/NOTES.md.
+
+[course]
+name = "Deer Ridge Golf Club"
+short = "Deer Ridge"
+layout = "18 holes"
+model_name = "deer_ridge"
+region = "southern_ontario"
+
+[frame]
+# NAD83(CSRS) / UTM zone 17N, the frame of the Ontario LiDAR; heights CGVD2013 (m)
+crs = "EPSG:2958"
+crs_label = "NAD83(CSRS) / UTM zone 17N (EPSG:2958); heights CGVD2013 (m)"
+# The OSM outline (way 140907484) is 2121 m wide: its east end (E 547705-547872) is a residential subdivision, a
+# wetland and a parking lot, with no golf feature. CORE covers the golf features (E 545761-547705, N 4805574-4806775)
+# + 50 m east-west / 100 m north-south in whole 256 m tiles (8 x 6), so it fits the 2048 m GSPro terrain square.
+origin = [546700.0, 4806150.0]
+base_h = 290.0  # metres subtracted from heights in the model frame
+core = { xmin = 545710.0, ymin = 4805410.0, xmax = 547758.0, ymax = 4806946.0 }
+terrain = { xmin = 545710.0, ymin = 4805154.0, xmax = 547758.0, ymax = 4807202.0 }  # 2048 m GSPro terrain square
+
+[osm]
+outline = ["way/140907484"]  # this course's leisure=golf_course outline
+
+[sources.lidar]
+# OMAFRA Lidar 2016-18, Lake Erie package: tiles in two NRCan folders (N 4805 and E 548 / N 4806 in Lake_Erie_Fall_2017,
+# the rest of N 4806 in Lake_Erie_2018). Inside the outline every point was flown 2017-11-21 (leaf-off).
+provider = "nrcan_copc"
+zone = 17
+projects = [{ folder = "ON/Lake_Erie_Fall_2017", suffix = "2017LLAKEERIE" }, { folder = "ON/Lake_Erie_2018", suffix = "2018LLAKEERIE" }]
+
+[sources.imagery]
+# Ontario SWOOP 2025 (Geospatial Ontario), 16 cm, R G B NIR, flown 2025-04-07: three days after a Grand River flood
+# peak (research/NOTES.md: a wet corridor and a flooded backwater on the photo).
+provider = "arcgis_imageserver"
+url = "https://ws.geoservices.lrc.gov.on.ca/arcgis5/rest/services/AerialImagery/GEO_Imagery_Data_Service_2023to2027/ImageServer"
+mosaic_rule = { mosaicMethod = "esriMosaicNorthwest", where = "Project='SWOOP2025'" }
+bands = [0, 1, 2, 3]  # R, G, B, NIR
+
+[sources.backdrop]
+# NRCan HRDEM 1 m DTM / DSM: the 5 km square is half Lake_Erie_2018, half Lake_Erie_Fall_2017 (no overlap).
+provider = "cog_dem"
+dtm = ["https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/ON-Lake_Erie_Fall_2017-1m-dtm.tif", "https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/ON-Lake_Erie_2018-1m-dtm.tif"]
+dsm = ["https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/ON-Lake_Erie_Fall_2017-1m-dsm.tif", "https://canelevation-dem.s3.ca-central-1.amazonaws.com/hrdem-lidar/ON-Lake_Erie_2018-1m-dsm.tif"]
+
+[lidar]
+leaf_off = true  # November 2017 flights: deciduous crowns are sparse in the CHM
+
+[imagery]
+# Ontario SWOOP 2025, 0.16 m, 4 bands (R, G, B, NIR), native EPSG:2958, Open Government Licence - Ontario.
+raw = "swoop2025_course.tif"
+registered = "swoop2025_course_reg.tif"
+res = 0.16
+shift = [0.25, -0.25]  # measure_registration.py, 2026-10-16: 70 bunkers, every half of the course within 0.25 m
+leaf_off = true  # spring photo: the ground is visible through the bare crowns
+credit = "Contains information licensed under the Open Government Licence - Ontario (SWOOP 2025 orthoimagery)"
+
+[holes]
+playable = "1-18"
+nines = { Front = "1-9", Back = "10-18" }
+
+# Six tee sets, back to front, named by their colour; GreenKeeper has six slots, one per set.
+[[tees]]
+key = "black"
+name = "Black"
+colour = "#1a1a1a"
+gkd_slot = "Black"  # GreenKeeper TeeType (GKD tee slot)
+
+[[tees]]
+key = "gold"
+name = "Gold"
+colour = "#d4a017"
+gkd_slot = "Yellow"
+
+[[tees]]
+key = "silver"
+name = "Silver"
+colour = "#c0c0c0"
+gkd_slot = "Blue"
+
+[[tees]]
+key = "bronze"
+name = "Bronze"
+colour = "#cd7f32"
+gkd_slot = "Green"
+
+[[tees]]
+key = "white"
+name = "White"
+colour = "#f5f5f5"
+gkd_slot = "White"
+
+[[tees]]
+key = "copper"
+name = "Copper"
+colour = "#b87333"
+gkd_slot = "Red"
+
+# The club's 2026 card (scorecard2026.jpg, the "VIEW SCORECARD" link on deerridgegolfclub.com/golf, = page 1 of the
+# March 2026 PDF): par 72; Black 7215, Gold 6715, Silver 6338, Bronze 6012, White 5263, Copper 4131 (Copper new in
+# 2025). Combination sets (Black/Gold, Gold/Silver, Silver/Bronze, Bronze/White, White/Copper) reuse these boxes.
+# hole = [par, black, gold, silver, bronze, white, copper]
+[scorecard]
+1 = [5, 526, 504, 495, 464, 408, 323]
+2 = [4, 449, 411, 384, 373, 316, 266]
+3 = [5, 587, 553, 529, 517, 444, 374]
+4 = [3, 187, 169, 152, 142, 122, 122]
+5 = [4, 435, 410, 384, 376, 297, 245]
+6 = [3, 214, 189, 167, 137, 118, 75]
+7 = [4, 385, 363, 349, 329, 281, 223]
+8 = [4, 423, 400, 367, 342, 328, 244]
+9 = [4, 445, 414, 402, 376, 318, 271]
+10 = [4, 391, 366, 353, 327, 295, 206]
+11 = [4, 388, 343, 321, 311, 289, 205]
+12 = [5, 555, 524, 507, 485, 417, 342]
+13 = [3, 202, 179, 165, 138, 114, 114]
+14 = [4, 429, 398, 372, 361, 323, 209]
+15 = [4, 431, 389, 361, 336, 318, 230]
+16 = [3, 214, 184, 164, 157, 138, 95]
+17 = [4, 444, 421, 396, 381, 312, 246]
+18 = [5, 510, 498, 470, 460, 425, 341]
+
+[stroke_index]  # the 2026 card (men odd on the front, women even); OSM's handicap tags match no card
+men = [5, 17, 15, 13, 9, 3, 7, 11, 1, 6, 18, 14, 16, 2, 12, 10, 4, 8]
+women = [16, 8, 4, 14, 6, 18, 10, 2, 12, 13, 9, 3, 7, 11, 1, 17, 15, 5]
+
+# GAO - RCGA ratings, page 2 of the 2026 PDF (= the 2025 ratings card); women not rated on Black and Gold.
+[ratings]  # tee = { men = [rating, slope], women = [rating, slope], yards }
+black = { men = [75.3, 133], yards = 7215 }
+gold = { men = [72.7, 131], yards = 6715 }
+silver = { men = [70.9, 128], women = [77.4, 139], yards = 6338 }
+bronze = { men = [69.0, 126], women = [75.4, 136], yards = 6012 }
+white = { men = [65.4, 114], women = [70.9, 123], yards = 5263 }
+copper = { men = [60.7, 105], women = [64.7, 108], yards = 4131 }

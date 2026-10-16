@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "aim_points_utm": [
+  [
+   547350.18,
+   4806295.72
+  ]
+ ],
+ "notes": "One aim point, at the dogleg (west end of the upper fairway). The OSM hole line's last vertex (E 547189.67 N 4806249.41) became a second aim point on the green's front edge, 0.6 m from the front pin; it adds 0.03 m to the yardage and only moves the approach target off the pin. White plays from OSM tee 890793766 (reassigned from hole 99 to hole 1 in features/overrides/hole01.geojson): 408.0/408."
+}

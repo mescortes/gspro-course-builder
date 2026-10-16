@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "copper": [
+   546450.9,
+   4805607.2
+  ]
+ },
+ "notes": "Copper (75 yd, new in 2025): no pad delivers 75 yd and the automatic marker on the line of play fell in the pond (E 546449.7, N 4805632.1, inside the water). Pinned at E 546450.9 N 4805607.2, 75.0 yd from the green centre: on dry rough (no canopy) 8.6 m east of the east end of the approach fairway, the nearest dry ground to the fairway at the card distance (the fairway itself reaches only 65 yd). It plays west along the fairway, south of the water. White (118 yd) stays the automatic marker on the line 15 yd ahead of the Bronze deck: no forward deck there in the photo or the LiDAR."
+}
