@@ -1,8 +1,8 @@
 {
  "course": "westmount",
- "created": "2026-10-16T14:45:38+00:00",
+ "created": "2026-10-16T16:15:05+00:00",
  "build": {
-  "commit": "57c58804bd944e7131043f6fe9201648328ceda6",
+  "commit": "0de2c4a0d8940b16baeb71676a73ffc8871c558b",
   "dirty": []
  },
  "env": {
@@ -625,11 +625,11 @@
    "bytes": 377487488
   },
   "FEATURES/auto_core.geojson": {
-   "sha256": "6b63b3191e0f6722e820c6ad5c7ccdf092338f46b33650ffd5f15dc8768a360c",
+   "sha256": "5dfe7424e81e993a94db6f44665fa47aed29764c360a3a9fb60c9c4ef64c926d",
    "kind": "bytes",
-   "bytes": 36903836,
+   "bytes": 36911647,
    "summary": {
-    "features": 2550,
+    "features": 2556,
     "by_surface": {
      "building": [
       843,
@@ -652,8 +652,8 @@
       50750
      ],
      "fairway": [
-      17,
-      97228
+      18,
+      97287
      ],
      "fringe": [
       20,
@@ -672,12 +672,12 @@
       240265
      ],
      "rough": [
-      1045,
-      1320815
+      1049,
+      1320720
      ],
      "semirough": [
-      19,
-      12747
+      20,
+      12784
      ],
      "tee": [
       62,
@@ -691,12 +691,12 @@
    }
   },
   "FEATURES/course_surfaces.geojson": {
-   "sha256": "4323be09e8c56ecd4212c8f9b6600a899f64be0b6f1e0a63f39467f983057d19",
+   "sha256": "d2d13e888eeac4b29f9096594ad76dc6391bae3216550c98d8b06f5bc6bd161b",
    "kind": "bytes",
-   "bytes": 36203948,
+   "bytes": 36211284,
    "core": true,
    "summary": {
-    "features": 2720,
+    "features": 2725,
     "by_surface": {
      "building": [
       843,
@@ -720,7 +720,7 @@
      ],
      "fairway": [
       20,
-      96720
+      96724
      ],
      "fringe": [
       22,
@@ -739,12 +739,12 @@
       239869
      ],
      "rough": [
-      1119,
-      1319043
+      1123,
+      1319014
      ],
      "semirough": [
-      34,
-      12869
+      35,
+      12895
      ],
      "tee": [
       69,
@@ -1284,9 +1284,9 @@
    "bytes": 77811879
   },
   "BUILD/terrain_mesh.npz": {
-   "sha256": "39bd149b576eff4ce7ae7c570be8cc698d4c75f4bcedc9cdaa21d47943d8c769",
+   "sha256": "d45670fa7cd9022a8b91f2013020b875619d6eb632381428e88ae4e52da86d2d",
    "kind": "arrays",
-   "bytes": 55860407
+   "bytes": 55863510
   },
   "BUILD/water_planes.json": {
    "sha256": "51c5c0c8bc6e23c0c757e6a272e426e970fbd510161331132c8a8f08f2ed33e9",
@@ -1324,9 +1324,9 @@
    "bytes": 10254516
   },
   "BUILD/backdrop_mesh.npz": {
-   "sha256": "302dc3bb898303a15cc1cd9f9e3133b52d5d8ee7be82322287c762af4b8fe461",
+   "sha256": "914d9a426fd2135da2dea92ed5c17a4e4c42372f46ebf7f5380a8741e5067379",
    "kind": "arrays",
-   "bytes": 6121763
+   "bytes": 6106360
   },
   "OUTPUT/holes.json": {
    "sha256": "4c64a27c52237ec6ffa2f8ca7e471fc8ae4654bc9a0203f4280294061ff948bc",
@@ -1519,20 +1519,20 @@
    }
   },
   "OUTPUT/westmount.glb": {
-   "sha256": "3d0c7374be079ca1a17830de548a1e2f41b08600eb15dfbe4e178e2e0024e928",
+   "sha256": "377c3528fbe0ef225589ff627f10c5348778b77322920f55802a6e5ef0a32bc0",
    "kind": "bytes",
-   "bytes": 299911124,
+   "bytes": 299936296,
    "core": true,
    "summary": {
-    "nodes": 3247,
-    "meshes": 1295,
+    "nodes": 3248,
+    "meshes": 1296,
     "materials": 56,
     "textures": 75,
     "images": 73,
-    "accessors": 18484,
-    "primitives": 2533,
-    "vertices": 3532370,
-    "triangles": 5818064,
+    "accessors": 18490,
+    "primitives": 2534,
+    "vertices": 3532766,
+    "triangles": 5818949,
     "instances": 47095,
     "node_names": {
      "Backdrop_Buildings": 1,
@@ -1560,7 +1560,7 @@
      "Hole#_GreenFringe": 19,
      "Hole#_Pinestraw_t#_#": 17,
      "Hole#_Rough_t#_#": 30,
-     "Hole#_SemiRough": 16,
+     "Hole#_SemiRough": 17,
      "Hole#_SemiRough_t#_#": 5,
      "Hole#_Tee": 18,
      "Hole#_TeeMarkers_blue": 18,
@@ -1595,24 +1595,24 @@
      "VegetationLOD#": 1,
      "Westmount_GandCC": 1
     },
-    "json_sha256": "78461ea04d21688d39e2112527fba6465e4a3eba8bae49df19a086d161a8c90d",
-    "bin_sha256": "3c40369515a94a21c82442449d5d062e00365dcf4617a0d80dd885bb1201ecb1"
+    "json_sha256": "a8d3967587d8a0ffd8ddd290020ce5d1a6dcdbc470a03759e75a74904f8cee28",
+    "bin_sha256": "f0cc146c3c73c6579c983973e832fcf2bd2f8f5c34a7521a091d901556473bd5"
    }
   },
   "OUTPUT/westmount_noveg.glb": {
-   "sha256": "7c900e209b5428bb6639169326a8bf1b974baf7d22afd0f1f82b558669f0823f",
+   "sha256": "b10d1788704f35fcea491e648c4294fca788ea16df30e74a25d0c07f64b6523c",
    "kind": "bytes",
-   "bytes": 281080464,
+   "bytes": 281105632,
    "summary": {
-    "nodes": 1247,
-    "meshes": 1220,
+    "nodes": 1248,
+    "meshes": 1221,
     "materials": 46,
     "textures": 58,
     "images": 56,
-    "accessors": 11815,
-    "primitives": 2398,
-    "vertices": 3321926,
-    "triangles": 5645310,
+    "accessors": 11821,
+    "primitives": 2399,
+    "vertices": 3322322,
+    "triangles": 5646195,
     "instances": 14896,
     "node_names": {
      "Backdrop_Buildings": 1,
@@ -1640,7 +1640,7 @@
      "Hole#_GreenFringe": 19,
      "Hole#_Pinestraw_t#_#": 17,
      "Hole#_Rough_t#_#": 30,
-     "Hole#_SemiRough": 16,
+     "Hole#_SemiRough": 17,
      "Hole#_SemiRough_t#_#": 5,
      "Hole#_Tee": 18,
      "Hole#_TeeMarkers_blue": 18,
@@ -1658,8 +1658,8 @@
      "Terrain": 1,
      "Westmount_GandCC": 1
     },
-    "json_sha256": "320410802758ca3f2a217217224362677c1af8c8cb40c702269aaa99cc3ff6e7",
-    "bin_sha256": "9f38fe09235db69794148e7a6a97cc2268829f2a2e479cd7da39e193c60b000b"
+    "json_sha256": "651b78f8fe7969e81e70d4864f967c38b9c72a97b7d33e05c23001252e63bac6",
+    "bin_sha256": "aefd75ff341540eff7e0ad61c0d2764ed0a4759f8db96904a65500ad7bfc8f2c"
    }
   },
   "OUTPUT/gspro/heightmap_4097.raw": {
@@ -1689,32 +1689,32 @@
    }
   },
   "OUTPUT/gspro/backdrop.fbx": {
-   "sha256": "a8b2175fe29e512b39d7174589ce1fbea0a0e8168f3f72ac444a46db1c250aae",
+   "sha256": "fb29f4945e5d163c274a4b238a5b45caebc7b335145a3346038bf46ed10bc8e8",
    "kind": "bytes",
-   "bytes": 14636380,
+   "bytes": 14618956,
    "enforced": false
   },
   "OUTPUT/gspro/course.blend": {
-   "sha256": "c8acd115f2cd58487d3a1d26ce535646a86e45a6ebae422562d142eff7e8d4ec",
+   "sha256": "7f1fcb6e603365a4e5cda37c01c1d5d3879d883efa88d317d9de868c259e7e9d",
    "kind": "bytes",
-   "bytes": 326971576,
+   "bytes": 326931682,
    "enforced": false
   },
   "OUTPUT/gspro/course_meshes.fbx": {
-   "sha256": "0fc143c42e11b7b96fab4d3c11138b043646c9e6c6413be54e88d4d6f51906de",
+   "sha256": "7c30972189ad62388d400c71d9ba8d483007c0ae05dac78bc646940084863112",
    "kind": "bytes",
-   "bytes": 144072812,
+   "bytes": 144057212,
    "enforced": false
   },
   "OUTPUT/gspro/course_opcd.svg": {
-   "sha256": "0477998cad7cf548729842f931ee5a156fd8ed0c76392a7f9f8bea001af88ff7",
+   "sha256": "48ccfea32ca2c9c8f9395fd64155ea72ce310aa1d8c0398c1517704de0ee6fee",
    "kind": "bytes",
-   "bytes": 1339359
+   "bytes": 1339799
   },
   "OUTPUT/gspro/fbx_manifest.json": {
-   "sha256": "b88dbc1289118e74a3ac88f22d944f645c48a6a5a0ea9e600cd13dc306d60dff",
+   "sha256": "9b78c40452145c9eaa8d3ee51df7ddb2862b2d3c01ff6d4a5d5c182ed9c5387e",
    "kind": "bytes",
-   "bytes": 167923
+   "bytes": 168060
   },
   "OUTPUT/gspro/grass_3dg.json": {
    "sha256": "95f65dfab57e73cfa1b56a461ab9062701bf8675ab9b982cc0dbdc153bf47da9",
@@ -1752,7 +1752,7 @@
    "bytes": 18266805
   },
   "OUTPUT/gspro/structures.fbx": {
-   "sha256": "3406c7186aa22ac5d89d5f446cdddd0d6f5484e92967ffabafb151cc90bb7419",
+   "sha256": "3f0c7ad18ee91c8660b2312ed31f89f738721f927ffe2af1b4a5e0b248ea6007",
    "kind": "bytes",
    "bytes": 42663276,
    "enforced": false
@@ -1763,9 +1763,9 @@
    "bytes": 1681
   },
   "OUTPUT/gspro/textures/Image_0.jpg": {
-   "sha256": "c3613e06fad4925436741d283a7b197a4e1914e4aeee35c1f72e1bff17d3bd00",
+   "sha256": "f3e3dac0b12e43d77b7f26b33a52612ebb0165759d7515ab80c33051d024cebc",
    "kind": "bytes",
-   "bytes": 2406779
+   "bytes": 2406715
   },
   "OUTPUT/gspro/textures/Image_1.jpg": {
    "sha256": "6ce4522e3a607ac7d9c071cb154369aef34abca32ac3dc7427aa8d864f5677db",
@@ -2043,7 +2043,7 @@
    "bytes": 2589812
   },
   "OUTPUT/gspro/tree_prefabs.fbx": {
-   "sha256": "16fd52a1674b1b270a08d545683b50275ad6afe192ac636e5c3313363e22ba8e",
+   "sha256": "7535aa8b019092b67c20efbd446a9264c7ac7e1b53209c06318e758ce3783893",
    "kind": "bytes",
    "bytes": 9983244,
    "enforced": false
@@ -2099,14 +2099,14 @@
    "bytes": 16307
   },
   "OUTPUT/maps/course_map.png": {
-   "sha256": "baf35a5417a1a84c9088a1ce7352380636be61669684cbefaa8b20a4d7f276e2",
+   "sha256": "d6ae57759d6ce42f8c44831946fa278111099b8f385abd2b681694ed8c6c3f5b",
    "kind": "bytes",
-   "bytes": 2570657
+   "bytes": 2570656
   },
   "OUTPUT/maps/hole01_green.png": {
-   "sha256": "d44feb517f9610d78e5d479129ff08db5bc9b3742031ef5b4d5d7619684644c6",
+   "sha256": "d38b7ca52123fb30970bfc0f204e57dbb42ccb20ac6f17b605c974ae770ca885",
    "kind": "bytes",
-   "bytes": 583200
+   "bytes": 583195
   },
   "OUTPUT/maps/hole01_map.png": {
    "sha256": "75c93a9894fb164729639d39649a8a4ece2dc7c9628ac2067f30bac952feee1a",
@@ -2114,9 +2114,9 @@
    "bytes": 1654918
   },
   "OUTPUT/maps/hole02_green.png": {
-   "sha256": "b9a94c4ec1716e79adfa2deff2dcddd216c41d1c0dae7dc502e447c02140997c",
+   "sha256": "b17d8ee34a71db153b32f2cb2245ac0d6e8da6fd332f6b9df214d74440674ee4",
    "kind": "bytes",
-   "bytes": 542859
+   "bytes": 542857
   },
   "OUTPUT/maps/hole02_map.png": {
    "sha256": "fa60d4333c897f3471a3e16acbb95049424d030b85d509d317fe911130694588",
@@ -2124,9 +2124,9 @@
    "bytes": 1417343
   },
   "OUTPUT/maps/hole03_green.png": {
-   "sha256": "219b503d71bd9e6265fdd680267399543725dc0346d3abc78b334089553352c3",
+   "sha256": "f43bec2b47c38bc23a66c9e5ddfd02e206ebca5cd9bf525fdfd3c7c00dff9811",
    "kind": "bytes",
-   "bytes": 645660
+   "bytes": 645664
   },
   "OUTPUT/maps/hole03_map.png": {
    "sha256": "14fc8779463fdd6ac4f8ece3d26439e22fc16d26c4a2afa489ea4df5a79d8445",
@@ -2134,29 +2134,29 @@
    "bytes": 995093
   },
   "OUTPUT/maps/hole04_green.png": {
-   "sha256": "e83b283bb87a87818f6093957866736aaa35fe4c303df54276237b4a8c323cf8",
+   "sha256": "fd89328e373bf61f0ee22a04e2363519358e8425ec22923a2ea00d6e05c36636",
    "kind": "bytes",
-   "bytes": 582913
+   "bytes": 582914
   },
   "OUTPUT/maps/hole04_map.png": {
-   "sha256": "43fdf3c92486a044c3b9897188812ea9a84d80955f0964514e90e0f8cbdea70b",
+   "sha256": "c44386305bd303b4727f73328ae92d637bd23ed69bd5fe455753227c346f878b",
    "kind": "bytes",
-   "bytes": 1462266
+   "bytes": 1462315
   },
   "OUTPUT/maps/hole05_green.png": {
-   "sha256": "7c145935291d1c587c1179dd4eda92048f2250ffd5d6f448f92f66bd22e013dc",
+   "sha256": "5ab965afd1737a5ebf9570a6d74c099fbff4af7b02c760fa4b39d360880bc1c7",
    "kind": "bytes",
-   "bytes": 692563
+   "bytes": 692558
   },
   "OUTPUT/maps/hole05_map.png": {
-   "sha256": "23e3e7e56b090ed7ff727254ff8b23086d05472f8b0bda6bdc7ec1eef23fe40b",
+   "sha256": "634a9fd5ccb76e4289a84b3c2721994ef66e9f53836eb4a3da56e5c9f4baf04f",
    "kind": "bytes",
-   "bytes": 1650191
+   "bytes": 1650229
   },
   "OUTPUT/maps/hole06_green.png": {
-   "sha256": "aa91a4455874598e5d97ae3948360f71d79aebd6e9631d69cd4bfc293f7e5e7b",
+   "sha256": "a9d791dbd5ea766821562de58f5737976447f27cc4c1bca724917ab181f91223",
    "kind": "bytes",
-   "bytes": 507006
+   "bytes": 507001
   },
   "OUTPUT/maps/hole06_map.png": {
    "sha256": "5549a269ba3336e6a85c6e92051b9492e4215b9df76a5a62ec3e0cbede84d010",
@@ -2164,9 +2164,9 @@
    "bytes": 1240324
   },
   "OUTPUT/maps/hole07_green.png": {
-   "sha256": "2612f125276aea9944ba68b25bffce8c48a2298ce53eeb735809cb14dff122eb",
+   "sha256": "a7f874391a13fd591eba8c7a1878cfac94ca8b0861257f7c96543a59e2a520ca",
    "kind": "bytes",
-   "bytes": 685750
+   "bytes": 685746
   },
   "OUTPUT/maps/hole07_map.png": {
    "sha256": "5f072e86e39741b38f0eaf7cc9f92aa2ce886ac5ec04517c432253d655afa84c",
@@ -2179,14 +2179,14 @@
    "bytes": 588167
   },
   "OUTPUT/maps/hole08_map.png": {
-   "sha256": "e0f1e9a383a7740b73fcc94e2b778176fc222ff8ed9cfd7d7e53008174d6f891",
+   "sha256": "1568098beec498eb696f4f99a5e6332cd3f613b953881a7ec5e3e094a0f27665",
    "kind": "bytes",
-   "bytes": 1392126
+   "bytes": 1392191
   },
   "OUTPUT/maps/hole09_green.png": {
-   "sha256": "cdb60884f3c432adc1ab373482d79861d1e0824762c1f335b50f185fc8fb07e0",
+   "sha256": "165e1c538e8390667bc05d166c9f44b3098c8d92a380af13e41d03a39ffdf160",
    "kind": "bytes",
-   "bytes": 398558
+   "bytes": 398557
   },
   "OUTPUT/maps/hole09_map.png": {
    "sha256": "7fe04c0f5aff417c40d77bb84a5edbf433be0b69dc4c4f21f4698e1a776c56dc",
@@ -2194,9 +2194,9 @@
    "bytes": 1372945
   },
   "OUTPUT/maps/hole10_green.png": {
-   "sha256": "2059b11467df5f82f6c1a9a289b8821c5e6d92d54cc35aeaf12095a5a8051873",
+   "sha256": "fb4eaff3ba4a10e85e8e11eabf22251045cbe95f00d5bf0fa81b9f8d1e067b2d",
    "kind": "bytes",
-   "bytes": 581974
+   "bytes": 581981
   },
   "OUTPUT/maps/hole10_map.png": {
    "sha256": "4a68b0117ad1124ea236f80c2bfed24d7b3e7256d252fa48b8b33c61f8931b17",
@@ -2204,9 +2204,9 @@
    "bytes": 1395215
   },
   "OUTPUT/maps/hole11_green.png": {
-   "sha256": "bf10073547cf18b28acdaa8ba2c284c1295a3612e81f6ee0df56a57abd48ef08",
+   "sha256": "8a058aff391b2ca9512c3ddaf26b4f365c8edf895ebf3f92c2fbf7965fb8f54a",
    "kind": "bytes",
-   "bytes": 615222
+   "bytes": 615228
   },
   "OUTPUT/maps/hole11_map.png": {
    "sha256": "fb8dbb67d1dc6e86f392b7506bee9d2887fc790b6337fa237723c3bab186f0e5",
@@ -2214,9 +2214,9 @@
    "bytes": 1773092
   },
   "OUTPUT/maps/hole12_green.png": {
-   "sha256": "ec130e3f69c61456fb5787d247bdbcd257cd37b6a4582fdb3261eeba2741116c",
+   "sha256": "08ea917b89cee9280ac4d39d091c8adfdec70e84b073c3f6a58bf71d3da16c9e",
    "kind": "bytes",
-   "bytes": 619785
+   "bytes": 619790
   },
   "OUTPUT/maps/hole12_map.png": {
    "sha256": "5a303a7f0d36916a425cf855242f52697cc5d7ec3887ef2f8af9a5b2f5b622a6",
@@ -2224,14 +2224,14 @@
    "bytes": 978344
   },
   "OUTPUT/maps/hole13_green.png": {
-   "sha256": "cce69cdd5fa4264e428e4c04b224ab87663b9a3958ce821deb7249bf15edd76e",
+   "sha256": "cd22b81242c1fc79968fe742c23ec32a48ff40a1acd88a6af7d3f7de89ebcd20",
    "kind": "bytes",
-   "bytes": 849371
+   "bytes": 849372
   },
   "OUTPUT/maps/hole13_map.png": {
-   "sha256": "5f58a6aaea686bf27eadc38c930536640fd31dbe0e98d0383c786dcb08a563e1",
+   "sha256": "69f70e6fbf00c7455a5c41696bcdb462833788d2e60d545ea77c99af9549dfd3",
    "kind": "bytes",
-   "bytes": 1517904
+   "bytes": 1517960
   },
   "OUTPUT/maps/hole14_green.png": {
    "sha256": "dc4c1eb1176bac10c90a5e550795b4f9ae74336fb97aff397ead47af071e8886",
@@ -2239,14 +2239,14 @@
    "bytes": 526657
   },
   "OUTPUT/maps/hole14_map.png": {
-   "sha256": "9e5ea4b9f2d15772113b9c475742c51eec469ad238b5be2c0ed9651b9f538548",
+   "sha256": "bdfdabe2ce62424f1c6964f2d55bc76bce5a3239393b1eb40d6169e254bd4a79",
    "kind": "bytes",
-   "bytes": 1275171
+   "bytes": 1275231
   },
   "OUTPUT/maps/hole15_green.png": {
-   "sha256": "6a90ee6c4db7e5dd7dbcae4f086ddac71332ec49720b01502b4f0703c30edfbd",
+   "sha256": "3d13bd57e384da69cd3195405a20fe5c96f4d1d914f898698600a886a798d02a",
    "kind": "bytes",
-   "bytes": 719968
+   "bytes": 719973
   },
   "OUTPUT/maps/hole15_map.png": {
    "sha256": "02dd885f347e1adb7273749174b70c7efaeecebcf97f55e721577d95fb29e1ac",
@@ -2254,9 +2254,9 @@
    "bytes": 1598149
   },
   "OUTPUT/maps/hole16_green.png": {
-   "sha256": "39fec54f3aa7a556a731ef8f806e60f21a783817f5d547992d9b6f36a2e12d46",
+   "sha256": "d9d65ae105b221463e29f9f507a04e3bbaae1923a508bb32d3b0b5120a4d5d6e",
    "kind": "bytes",
-   "bytes": 734920
+   "bytes": 734919
   },
   "OUTPUT/maps/hole16_map.png": {
    "sha256": "033af7b472882263b9c0dcf4e0ec8b9a12a0ea062e52b28d3adea2d3c056c35a",
@@ -2264,14 +2264,14 @@
    "bytes": 1463842
   },
   "OUTPUT/maps/hole17_green.png": {
-   "sha256": "ecaff19baee91c884089d78af7b62cd4c46ebff1619bd750ba35d4a958966139",
+   "sha256": "42d2e4ac39b3d85bd5951111026f450f163a4faa90d602f75aa4cbaf5ff28f2c",
    "kind": "bytes",
-   "bytes": 491843
+   "bytes": 491833
   },
   "OUTPUT/maps/hole17_map.png": {
-   "sha256": "98abb6f5f4a0bc481e870d8f4330771726efb7b3340ad3f2ca610b8cbb1a9617",
+   "sha256": "deaf788c803afb106b6b298bf6c203763107b0612006e2e1ea1f6a27ce8b7d62",
    "kind": "bytes",
-   "bytes": 912096
+   "bytes": 912152
   },
   "OUTPUT/maps/hole18_green.png": {
    "sha256": "6d282955c072184a2560c3a2694ee704732ee488d5bc1fe585e548b7c8b46f25",
@@ -2279,9 +2279,9 @@
    "bytes": 841100
   },
   "OUTPUT/maps/hole18_map.png": {
-   "sha256": "df0257f5c824984d8237c4f4726e6566961840e4fe198fbc2c52686cfc2fc965",
+   "sha256": "87826fb2c6d325fed4c59a479fcd83d6a1f248612be992c8b3b5017ad38a4703",
    "kind": "bytes",
-   "bytes": 1295062
+   "bytes": 1295108
   },
   "VIEWER/views.json": {
    "sha256": "5f9a6aa9bad3179d4e341cd96715f400499eefdbabcdc6a95b9a0bb33edc4067",

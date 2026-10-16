@@ -12,7 +12,7 @@ so the measured yardage matches the card (that is how real markers are set), cla
 import sys, json, math
 import numpy as np
 import rasterio
-from shapely.geometry import shape, Point, LineString, Polygon
+from shapely.geometry import shape, Point, LineString, Polygon, box
 from shapely.ops import unary_union
 from scipy import ndimage
 
@@ -49,6 +49,48 @@ def model(e, n, h):
 
 def load_features(feats_path=None):
     return [(shape(f["geometry"]), f["properties"]) for f in json.load(open(feats_path or (C.FEATURES / "course_surfaces.geojson")))["features"]]
+
+
+def penalty_areas(G, aoi=None):
+    """[(polygon, hazard type)]: the golf water hazards mapped as wetlands (surface_classify.is_penalty_wetland) in the
+    OSM features G, clipped to `aoi` (the build area). They have no water surface (their ground is reeds or marsh
+    grass), so the hole data takes them from OSM: "lateral_water" for golf=lateral_water_hazard, else "water"."""
+    from surface_classify import is_penalty_wetland
+    out = []
+    for _, t, g in G:
+        if not is_penalty_wetland(t) or g.geom_type not in ("Polygon", "MultiPolygon"):
+            continue
+        g = g if aoi is None else g.intersection(aoi)
+        for p in getattr(g, "geoms", [g]):
+            if p.geom_type == "Polygon" and not p.is_empty:
+                out.append((p, "lateral_water" if t["golf"] == "lateral_water_hazard" else "water"))
+    return out
+
+
+def penalty_hazards(areas, corridor, min_area=50.0):
+    """holes.json hazards for the penalty areas (penalty_areas) over `min_area` m2 that reach a hole's corridor."""
+    out = []
+    for g, kind in areas:
+        if g.area > min_area and g.intersects(corridor):
+            c = g.centroid
+            out.append({"type": kind, "utm_centroid": [round(c.x, 2), round(c.y, 2)], "area_m2": round(g.area, 1),
+                        "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
+    return out
+
+
+def surface_hazards(feats, corridor, penalties=(), min_area=50.0):
+    """holes.json hazards from the surfaces: the water and native polygons over `min_area` m2 that reach a hole's
+    corridor, except those lying mostly inside a penalty area (penalty_areas: the reedbed's own ground is native area
+    and deep rough; it is in the lateral hazard's ring already)."""
+    out = []
+    for g, p in feats:
+        if p["surface"] in ("native", "water") and g.area > min_area and g.intersects(corridor):
+            if any(g.intersection(a).area >= 0.5 * g.area for a, _ in penalties):
+                continue
+            c = g.centroid
+            out.append({"type": "native_area" if p["surface"] == "native" else "water", "utm_centroid": [round(c.x, 2), round(c.y, 2)],
+                        "area_m2": round(g.area, 1), "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
+    return out
 
 
 def hole_lines():
@@ -278,7 +320,7 @@ def pin_candidates(inside, edge, slope, limits=PIN_LIMITS, min_frac=PIN_MIN_FRAC
     return ok, limit
 
 
-def hole_record(h, line, feats, terr, all_feats):
+def hole_record(h, line, feats, terr, all_feats, penalties=()):
     par, *card = C.SCORECARD[h]
     hf = [(g, p) for g, p in feats if p["hole"] == h]
     greens = [g for g, p in hf if p["surface"] == "green"]
@@ -383,11 +425,8 @@ def hole_record(h, line, feats, terr, all_feats):
             rec["hazards"].append({"type": "bunker", "utm_centroid": [round(c.x, 2), round(c.y, 2)], "area_m2": round(g.area, 1),
                                    "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
     corridor = play.buffer(40)
-    for g, p in all_feats:
-        if p["surface"] in ("native", "water") and g.area > 50 and g.intersects(corridor):
-            c = g.centroid
-            rec["hazards"].append({"type": "native_area" if p["surface"] == "native" else "water", "utm_centroid": [round(c.x, 2), round(c.y, 2)],
-                                   "area_m2": round(g.area, 1), "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
+    rec["hazards"] += surface_hazards(all_feats, corridor, penalties)
+    rec["hazards"] += penalty_hazards(penalties, corridor)   # wetland hazards: penalty areas with no water surface
     if rec["tees"]:
         rec["elevation_change_m"] = round(gh - rec["tees"][0]["utm"][2], 2)
     return rec
@@ -397,11 +436,13 @@ def main():
     feats = load_features()
     terr = Terrain()
     lines = hole_lines()
+    from surface_classify import osm_geoms
+    penalties = penalty_areas(osm_geoms(), box(C.CORE["xmin"], C.CORE["ymin"], C.CORE["xmax"], C.CORE["ymax"]))
     holes = []
     for h in C.PLAYABLE:
         if h not in lines:
             holes.append({"hole": h, "error": "no OSM line of play"}); continue
-        rec = hole_record(h, lines[h], feats, terr, feats)
+        rec = hole_record(h, lines[h], feats, terr, feats, penalties)
         holes.append(rec)
         if "tees" in rec and rec["tees"]:
             print(f"hole {h:2d} ({rec['nine']} {rec['nine_hole']}) par {rec['par']}: " +

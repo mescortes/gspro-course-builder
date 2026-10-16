@@ -59,8 +59,16 @@ def tuned(name, default):
 
 def is_water(t):
     """OSM tags of a pond, lake or creek: natural=water, or a golf water hazard (golf=lateral_water_hazard is often
-    mapped without natural=water). check_course counts the same features."""
-    return t.get("golf") in ("water_hazard", "lateral_water_hazard") or t.get("natural") == "water"
+    mapped without natural=water) that is not a wetland (is_penalty_wetland). check_course counts the same features."""
+    return (t.get("golf") in ("water_hazard", "lateral_water_hazard") and not is_penalty_wetland(t)) or \
+        t.get("natural") == "water"
+
+
+def is_penalty_wetland(t):
+    """OSM tags of a golf water hazard mapped as a wetland (natural=wetland, no natural=water: Deer Ridge's reedbed,
+    relation 11198160): a penalty area on its own ground (reeds, marsh grass), not open water. It was a water surface
+    with a WaterPlane carved below the reeds, a pond to look at; hole_data.penalty_areas keeps it a hazard."""
+    return t.get("golf") in ("water_hazard", "lateral_water_hazard") and t.get("natural") == "wetland"
 
 
 # OSM highway classes that are roads, with the half width (m) of the road surface vectorize draws round the centre line
@@ -110,6 +118,21 @@ TURF_TRACK = {"surface": {"grass", "ground", "dirt", "earth", "mud"}, "tracktype
 def turf_track(t):
     """OSM tags of a track or service way mapped as grass or earth (TURF_TRACK)."""
     return t.get("highway") in ("track", "service") and any(t.get(k) in v for k, v in TURF_TRACK.items())
+
+
+def is_trail(t):
+    """OSM tags of a cycle trail drawn as a path, like a footway: highway=cycleway (Deer Ridge: the Walter Bean Grand
+    River Trail, fine gravel, and the Trans-Canada Trail were not modelled at all), unless it is mapped as grass or
+    earth (TURF_TRACK: turf) or the course sizes cycleways as roads ([tuning.road_half_width] cycleway)."""
+    return t.get("highway") == "cycleway" and "cycleway" not in ROAD_HALF_WIDTH and \
+        not any(t.get(k) in v for k, v in TURF_TRACK.items())
+
+
+def is_path(t):
+    """OSM tags of a way vectorize draws as a path (a cart path on the course, concrete road past it): golf=cartpath,
+    golf_cart=yes, highway=path / footway, and cycle trails (is_trail)."""
+    return t.get("golf") == "cartpath" or t.get("golf_cart") == "yes" or t.get("highway") in ("path", "footway") or \
+        is_trail(t)
 
 
 def grid():
@@ -277,7 +300,7 @@ def osm_label_raster(W, H, T, chm):
     # a golf=cartpath is a cart path whatever its highway tag (Whistle Bear: golf=cartpath + highway=service)
     # and a grass or earth track is grass (turf_track)
     road = lambda t: t.get("highway") in ROAD_HALF_WIDTH and t.get("golf") != "cartpath" and not turf_track(t)
-    lines = polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway"), 1.8) + \
+    lines = polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway") or is_trail(t), 1.8) + \
         polys(road, 6.0)
     line_m = rasterize([(g, 1) for g in lines], out_shape=(H, W), transform=T, fill=0, dtype="uint8").astype(bool) if lines else np.zeros((H, W), bool)
     rough = course_m & ~ndimage.binary_dilation(feat_m, iterations=int(4 / C.DEM_RES)) & ~line_m & (chm < 0.5)
@@ -287,7 +310,8 @@ def osm_label_raster(W, H, T, chm):
     burn(polys(lambda t: t.get("golf") == "green"), CID["green"], 0.75)
     burn(polys(lambda t: t.get("golf") == "bunker"), CID["bunker"], 0.5)
     burn(polys(is_water), CID["water"], 1.0)
-    burn(polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway"), 0.6), CID["cartpath"], 0)
+    burn(polys(lambda t: t.get("golf") == "cartpath" or t.get("highway") in ("path", "footway") or is_trail(t), 0.6),
+         CID["cartpath"], 0)
     burn(polys(road, lambda t: min(2.5, ROAD_HALF_WIDTH[t["highway"]])), CID["road"], 0)  # a track: no wider than itself
     burn(polys(lambda t: t.get("amenity") == "parking"), CID["road"], 1.0)
     burn(polys(lambda t: "building" in t), CID["building"], 1.0)

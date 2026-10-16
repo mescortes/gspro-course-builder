@@ -337,15 +337,20 @@ Engine settings for problems QA finds on many holes (`course.toml [tuning]`, def
 | Bunkers spilling onto their grass faces with a coarse photo | `[tuning.bunker_trim]`: with a photo of `photo_res` m (0.3) or coarser, bunkers are cut to their LiDAR pans (`radius` 5 m rim search, `depth` 0.08 m, `lip` 0.5 m); `photo_res = 100` turns it off |
 | A shared fairway split badly between holes | A fairway several lines of play run along is split between their corridors. `shared_fairway_min_part` (150 m2): the smallest part a hole takes; `shared_fairway_min_run` (80 m) and `shared_fairway_green_reach` (30 m): a line runs along a fairway when that much of it lies inside, or its green end is that close (a par 3's green surround); a line that only crosses it (a tee shot over another hole's fairway or green surround) takes none |
 | Mapped forward tees left as background (hole 99) | A tee pad belongs to the line of play within 40 m of it (extended 35 m back), unless it lies past `forward_tee_frac` (0.45) of the line. A mapped tee no line claims goes to the hole whose line is within `forward_tee_reach` (60 m) and whose card it plays (within `forward_tee_card_tol`, 10 yd, of the hole's shortest to longest yardage), when that hole is the nearest by half; a range tee or a pad that plays no card stays hole 99 |
+| Mapped collection areas or drop zones built as rough | `small_osm_fairway` (300 m2): an OSM fairway smaller than this is fairway as mapped (below greens, bunkers, tees, paths and water), its parts kept down to 37.5 m2; a larger one is left to the classifier |
 | Two tee sets on one marker | `tee_marker_gap` (2 m): a set never takes a spot this close to another set's while another pad is free, unless their cards are this close too (two sets with the same yardage share a box); the gap is reported |
 | Deckless forward markers (no deck delivers the card) in rough, by bunkers or on a lake bank | The marker keeps the card distance and takes the best ground within `fairway_marker_offset` (20 m) either side of the back tee's first leg: the hole's fairway, its tee decks, semirough, then rough, never within `fairway_marker_clearance` (5 m) of a bunker, water or a native area; with none the set stays on its pad and the gap is reported |
 | Holes in the terrain at tees, steps around greens | `[tuning.level_tees] enabled = false` when the LiDAR shows every tee (§2) |
 | A river or creek in a trench at its upper end, or with levees at its lower end | A water body is flat at its lowest 20 % shoreline. One whose local level (the 20th percentile of the shoreline within 60 m) falls more than `water_step` (0.3 m) is cut across into reaches falling at most that much, each with its own flat WaterPlane at the level of its lower end; `water_step = 0` keeps one level |
+| A reedbed or marsh hazard built as a pond | A golf water hazard mapped `natural=wetland` (no `natural=water`) is no water: its ground is what the photo and the LiDAR show (reeds: deep rough), with no WaterPlane or carved bed, and it stays a penalty area in holes.json and GreenKeeper (`lateral_water` for a lateral hazard). Map open water `natural=water` |
+| Green patches in the woods (leaf-off photo) | `green_canopy_max` (0.5): a classifier green lying this much or more under the closed canopy is woodland floor in the trees' shadow (rough); real greens have at most 2 % there |
 | Lawns, sports fields or a driving range round the course built as greens (hole 99) | `green_off_course` (15 m): a classifier green farther than this outside the course outline (`leisure=golf_course`) is rough; OSM-mapped greens stay wherever they are |
 
 Tracks and service ways inside the course mapped `surface=grass / ground / dirt / earth / mud` or
 `tracktype=grade4 / grade5` are turf (mown maintenance routes; the classifier's training labels never call them
-road); other tracks and service roads there are cart paths.
+road); other tracks and service roads there are cart paths. Cycle trails (`highway=cycleway`) are paths like
+footways (cart path on the course, concrete road past it) unless they are mapped as grass or earth (turf); a
+`[tuning.road_half_width] cycleway` entry makes them roads instead.
 
 **Checkpoint:** every hole scores at least 8 of 10 from its verifier; the tests pass or each failure is documented.
 
