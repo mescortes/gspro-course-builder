@@ -19,6 +19,14 @@ The build produces:
 The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's job: see
 [research/GSPRO_COSMETICS.md](../../research/GSPRO_COSMETICS.md).
 
+**Explore it without building** (a 250 MB download; Python 3.9+ and curl):
+
+```bash
+python3 scripts/get_course.py westmount && python3 scripts/devserver.py 8765
+```
+
+Then open <http://localhost:8765/viewer/?course=westmount#h1-tee>.
+
 ![Course map](images/course_map.jpg)
 
 | | |
