@@ -309,6 +309,226 @@
     "reason": "1 m fringe along the new front edge of the green where the tail was cut back (overrides are burned after the fringe ring is drawn).",
     "frame": "lidar"
    }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       547105.55,
+       4806258.48
+      ],
+      [
+       547105.98,
+       4806260.35
+      ],
+      [
+       547106.56,
+       4806261.2
+      ],
+      [
+       547106.66,
+       4806261.79
+      ],
+      [
+       547107.22,
+       4806262.62
+      ],
+      [
+       547107.45,
+       4806264.35
+      ],
+      [
+       547108.91,
+       4806266.85
+      ],
+      [
+       547109.76,
+       4806267.29
+      ],
+      [
+       547110.96,
+       4806267.56
+      ],
+      [
+       547112.21,
+       4806268.55
+      ],
+      [
+       547113.68,
+       4806267.48
+      ],
+      [
+       547114.27,
+       4806267.35
+      ],
+      [
+       547115.28,
+       4806268.6
+      ],
+      [
+       547116.82,
+       4806271.08
+      ],
+      [
+       547120.02,
+       4806274.64
+      ],
+      [
+       547120.75,
+       4806274.56
+      ],
+      [
+       547121.02,
+       4806274.29
+      ],
+      [
+       547120.83,
+       4806273.38
+      ],
+      [
+       547116.79,
+       4806268.3
+      ],
+      [
+       547110.24,
+       4806262.45
+      ],
+      [
+       547109.71,
+       4806261.61
+      ],
+      [
+       547109.56,
+       4806260.92
+      ],
+      [
+       547108.83,
+       4806259.85
+      ],
+      [
+       547108.59,
+       4806257.28
+      ],
+      [
+       547108.07,
+       4806256.35
+      ],
+      [
+       547106.31,
+       4806256.12
+      ],
+      [
+       547105.16,
+       4806256.45
+      ],
+      [
+       547104.94,
+       4806256.68
+      ],
+      [
+       547104.92,
+       4806257.54
+      ],
+      [
+       547105.55,
+       4806258.48
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "surface": "rough",
+    "hole": 99,
+    "reason": "False cart path (trace_paths line, 40 m) on the NW bank of the Silver/Bronze deck, E 547105-547121, N 4806256-4806274: the photo shows only dry brown rough (no asphalt: saturation 41 vs 22 on the real path, colour as the surrounding grass) and dem_raw shows a uniform bank sloping from 287.8 to 284.5 m with no path bench. A stray concrete strip in GSPro; burned to rough 99 (tee pads and the native patch left as they are).",
+    "frame": "lidar"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       547124.63,
+       4806279.83
+      ],
+      [
+       547126.43,
+       4806280.85
+      ],
+      [
+       547127.8,
+       4806280.86
+      ],
+      [
+       547128.4,
+       4806280.48
+      ],
+      [
+       547128.32,
+       4806279.82
+      ],
+      [
+       547128.0,
+       4806279.46
+      ],
+      [
+       547126.46,
+       4806279.01
+      ],
+      [
+       547125.63,
+       4806278.35
+      ],
+      [
+       547124.68,
+       4806277.1
+      ],
+      [
+       547124.3,
+       4806276.1
+      ],
+      [
+       547123.64,
+       4806275.33
+      ],
+      [
+       547122.78,
+       4806274.85
+      ],
+      [
+       547122.13,
+       4806274.99
+      ],
+      [
+       547121.85,
+       4806275.58
+      ],
+      [
+       547121.96,
+       4806276.42
+      ],
+      [
+       547123.6,
+       4806278.88
+      ],
+      [
+       547124.63,
+       4806279.83
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "surface": "rough",
+    "hole": 99,
+    "reason": "False cart path fragment (same trace_paths line) between the Silver/Bronze deck and the White deck, E 547122-547128, N 4806275-4806281: dry rough in the photo, no path in dem_raw. Burned to rough 99.",
+    "frame": "lidar"
+   }
   }
  ]
 }

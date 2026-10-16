@@ -321,6 +321,90 @@
     "frame": "lidar",
     "reason": "Hole number only: this 94 m2 bunker (centroid E 545941.0 N 4805973.7) is one of the three-bunker cluster on the right edge of the 8th fairway (6.9 m from it), 245-260 yd from the 8th tee just past its aim point; the third bunker of the cluster is already hole 8. It is 33-50 m from the 11th fairway and 27-29 m right of the 11th line only 130 yd from its back tee, so it was given to 11 by line distance alone. Same outline (course_surfaces geometry simplified 0.08 m, grown 0.06 m to cover it), hole 8."
    }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       546121.97,
+       4805817.0
+      ],
+      [
+       546124.98,
+       4805819.64
+      ],
+      [
+       546127.24,
+       4805817.07
+      ],
+      [
+       546129.51,
+       4805814.49
+      ],
+      [
+       546131.77,
+       4805811.92
+      ],
+      [
+       546134.03,
+       4805809.34
+      ],
+      [
+       546136.29,
+       4805806.76
+      ],
+      [
+       546138.56,
+       4805804.19
+      ],
+      [
+       546140.82,
+       4805801.61
+      ],
+      [
+       546137.81,
+       4805798.97
+      ],
+      [
+       546135.55,
+       4805801.55
+      ],
+      [
+       546133.29,
+       4805804.12
+      ],
+      [
+       546131.03,
+       4805806.7
+      ],
+      [
+       546128.76,
+       4805809.28
+      ],
+      [
+       546126.5,
+       4805811.85
+      ],
+      [
+       546124.24,
+       4805814.43
+      ],
+      [
+       546121.97,
+       4805817.0
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "surface": "cartpath",
+    "hole": 98,
+    "frame": "lidar",
+    "reason": "Cart path cut by the reedbed water south of the 11th green: OSM golf=path way 814783564 (green -> south, 3.7-4.4 m wide either side) runs 16.4 m across the lateral-hazard reedbed polygon (E 546126.5-546137.3, N 4805803.3-4805815.7), and water outranks cart path in the partition, so the model has a 17 m gap of water there and dem_final carves it to the pond bed (277.7-278.3 m). The 2025 photo shows the grey path continuous across, and dem_raw shows a flat causeway 4 m wide (278.95-279.05, 0.1-0.4 m above the marsh either side, CHM 0.00-0.05) centred 0.5 m SW of the OSM line. Burned as cart path (hole 98): the OSM line from 43 to 67 m along it, offset 0.5 m SW, 2.0 m each side, overlapping the existing path 2-3 m at each end. Splits the reedbed water into pieces; no other surface touched (0.7 m2 native, 3 m2 rough at the ends)."
+   }
   }
  ]
 }
