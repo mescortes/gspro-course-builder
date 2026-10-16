@@ -625,3 +625,25 @@ def test_a_mapped_forward_tee_off_the_line_goes_to_the_hole_whose_card_it_fits()
     assert V.card_tee_hole(fwd, holes, {2: cards[2]}) == 99, "a hole without a card takes no tee"
     assert V.card_tee_hole(fwd, holes, cards, reach=40) == 99
     assert V.nearest_line(pad(2, -10), holes, 40, "start") == 1, "the back tee is still the line's"
+
+
+def test_semirough_takes_the_hole_of_the_fairway_it_rings():
+    """Deer Ridge QA: every semirough polygon was background (hole 99), the rings round the fairways too, though fringe
+    and semirough are to adopt the hole of the green / fairway they surround. A ring takes its fairway's hole; one round
+    the fairways of two holes (a shared fairway split between their corridors) is cut between them, each part to the
+    hole of the fairway it lies by; a ring round a fairway of no hole (a practice ground) stays 99."""
+    from shapely.geometry import Point, box
+    from shapely.ops import unary_union
+    f3, f4 = box(0, 0, 30, 200), box(30, 0, 60, 200)                  # one fairway split between holes 3 and 4
+    f7, f99 = box(200, 0, 230, 150), box(400, 0, 440, 60)
+    ring = lambda f: f.buffer(1.5, join_style=1).difference(f)
+    joined, own, practice = ring(box(0, 0, 60, 200)), ring(f7), ring(f99)
+    out = V.ring_holes([joined, own, practice], [(f3, 3), (f4, 4), (f7, 7), (f99, 99)])
+    assert {h for _, h in out} == {3, 4, 7, 99}
+    assert abs(sum(p.area for p, _ in out) - joined.area - own.area - practice.area) < 1e-6, "the parts tile the rings"
+    assert next(p for p, h in out if h == 7) is own and next(p for p, h in out if h == 99) is practice
+    part3 = unary_union([p for p, h in out if h == 3]); part4 = unary_union([p for p, h in out if h == 4])
+    assert part3.distance(Point(-1, 100)) < 1e-9 and part4.distance(Point(61, 100)) < 1e-9
+    assert abs(part3.area - part4.area) < 1.0 and not part3.intersects(Point(45, 201))
+    assert min(p.area for p, _ in out) >= 0.25 * V.MIN_AREA["semirough"]
+    assert V.ring_holes([ring(box(600, 0, 640, 60))], [(f3, 3)])[0][1] == 99, "no fairway by it"

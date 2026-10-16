@@ -408,18 +408,60 @@ def split_shared_fairways(fairways, lines, min_part=None, step=2.0, min_run=None
             continue
         # a shard the corridor boundary cuts off a ragged edge (smaller than any fairway part vectorize keeps) joins
         # the piece it shares the longest edge with
-        speck = 0.25 * MIN_AREA["fairway"]
-        pieces = sorted(((r, h) for h, q in parts.items() for r in polys_of(q)), key=lambda x: -x[0].area)
-        keep = [[r, h] for r, h in pieces if r.area >= speck]
-        for r, h in pieces:
-            if r.area >= speck:
-                continue
-            edge = max(((r.boundary.intersection(k[0].boundary).length, i) for i, k in enumerate(keep)), default=(0, 0))
-            if edge[0] > 0:
-                keep[edge[1]][0] = keep[edge[1]][0].union(r)
-            else:
-                keep.append([r, h])
-        out.extend((r, h) for r, h in keep)
+        out.extend(join_shards(parts, 0.25 * MIN_AREA["fairway"]))
+    return out
+
+
+def join_shards(parts, speck):
+    """[(polygon, hole)] from parts ({hole: geometry} cut from one polygon): each polygon of a part, biggest first,
+    except the shards under `speck` m2, which join the piece they share the longest edge with (a shard touching none
+    stays on its own)."""
+    pieces = sorted(((r, h) for h, q in parts.items() for r in polys_of(q)), key=lambda x: -x[0].area)
+    keep = [[r, h] for r, h in pieces if r.area >= speck]
+    for r, h in pieces:
+        if r.area >= speck:
+            continue
+        edge = max(((r.boundary.intersection(k[0].boundary).length, i) for i, k in enumerate(keep)), default=(0, 0))
+        if edge[0] > 0:
+            keep[edge[1]][0] = keep[edge[1]][0].union(r)
+        else:
+            keep.append([r, h])
+    return [(r, h) for r, h in keep]
+
+
+def ring_holes(rings, fairways, reach=2.0, step=1.0):
+    """[(semirough polygon, hole)]: a semirough ring takes the hole of the fairway it rings (fairways: [(polygon,
+    hole)], the parts within `reach` m of it). One that rings the fairways of several holes (a shared fairway split
+    between their corridors, two holes' fairways a few metres apart) is cut between them along the Voronoi cells of
+    their outer edges (points every `step` m within `reach` m of it), each part to the hole of the fairway it lies by;
+    a shard joins its neighbour (join_shards). By no fairway: 99. Deer Ridge QA: every semirough was hole 99."""
+    from shapely.geometry import MultiPoint
+    from shapely.ops import voronoi_diagram
+    from shapely import STRtree, segmentize
+    tree = STRtree([f for f, _ in fairways]) if fairways else None
+    out = []
+    for q in rings:
+        zone = q.buffer(reach)
+        near = [fairways[i] for i in np.sort(tree.query(zone, predicate="intersects"))] if tree is not None else []
+        hs = sorted({h for _, h in near})
+        if len(hs) < 2:
+            out.append((q, hs[0] if hs else 99))
+            continue
+        pts, own = [], []
+        for f, h in near:   # (an edge two parts share is no site: it would give the cells round its ends to one hole)
+            b = f.boundary.intersection(zone).difference(unary_union([o for o, _ in near if o is not f]).buffer(0.01))
+            for g in getattr(b, "geoms", [b]):
+                if g.geom_type == "LineString" and g.length > 0:
+                    for c in segmentize(g, step).coords:
+                        pts.append(Point(c)); own.append(h)
+        sites = STRtree(pts)
+        cells = {h: [] for h in hs}
+        for c in voronoi_diagram(MultiPoint(pts), envelope=q.envelope.buffer(50)).geoms:
+            i = sites.query(c, predicate="contains")
+            if len(i):
+                cells[own[min(i)]].append(make_valid(c))
+        parts = {h: q.intersection(unary_union(cs)) for h, cs in cells.items() if cs}
+        out.extend(join_shards(parts, 0.25 * MIN_AREA["semirough"]))
     return out
 
 
@@ -890,7 +932,7 @@ def main():
     def assign(p, n):
         if n == "cartpath":
             return 98
-        if n in ("rough", "road", "building", "court", "native", "semirough", "water", "deeprough"):
+        if n in ("rough", "road", "building", "court", "native", "water", "deeprough"):
             return 99
         if n == "green":
             return next(h for g, h in green_hole if g.equals(p))   # (greens are emitted from green_hole below)
@@ -905,16 +947,19 @@ def main():
             return card_tee_hole(p, holes, cards) if h == 99 and mapped_tee(p) else h
         return nearest_line(p, holes, 45)
     # a fairway several lines of play run through is split between their corridors (the rest: nearest line)
-    fairway_hole = split_shared_fairways(polys_of(final["fairway"]), holes)
+    fairway_hole = [(p, assign(p, "fairway") if h is None else h)
+                    for p, h in split_shared_fairways(polys_of(final["fairway"]), holes)]
+    # fringe and semirough adopt the hole of the green / fairway they surround
+    semi_hole = ring_holes(polys_of(final["semirough"]), [(p, h) for p, h in fairway_hole if p.area >= 1e-6])
+    split = {"green": green_hole, "fairway": fairway_hole, "semirough": semi_hole}
     feats = []
     for n, g in final.items():
-        for p, h in (green_hole if n == "green" else fairway_hole if n == "fairway" else [(q, None) for q in polys_of(g)]):
+        for p, h in split.get(n) or [(q, None) for q in polys_of(g)]:
             if p.area < 1e-6:
                 continue
             h = assign(p, n) if h is None else h
             feats.append({"type": "Feature", "geometry": mapping(p),
                           "properties": {"surface": n, "hole": h, "area": round(p.area, 2), "stroke": STROKE.get(n, "#ff00ff")}})
-    # fringe/semirough adopt the hole of the green/fairway they surround
     out = {"type": "FeatureCollection", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::" + C.CRS.split(":")[1]}}, "features": feats}
     C.FEATURES.mkdir(exist_ok=True)
     json.dump(out, open(C.FEATURES / "auto_core.geojson", "w"))
