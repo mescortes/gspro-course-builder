@@ -33,6 +33,7 @@ SHARED_FAIRWAY_MIN_PART = C.tuning("shared_fairway_min_part", 150.0)  # m2: smal
 SHARED_FAIRWAY_MIN_RUN = C.tuning("shared_fairway_min_run", 80.0)     # m of a line inside a fairway it runs along ...
 SHARED_FAIRWAY_GREEN_REACH = C.tuning("shared_fairway_green_reach", 30.0)  # ... or m from it to the line's green end
 GREEN_OFF_COURSE = C.tuning("green_off_course", 15.0)  # m: a classifier green farther off the course outline is a lawn
+SMALL_OSM_FAIRWAY = C.tuning("small_osm_fairway", 300.0)  # m2: a mapped fairway under this is fairway as mapped
 MIN_AREA = {"deeprough": 60, "green": 60, "bunker": 10, "tee": 12, "fairway": 150, "cartpath": 6, "native": 25, "road": 25,
             "building": 25, "court": 50, "water": 4, "fringe": 4, "semirough": 4}
 # Photo colour rules SAND, SHADOW_SAND and TURF ([tuning.sand], [tuning.shadow_sand], [tuning.turf]): surface_classify.py
@@ -525,6 +526,28 @@ def green_keep_area(course_area, osm_greens, margin=None):
     return unary_union([course_area.buffer(margin)] + [g for g in osm_greens if not g.is_empty])
 
 
+def small_osm_fairways(G, limit=None):
+    """The mapped fairways (golf=fairway, not drafted) under `limit` m2 (SMALL_OSM_FAIRWAY): collection areas and drop
+    zones the classifier does not hold, or holds in pieces under MIN_AREA["fairway"] that vectorize drops (Deer Ridge:
+    66-238 m2 by the greens of 6, 14, 16 and 18, all rough). They are fairway as mapped, below the surfaces that
+    outrank fairway; a larger one is left to the classifier, whose mowing lines are more exact than an outline."""
+    limit = SMALL_OSM_FAIRWAY if limit is None else limit
+    return [make_valid(g) for _, t, g in G if t.get("golf") == "fairway" and not is_drafted(t)
+            and g.geom_type in ("Polygon", "MultiPolygon") and g.area < limit]
+
+
+def keep_part(p, n, mapped=None):
+    """Is a part p of surface n big and thick enough to keep (a speck becomes rough)? At least MIN_AREA[n] m2 (a
+    quarter of it for fringe and semirough rings, and for a fairway part lying on a small mapped fairway, `mapped`:
+    small_osm_fairways), and not thinner than a few decimetres."""
+    small = n in ("fringe", "semirough") or (n == "fairway" and mapped is not None and not mapped.is_empty
+                                             and p.intersection(mapped).area >= 0.5 * p.area)
+    if p.area < MIN_AREA.get(n, 0.5) * (0.25 if small else 1.0):
+        return False
+    thin = {"fringe": 0.1, "semirough": 0.15, "cartpath": 0.3, "road": 0.8, "building": 0.8}.get(n, 0.3)
+    return not p.buffer(-thin).is_empty
+
+
 def is_court(t):
     """OSM tags of a sports pitch or a tennis court (the court surface). A golf feature mapped as a pitch is not one:
     Deer Ridge maps hole 1's green and four tees golf=green / golf=tee + leisure=pitch + sport=golf, and a court erases
@@ -753,6 +776,8 @@ def main():
     trim_bunkers = trims_bunkers(C.IMAGERY_RES)
 
     aoi = box(C.CORE["xmin"], C.CORE["ymin"], C.CORE["xmax"], C.CORE["ymax"])
+    small_fw = small_osm_fairways(G)
+    small_fw_area = unary_union(small_fw) if small_fw else None
     final = {}
     taken = Polygon()
     for n in PRIORITY:
@@ -765,6 +790,8 @@ def main():
             g = smooth_poly(g, close=0.4, simp=0.1)
         else:
             g = smooth_poly(g, close=0.35 if n != "bunker" else 0.2)
+        if n == "fairway" and small_fw:   # small mapped fairways (collection areas, drop zones) as mapped
+            g = unary_union([g] + small_fw)
         g = make_valid(g).intersection(aoi).difference(taken)
         if n == "bunker" and trim_bunkers:
             n0 = len(polys_of(g)); a0 = g.area
@@ -889,13 +916,8 @@ def main():
     final["semirough"] = semi.intersection(aoi)
 
     # drop slivers / specks; whatever is dropped becomes rough so the partition stays gap-free
-    def keep_part(p, n):
-        if p.area < MIN_AREA.get(n, 0.5) * (0.25 if n in ("fringe", "semirough") else 1.0):
-            return False
-        thin = {"fringe": 0.1, "semirough": 0.15, "cartpath": 0.3, "road": 0.8, "building": 0.8}.get(n, 0.3)
-        return not p.buffer(-thin).is_empty
     for n in list(final):
-        final[n] = unary_union([p for p in polys_of(final[n]) if keep_part(p, n)])
+        final[n] = unary_union([p for p in polys_of(final[n]) if keep_part(p, n, small_fw_area)])
     final["rough"] = aoi.difference(unary_union(list(final.values())))
     # tiny rough / semirough islands (< 15 m2) inside other surfaces render as odd patches: merge each into the
     # neighbouring surface it shares the most boundary with

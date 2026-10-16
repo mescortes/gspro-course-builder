@@ -697,3 +697,25 @@ def test_cycle_trails_are_paths_unless_mapped_as_turf(monkeypatch):
     assert lab[row(70), 200] == CID["rough"]
     monkeypatch.setitem(S.ROAD_HALF_WIDTH, "cycleway", 1.5)
     assert not S.is_trail(G[2][1]) and ys(V.path_lines(G)) == [10]
+
+
+def test_small_mapped_fairways_are_kept_as_mapped():
+    """Deer Ridge maps collection areas and drop zones as golf=fairway (66-238 m2, by the greens of 6, 14, 16 and 18;
+    ways 891742653, 892441100): the classifier holds none of them, or pieces under MIN_AREA["fairway"] (150 m2) that
+    vectorize drops, so they were rough. A mapped fairway under SMALL_OSM_FAIRWAY m2 is fairway as mapped, and its
+    parts are kept down to the speck limit (a quarter of MIN_AREA); a larger one is left to the classifier, and a
+    drafted one (draft=yes: photo-derived, no survey) is not kept."""
+    from shapely.geometry import box
+    G = [(1, {"golf": "fairway"}, box(0, 0, 10, 7)),                              # 70 m2: a drop zone
+         (2, {"golf": "fairway"}, box(100, 0, 120, 12)),                          # 240 m2: a collection area
+         (3, {"golf": "fairway"}, box(200, 0, 260, 100)),                         # 6,000 m2: the classifier's
+         (4, {"golf": "fairway", "draft": "yes"}, box(300, 0, 310, 10)),
+         (5, {"golf": "green"}, box(400, 0, 410, 10))]
+    small = V.small_osm_fairways(G)
+    assert sorted(g.area for g in small) == [70.0, 240.0]
+    assert V.SMALL_OSM_FAIRWAY == 300.0 and len(V.small_osm_fairways(G, limit=100.0)) == 1
+    mapped = box(0, 0, 10, 7)
+    assert not V.keep_part(box(0, 0, 10, 6), "fairway")                           # 60 m2 of classifier fairway
+    assert V.keep_part(box(0, 0, 10, 6), "fairway", mapped)                       # ... on a mapped one
+    assert not V.keep_part(box(0, 0, 5, 6), "fairway", mapped)                    # 30 m2: a speck
+    assert V.keep_part(box(0, 0, 20, 10), "fairway") and not V.keep_part(box(0, 0, 0.5, 1.5), "semirough")
