@@ -551,6 +551,30 @@ def small_osm_fairways(G, limit=None):
             and g.geom_type in ("Polygon", "MultiPolygon") and g.area < limit]
 
 
+def burn_small_fairways(final, small_fw):
+    """In place: the small mapped fairways (small_osm_fairways) laid down again after the tee and bunker validation,
+    under the surfaces that outrank fairway and survived it (water, green, bunker, tee, paths, roads, buildings,
+    courts): the ground a rejected classifier tee or bunker leaves on a drop zone is fairway, not a remnant under the
+    speck limit."""
+    if not small_fw:
+        return final
+    above = unary_union([final[n] for n in ("water", "green", "bunker", "tee", "cartpath", "road", "building", "court")])
+    final["fairway"] = unary_union([final["fairway"]] + [g.difference(above) for g in small_fw])
+    for n in ("native", "deeprough"):
+        final[n] = final[n].difference(unary_union(small_fw))
+    return final
+
+
+def rejected_tee_is_fairway(p, fair, mapped=None):
+    """Is a classifier tee the LiDAR rejected fairway (else rough)? When fairway (`fair`) covers most of the ring 1.5 m
+    round it, or when it lies mostly on a small mapped fairway (`mapped`: small_osm_fairways; Deer Ridge's 66 m2 drop
+    zone, way 892441100, was 55 % classifier tee)."""
+    ring = p.buffer(1.5).difference(p)
+    if ring.intersection(fair).area > 0.5 * ring.area:
+        return True
+    return mapped is not None and not mapped.is_empty and p.intersection(mapped).area >= 0.5 * p.area
+
+
 def keep_part(p, n, mapped=None):
     """Is a part p of surface n big and thick enough to keep (a speck becomes rough)? At least MIN_AREA[n] m2 (a
     quarter of it for fringe and semirough rings, and for a fairway part lying on a small mapped fairway, `mapped`:
@@ -863,8 +887,7 @@ def main():
         # a flat deck that is no hole's tee (lawn, terrace, court apron) is not a tee (QA round 2)
         if tee_ok(p) and (mapped_tee(p) or nearest_line(p, holes, 40, "start") != 99):
             keep_t.append(p); continue
-        ring = p.buffer(1.5).difference(p)
-        (to_fair if ring.intersection(fair).area > 0.5 * ring.area else []).append(p); dropped += 1
+        (to_fair if rejected_tee_is_fairway(p, fair, small_fw_area) else []).append(p); dropped += 1
     paved = unary_union([make_valid(x) for x in vector["road"]]) if vector["road"] else Polygon()
     bldgs = unary_union([make_valid(x) for x in vector["building"]]) if vector["building"] else Polygon()
     for p in polys_of(final["bunker"]):
@@ -898,6 +921,7 @@ def main():
     if to_path:
         final["cartpath"] = unary_union([final["cartpath"]] + to_path)
     final["cartpath"], final["road"] = off_course_paths(final["cartpath"], final["road"], course_area)
+    burn_small_fairways(final, small_fw)
 
     # greens: clear banks (LiDAR slope > 12 %) in the outer 2.5 m of a green outline are not putting surface
     # (photo outlines can include a mown bank); tilted greens and interior tier slopes are left alone

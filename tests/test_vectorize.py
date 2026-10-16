@@ -735,3 +735,34 @@ def test_a_classifier_green_in_the_woods_is_not_a_green():
     assert V.GREEN_CANOPY_MAX == 0.5
     assert V.drop_greens_under_canopy(green, canopy, share=0.1).sum() == 0
     assert V.drop_greens_under_canopy(np.zeros((4, 4), bool), canopy[:4, :4]).sum() == 0
+
+
+def test_a_rejected_tee_on_a_small_mapped_fairway_is_fairway():
+    """Deer Ridge way 892441100 (a 66 m2 drop zone mapped golf=fairway) stayed rough with the small mapped fairways
+    kept: the classifier called 55 % of it tee, a tee outranks fairway, and the LiDAR rejected the deck. A rejected
+    classifier tee is fairway when fairway rings it (as before) or when it lies on a small mapped fairway; otherwise
+    rough."""
+    from shapely.geometry import box
+    tee = box(0, 0, 8, 5)
+    assert V.rejected_tee_is_fairway(tee, box(-10, -10, 20, 20), None)                 # fairway all round
+    assert not V.rejected_tee_is_fairway(tee, box(100, 100, 120, 120), None)           # rough all round
+    assert V.rejected_tee_is_fairway(tee, box(100, 100, 120, 120), box(-1, -1, 9, 6))  # on a mapped drop zone
+    assert not V.rejected_tee_is_fairway(tee, box(100, 100, 120, 120), box(6, 0, 30, 5))
+
+
+def test_small_mapped_fairways_fill_the_ground_rejected_tees_leave():
+    """The small mapped fairways are laid down again after the tee and bunker validation (burn_small_fairways), under
+    the surfaces that outrank fairway and survived it: a rejected classifier tee on a drop zone (Deer Ridge way
+    892441100) leaves fairway, not a 30 m2 remnant under the speck limit."""
+    from shapely.geometry import box
+    from shapely.geometry import Polygon
+    drop = box(0, 0, 11, 6)                                                      # 66 m2, mapped
+    final = {"water": Polygon(), "green": box(10, 0, 11, 6), "bunker": Polygon(), "tee": Polygon(),   # tee rejected
+             "cartpath": Polygon(), "road": Polygon(), "building": Polygon(), "court": Polygon(),
+             "fairway": box(6, 0, 10, 6), "native": box(-5, -5, 0, 0), "deeprough": Polygon()}
+    V.burn_small_fairways(final, [drop])
+    assert abs(final["fairway"].area - 60.0) < 1e-9 and final["green"].area == 6.0
+    assert V.keep_part(final["fairway"], "fairway", drop)
+    before = dict(final)
+    V.burn_small_fairways(final, [])
+    assert final == before
