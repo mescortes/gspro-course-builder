@@ -95,7 +95,8 @@ The engine's steps are in the [top-level README](../../README.md#how-a-course-is
    between the holes; NAIP 2022 (the newest photo on USGS The National Map) shows neither. It sits 0.75 m east and
    0.25 m south of the LiDAR (`measure_registration.py`, 84 bunkers): `[imagery] shift = [-0.75, 0.25]`.
 4. **Native ground.** The native seed colours are set for this photo (`[tuning.native]`): the tan sand-and-mulch
-   plantings are brighter than the engine's default allows.
+   plantings are brighter than the engine's default allows. Their texture is `gravelly_sand` (`[materials] native`):
+   the region's `withered_grass` repeats visibly over areas this large.
 5. **Colours, trees, grass and buildings** tuned in the first port's visual review (on NAIP 2022) are course.toml tables over
    the region's (`[turf_tint]`, `[trees.*]`, `[foliage.*]`, `[grass.*]`, `[buildings]`, `[materials]`, `[viewer]`).
 6. **No synthetic tee decks** (`[tuning.level_tees]` off): the LiDAR was flown after every tee was built.

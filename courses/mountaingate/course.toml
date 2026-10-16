@@ -253,6 +253,7 @@ summer_green = [86, 106, 56]
 
 [materials]
 deeprough = "dry_ground_01"  # chaparral floor: dry ground, not leaf litter
+native = "gravelly_sand"      # the native plantings: fine tan sand and gravel (withered_grass repeats visibly)
 
 [viewer]
 species_tint = { coast_live_oak = [0.86, 0.9, 0.74], aleppo_pine = [0.86, 0.95, 0.86], sycamore = [1.04, 1.07, 0.86], eucalyptus = [0.95, 0.98, 0.84], shrub = [0.96, 0.99, 0.88] }
