@@ -1,0 +1,16 @@
+{
+ "frame": "lidar",
+ "aim_points_utm": [
+  [
+   546445.0,
+   4806118.0
+  ]
+ ],
+ "tees_utm": {
+  "copper": [
+   546487.06,
+   4806109.26
+  ]
+ },
+ "notes": "One aim point, at the dogleg corner: the west end of the lower fairway lobe (E 546445 N 4806118, on the fairway centre line, 18 m inside its edges), where the fairway turns from west to north-west round the pine island and the two fairway bunkers. The OSM vertex used before (E 546378.8 N 4806168.3) is 70 m up the north-west leg: the tee line from it ran over both fairway bunkers and left Black 581/587, Gold 550/553 and White 439/444 clamped at the back of their decks. From the corner the line runs north-west down the corridor to the green (it clips the fairway bunker on the corridor's south edge at E 546299 N 4806215, as the old line did), the deck centres measure within 1-4 yd of their cards (they were 6-16 yd short on the old line), and every deck delivers its card: Black 587.0, Gold 553.0, Silver 529.0 (back of the Bronze deck, 11 m behind Bronze), Bronze 517.0, White 443.6 (OSM tee 890853489, reassigned from hole 99 to hole 3 in features/overrides/hole03.geojson). Copper (374) has no deck: pinned on the lower fairway lobe in front of the White deck, on the line White deck -> aim point, at 374.0 yd (the round-1 pin E 546494.43 N 4806119.1 was on the old line and would measure 381 yd on this one)."
+}

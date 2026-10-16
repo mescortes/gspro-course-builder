@@ -1,0 +1,10 @@
+{
+ "frame": "lidar",
+ "tees_utm": {
+  "copper": [
+   546141.55,
+   4805991.98
+  ]
+ },
+ "notes": "Copper (card 342, new in 2025; no pad delivers it, the nearest, White, is 72 yd long) is a fairway marker. The automatic marker (E 546169.36 N 4805992.94) is on the back-tee -> aim line, 13.4 m right of the fairway in the rough (hole 99). Pinned on the same yardage arc round the aim point in the fairway's south lobe, 14 m inside the fairway edge, slope about 2 %: 49.56 m to the aim point E 546150.15 N 4806040.79 + 260.96 m to the green centre (E 546111.28 N 4806301.07 once the green's front finger is trimmed to fringe, QA round 1) = 342.0 yd. QA verify moved the inspector's E 546141.20 N 4805990.01 1.98 m along the same bearing, because the green trim moves the green centre 2 m north (it would read 344.2 yd)."
+}
