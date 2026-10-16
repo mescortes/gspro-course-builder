@@ -78,6 +78,21 @@ def penalty_hazards(areas, corridor, min_area=50.0):
     return out
 
 
+def surface_hazards(feats, corridor, penalties=(), min_area=50.0):
+    """holes.json hazards from the surfaces: the water and native polygons over `min_area` m2 that reach a hole's
+    corridor, except those lying mostly inside a penalty area (penalty_areas: the reedbed's own ground is native area
+    and deep rough; it is in the lateral hazard's ring already)."""
+    out = []
+    for g, p in feats:
+        if p["surface"] in ("native", "water") and g.area > min_area and g.intersects(corridor):
+            if any(g.intersection(a).area >= 0.5 * g.area for a, _ in penalties):
+                continue
+            c = g.centroid
+            out.append({"type": "native_area" if p["surface"] == "native" else "water", "utm_centroid": [round(c.x, 2), round(c.y, 2)],
+                        "area_m2": round(g.area, 1), "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
+    return out
+
+
 def hole_lines():
     from surface_classify import osm_geoms
     return {C.course_hole(t["ref"]): g for _, t, g in osm_geoms()
@@ -410,11 +425,7 @@ def hole_record(h, line, feats, terr, all_feats, penalties=()):
             rec["hazards"].append({"type": "bunker", "utm_centroid": [round(c.x, 2), round(c.y, 2)], "area_m2": round(g.area, 1),
                                    "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
     corridor = play.buffer(40)
-    for g, p in all_feats:
-        if p["surface"] in ("native", "water") and g.area > 50 and g.intersects(corridor):
-            c = g.centroid
-            rec["hazards"].append({"type": "native_area" if p["surface"] == "native" else "water", "utm_centroid": [round(c.x, 2), round(c.y, 2)],
-                                   "area_m2": round(g.area, 1), "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
+    rec["hazards"] += surface_hazards(all_feats, corridor, penalties)
     rec["hazards"] += penalty_hazards(penalties, corridor)   # wetland hazards: penalty areas with no water surface
     if rec["tees"]:
         rec["elevation_change_m"] = round(gh - rec["tees"][0]["utm"][2], 2)

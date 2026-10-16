@@ -197,3 +197,19 @@ def test_a_wetland_hazard_stays_a_penalty_area_in_the_hole_data():
     hz = HD.penalty_hazards(areas, play.buffer(40))
     assert [(z["type"], z["area_m2"]) for z in hz] == [("lateral_water", 6000.0)]
     assert hz[0]["polygon_utm"][0] == hz[0]["polygon_utm"][-1] and len(hz[0]["utm_centroid"]) == 2
+
+
+def test_ground_inside_a_penalty_area_is_not_a_second_hazard():
+    """The reedbed's own ground is native area and deep rough: the native polygons inside it were listed as native-area
+    hazards inside the lateral hazard's ring (Deer Ridge holes 7, 8, 11, 12: 2-5 more each). Water and native surfaces
+    over 50 m2 in the corridor are hazards, except those lying mostly inside a penalty area."""
+    from shapely.geometry import LineString
+    corridor = LineString([(0, 0), (0, 300)]).buffer(40)
+    reed = box(10, 100, 60, 160)
+    feats = [(box(15, 110, 30, 130), {"surface": "native", "hole": 99}),       # reeds' ground, inside the reedbed
+             (box(-30, 10, -10, 30), {"surface": "native", "hole": 99}),       # a native area elsewhere
+             (box(-20, 200, 10, 230), {"surface": "water", "hole": 99}),
+             (box(0, 50, 5, 55), {"surface": "native", "hole": 99})]           # under 50 m2
+    hz = HD.surface_hazards(feats, corridor, [(reed, "lateral_water")])
+    assert sorted((z["type"], z["area_m2"]) for z in hz) == [("native_area", 400.0), ("water", 900.0)]
+    assert len(HD.surface_hazards(feats, corridor)) == 3
