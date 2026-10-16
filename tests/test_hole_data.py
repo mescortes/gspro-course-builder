@@ -178,3 +178,22 @@ def test_a_deckless_forward_marker_goes_on_mown_ground_away_from_hazards():
     assert t["source"] == "fairway_marker" and abs(t["pos"][0]) > 45
     t = marker(None)                                                   # no surfaces: the old rule
     assert t["source"] == "fairway_marker" and np.allclose(t["pos"], on_line)
+
+
+def test_a_wetland_hazard_stays_a_penalty_area_in_the_hole_data():
+    """A golf water hazard mapped as a wetland has no water surface any more (it is not to be carved as a pond), but it
+    is still a penalty area: the holes whose corridor it reaches list it among their hazards (GreenKeeper), lateral or
+    not as OSM maps it, clipped to the build area."""
+    from shapely.geometry import LineString
+    G = [(1, {"golf": "lateral_water_hazard", "natural": "wetland", "wetland": "reedbed"}, box(20, 100, 120, 160)),
+         (2, {"golf": "water_hazard", "natural": "wetland"}, box(-300, 0, -200, 50)),             # outside the build
+         (3, {"golf": "water_hazard", "natural": "water"}, box(60, 200, 90, 230)),         # a pond: a water surface
+         (4, {"natural": "wetland"}, box(-40, 100, -20, 140)),                             # no golf hazard
+         (5, {"golf": "lateral_water_hazard", "natural": "wetland"}, box(390, 0, 500, 40))]
+    areas = HD.penalty_areas(G, aoi=box(-150, -50, 450, 350))
+    assert sorted((round(g.area), k) for g, k in areas) == [(2400, "lateral_water"), (6000, "lateral_water")]
+    assert HD.penalty_areas([(2, {"golf": "water_hazard", "natural": "wetland"}, box(0, 0, 10, 10))])[0][1] == "water"
+    play = LineString([(0, 0), (0, 300)])
+    hz = HD.penalty_hazards(areas, play.buffer(40))
+    assert [(z["type"], z["area_m2"]) for z in hz] == [("lateral_water", 6000.0)]
+    assert hz[0]["polygon_utm"][0] == hz[0]["polygon_utm"][-1] and len(hz[0]["utm_centroid"]) == 2

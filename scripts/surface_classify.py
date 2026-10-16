@@ -59,8 +59,16 @@ def tuned(name, default):
 
 def is_water(t):
     """OSM tags of a pond, lake or creek: natural=water, or a golf water hazard (golf=lateral_water_hazard is often
-    mapped without natural=water). check_course counts the same features."""
-    return t.get("golf") in ("water_hazard", "lateral_water_hazard") or t.get("natural") == "water"
+    mapped without natural=water) that is not a wetland (is_penalty_wetland). check_course counts the same features."""
+    return (t.get("golf") in ("water_hazard", "lateral_water_hazard") and not is_penalty_wetland(t)) or \
+        t.get("natural") == "water"
+
+
+def is_penalty_wetland(t):
+    """OSM tags of a golf water hazard mapped as a wetland (natural=wetland, no natural=water: Deer Ridge's reedbed,
+    relation 11198160): a penalty area on its own ground (reeds, marsh grass), not open water. It was a water surface
+    with a WaterPlane carved below the reeds, a pond to look at; hole_data.penalty_areas keeps it a hazard."""
+    return t.get("golf") in ("water_hazard", "lateral_water_hazard") and t.get("natural") == "wetland"
 
 
 # OSM highway classes that are roads, with the half width (m) of the road surface vectorize draws round the centre line

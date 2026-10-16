@@ -647,3 +647,24 @@ def test_semirough_takes_the_hole_of_the_fairway_it_rings():
     assert abs(part3.area - part4.area) < 1.0 and not part3.intersects(Point(45, 201))
     assert min(p.area for p, _ in out) >= 0.25 * V.MIN_AREA["semirough"]
     assert V.ring_holes([ring(box(600, 0, 640, 60))], [(f3, 3)])[0][1] == 99, "no fairway by it"
+
+
+def test_a_wetland_hazard_is_a_penalty_area_on_its_own_ground_not_water():
+    """Deer Ridge's reedbed (relation 11198160: golf=lateral_water_hazard + natural=wetland + wetland=reedbed) was water:
+    a water training label, a water surface and a flat WaterPlane carved 0.3-1.5 m below the reed ground, so it looked
+    like a pond. A golf water hazard mapped as a wetland (natural=wetland, no natural=water) is no water: its ground is
+    what the photo and the LiDAR show (reeds: deep rough); it stays a penalty area (hole_data.penalty_areas). A golf
+    water hazard with no natural tag (a pond) and natural=water stay water; a wetland that is no golf hazard is
+    neither."""
+    from shapely.geometry import box
+    from surface_classify import is_water, is_penalty_wetland
+    reed = {"golf": "lateral_water_hazard", "natural": "wetland", "wetland": "reedbed"}
+    assert not is_water(reed) and is_penalty_wetland(reed)
+    assert is_penalty_wetland({"golf": "water_hazard", "natural": "wetland"})
+    for t in ({"golf": "lateral_water_hazard"}, {"golf": "water_hazard", "natural": "water"}, {"natural": "water"}):
+        assert is_water(t) and not is_penalty_wetland(t), t
+    assert not is_water({"natural": "wetland"}) and not is_penalty_wetland({"natural": "wetland"})
+    G = [(1, {"leisure": "golf_course"}, box(0, 0, 400, 400)), (2, reed, box(100, 100, 200, 160)),
+         (3, {"golf": "water_hazard", "natural": "water"}, box(300, 300, 320, 330))]
+    vector, _, _ = V.osm_vectors(G)
+    assert [g.area for g in vector["water"]] == [600.0]
