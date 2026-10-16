@@ -23,6 +23,7 @@ The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's jo
 | [Westmount Golf & Country Club](courses/westmount/README.md) | Kitchener, Ontario (Stanley Thompson, 1931) | Built and QA'd in two multi-agent rounds. The reference build: its golden fingerprint checks every engine change. |
 | [Whistle Bear Golf Club](courses/whistle-bear/) | Cambridge, Ontario (John Robinson, 2000-01) | Built with its practice facility; QA round 1 (63 override features). Hole 1 and 11 Black tees can't reach the card from any deck (documented gaps). QA round 2 and the course README are still to do. ([#9](https://github.com/mescortes/gspro-course-builder/pull/9)) |
 | [Brambles](courses/brambles/) | Middletown, Lake County, California (Coore & Crenshaw with James Duncan, 2024) | The first course without OSM: features drafted from the GolfNow GPS layout and the NAIP photo. QA rounds 1 and 2 (157 override features). Holes 1, 7 and 18 measure short of the card from every deck (documented gaps). The course README is still to do. ([#7](https://github.com/mescortes/gspro-course-builder/pull/7)) |
+| [Deer Ridge Golf Club](courses/deer-ridge/) | Kitchener, Ontario (Thomas McBroom; the club dates itself to 1991) | Built on the current engine with six tee sets; the photo is registered to the LiDAR (0.25 m east, 0.25 m south). QA rounds 1 and 2 (51 override features): every hole scores 8 or 9, and test_course passes (137). The course README is still to do. ([#12](https://github.com/mescortes/gspro-course-builder/pull/12)) |
 
 ## How a course is built
 

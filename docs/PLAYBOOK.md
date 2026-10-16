@@ -1,6 +1,6 @@
 # Playbook: build a new course
 
-From nothing to a GSPro hand-off package and a reviewed model, the way Westmount, Brambles and Whistle Bear were
+From nothing to a GSPro hand-off package and a reviewed model, the way Westmount, Brambles, Whistle Bear and Deer Ridge were
 built. Each phase ends with a checkpoint; do not move on until it holds. Commands run from the repository root. Times
 are for an Apple M-series laptop; the downloads depend on the servers.
 
