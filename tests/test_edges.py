@@ -163,6 +163,28 @@ def test_a_river_falls_in_reaches_each_flat_at_its_own_level():
     assert p is pond and lv == edges.water_levels([(pond, "water", 99)], bowl, Tb)[0][1]
 
 
+def test_a_pond_falling_at_a_cascade_is_cut_at_the_cascade():
+    """Whistle Bear: a pond (OSM way 936553651) falls 1.65 m at a rock cascade, but the local level (the 20th
+    percentile of the shoreline within 60 m) of the upper pond's shore near it is the lower pond's, so the cut fell
+    20-45 m upstream in open water and 1,000 m2 of the upper pond took the lower plane, 1.4 m below its water. The
+    cut falls where the shoreline's level changes, and each side keeps a level at or below its own banks."""
+    from shapely.ops import unary_union
+    res, half, fall, at = 0.5, 45.0, 1.65, 150.0
+    nx, ny = int(300.0 / res), int(2 * half / res)
+    T = from_origin(0.0, half, res, res)
+    X, Y = np.meshgrid((np.arange(nx) + 0.5) * res, half - (np.arange(ny) + 0.5) * res)
+    edge = np.where(X < at, 102.0, 102.0 - fall)
+    dem = edge + 0.5 * np.maximum(0.0, np.abs(Y) - 15.0) - 0.05 * (np.abs(Y) < 15.0)
+    pond = box(0.0, -15.0, 300.0, 15.0)
+    reaches = edges.water_reaches(pond, dem, T)
+    assert abs(unary_union([r for r, _ in reaches]).area - pond.area) < 1e-6
+    level = lambda x: next(lv for r, lv in reaches if r.covers(Point(x, 0.0)))
+    upper, lower = level(5.0), level(295.0)
+    assert 102.0 - edges.WATER_STEP - 0.05 <= upper <= 102.0 and lower <= 102.0 - fall
+    assert all(level(x) == upper for x in np.arange(5.0, at - 3.0, 2.0)), "upper pond on the lower plane"
+    assert all(level(x) == lower for x in np.arange(at + 3.0, 296.0, 2.0)), "lower pond on the upper plane"
+
+
 def test_a_river_is_carved_reach_by_reach_with_no_dam_and_no_spill():
     """The bed under each reach is below that reach's level (no ridge where reaches meet), each reach's WaterPlane
     covers no other reach's water, and the land under every plane's outset stays above it."""

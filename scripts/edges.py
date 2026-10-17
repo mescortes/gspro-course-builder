@@ -142,10 +142,13 @@ def water_bodies(feats, dem, T):
 def water_reaches(p, dem, T, step=None, radius=60.0, cell=1.0, min_piece=50.0):
     """[(reach, level)] of water body p. A pond: [(p, its lowest ~20 % shoreline minus 5 cm)]. A body whose local
     level - the 20th percentile of the shoreline within `radius` m of a point on it - falls more than `step` m
-    (WATER_STEP; Deer Ridge's Grand River 1.7-3.8 m across the course, a Whistle Bear creek 1.65 m) is cut across into
-    reaches falling at most that much: each cell of a `cell` m grid takes the local level of the shoreline point
-    nearest it, banded; each reach is flat at its band's lower end minus 5 cm, so its water is never above its banks.
-    Pieces under `min_piece` m2 join the neighbour they share the longest edge with. The reaches tile p."""
+    (WATER_STEP; Deer Ridge's Grand River 1.7-3.8 m across the course, a Whistle Bear pond 1.65 m at a rock cascade)
+    is cut across into reaches falling at most that much: each cell of a `cell` m grid takes the local level of the
+    shoreline point nearest it, banded; at a step in the shoreline, the 80th percentile of the local levels within
+    `radius` m, so the cut falls at the step (the 20th percentile alone put it 20-45 m up Whistle Bear's pond from the
+    cascade, and 40 m above a weir on Deer Ridge's river: the upper water 1.4-1.6 m low). Each reach is flat at its
+    band's lower end minus 5 cm, so its water is never above its banks. Pieces under `min_piece` m2 join the neighbour
+    they share the longest edge with. The reaches tile p."""
     from scipy.spatial import cKDTree
     from rasterio.features import rasterize, shapes
     from rasterio.transform import from_origin
@@ -154,10 +157,17 @@ def water_reaches(p, dem, T, step=None, radius=60.0, cell=1.0, min_piece=50.0):
     ring, z = _shoreline(p, dem, T)
     level = float(np.percentile(z, 20)) - 0.05
     tree = cKDTree(ring[:, :2])
-    L = np.array([np.percentile(z[i], 20) for i in tree.query_ball_point(ring[:, :2], radius)])
+    near = tree.query_ball_point(ring[:, :2], radius)
+    L = np.array([np.percentile(z[i], 20) for i in near])
     lo, span = float(L.min()), float(L.max() - L.min())
     if step <= 0 or span <= step:
         return [(p, level)]
+    # the 20th percentile moves a step in the shoreline (a cascade, a weir) up to 0.6 radius uphill; the 80th
+    # percentile of those levels over the same radius moves it back (a rank opening). It is taken only where it is more
+    # than a step above: it also widens a high bank along one side of a wide river into a plateau (Deer Ridge's Grand
+    # River, a 100 m levee 0.5 m above the water on one bank, 165 m from the other)
+    up = np.array([np.percentile(L[i], 80) for i in near])
+    L = np.where(up - L > step, up, L)
     n = int(np.ceil(span / step)); w = span / n
     band = np.minimum(n - 1, ((L - lo) / w).astype(np.int32))
     x0, y0, x1, y1 = p.buffer(2 * cell).bounds
