@@ -44,24 +44,24 @@ brackets where they differ by more than 6 yd. On holes 5, 10, 17 and 18 no real 
 <!-- holes-table -->
 | Hole | Par | SI | Championship (Gold) | Middle (Blue) | Forward (White) | Green (yd deep × wide) | Elev. change | Hazards |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 4 | 16 | 342 | 323 | 307 | 21 × 15 | -12 m | 2 bunker, 5 native_area |
+| 1 | 4 | 16 | 342 | 323 | 307 | 21 × 15 | -12 m | 2 bunker, 3 native_area |
 | 2 | 3 | 10 | 189 | 169 | 153 | 13 × 28 | +3 m | 1 bunker, 4 native_area |
-| 3 | 4 | 6 | 342 | 323 | 298 | 37 × 16 | +17 m | 4 bunker, 4 native_area |
-| 4 | 4 | 18 | 299 | 289 | 266 | 29 × 12 | -10 m | 3 bunker, 2 native_area |
-| 5 | 5 | 8 | 516 | 498 | 423 (467) | 21 × 27 | -5 m | 4 bunker, 6 native_area |
-| 6 | 4 | 2 | 434 | 408 | 363 | 22 × 25 | -4 m | 4 bunker, 3 native_area |
+| 3 | 4 | 6 | 342 | 323 | 298 | 37 × 16 | +17 m | 4 bunker, 2 native_area |
+| 4 | 4 | 18 | 299 | 289 | 266 | 29 × 12 | -10 m | 3 bunker, 1 native_area |
+| 5 | 5 | 8 | 516 | 498 | 423 (467) | 21 × 27 | -5 m | 4 bunker, 5 native_area |
+| 6 | 4 | 2 | 434 | 408 | 363 | 22 × 25 | -4 m | 4 bunker, 2 native_area |
 | 7 | 3 | 14 | 172 | 153 | 131 | 28 × 16 | +0 m | 4 bunker, 7 native_area |
 | 8 | 4 | 4 | 437 | 420 | 401 | 29 × 24 | -9 m | 3 bunker, 10 native_area |
-| 9 | 5 | 12 | 466 | 453 | 403 | 24 × 14 | +9 m | 4 bunker, 6 native_area |
-| 10 | 4 | 15 | 417 | 390 | 358 (366) | 33 × 23 | -35 m | 5 bunker, 5 native_area |
-| 11 | 4 | 1 | 400 | 387 | 364 | 26 × 19 | +1 m | 4 bunker, 10 native_area, 1 water |
-| 12 | 3 | 13 | 174 | 153 | 97 | 27 × 21 | -3 m | 3 bunker, 8 native_area, 1 water |
-| 13 | 4 | 9 | 365 | 356 | 219 | 20 × 35 | +2 m | 5 bunker, 18 native_area, 2 water |
-| 14 | 5 | 5 | 535 | 513 | 460 | 22 × 16 | +28 m | 6 bunker, 3 native_area |
-| 15 | 4 | 11 | 412 | 361 | 326 | 20 × 27 | -13 m | 2 bunker, 7 native_area |
+| 9 | 5 | 12 | 466 | 453 | 403 | 24 × 14 | +9 m | 4 bunker, 5 native_area |
+| 10 | 4 | 15 | 417 | 390 | 358 (366) | 33 × 23 | -35 m | 5 bunker, 3 native_area |
+| 11 | 4 | 1 | 400 | 387 | 364 | 26 × 19 | +1 m | 4 bunker, 6 native_area, 1 water |
+| 12 | 3 | 13 | 174 | 153 | 97 | 27 × 21 | -3 m | 3 bunker, 4 native_area, 1 water |
+| 13 | 4 | 9 | 365 | 356 | 219 | 20 × 35 | +2 m | 5 bunker, 14 native_area, 2 water |
+| 14 | 5 | 5 | 535 | 513 | 460 | 22 × 16 | +28 m | 6 bunker, 4 native_area |
+| 15 | 4 | 11 | 412 | 361 | 326 | 20 × 27 | -13 m | 2 bunker, 2 native_area |
 | 16 | 3 | 17 | 203 | 190 | 180 | 23 × 19 | +0 m | 3 bunker, 2 native_area |
-| 17 | 4 | 7 | 434 (450) | 416 (430) | 369 (382) | 29 × 16 | -13 m | 5 bunker, 3 native_area |
-| 18 | 5 | 3 | 563 | 535 | 447 (481) | 28 × 18 | +23 m | 7 bunker, 11 native_area |
+| 17 | 4 | 7 | 434 (450) | 416 (430) | 369 (382) | 29 × 16 | -13 m | 5 bunker, 1 native_area |
+| 18 | 5 | 3 | 563 | 535 | 447 (481) | 28 × 18 | +23 m | 7 bunker, 9 native_area |
 | **Total** | **72** | | **6701** (6719) | **6337** (6358) | **5565** (5667) | | | |
 <!-- /holes-table -->
 
@@ -152,8 +152,10 @@ Left for the engine (seen on several holes):
 * **Trees** are inferred from LiDAR structure and the photo's crown colour (coast live oak, Aleppo pine, sycamore,
   eucalyptus, shrub; the region has no palm model). The prefabs are `Tree_<archetype>_v0` to `_v4` for the five archetypes (the delivered package had `Tree_oak_*` and `Tree_pine_*`).
 * **The Windows side was not run here.** Unity, OPCD and GreenKeeper do not run on macOS. The Unity helper is
-  syntax-checked (tree-sitter), not compiled; `grass_3dg.json` values are starting estimates. The FBX files were
-  written with Blender 5.2.2, not the 4.2 LTS the engine is checked with.
+  syntax-checked (tree-sitter), not compiled; `grass_3dg.json` values are starting estimates. The FBX files are written
+  with Blender 4.2.23 LTS. `tree_prefabs.fbx` embeds each material's textures; in Unity, extract them (the model's
+  Materials tab), set the `Foliage_*` materials to Cutout with the glTF's alpha cutoff, 0.45, and mark the `*_normal`
+  textures as normal maps: the Unity helper does not do this yet.
 * **Private club.** MountainGate is a private club and its name may be a trademark: keep the built course private
   unless the club agrees otherwise.
 
@@ -162,16 +164,16 @@ Left for the engine (seen on several holes):
 Setup and the general commands are in the [top-level README](../../README.md#building-a-course). The downloads are
 about 1.5 GB (LiDAR 1.05 GB in 9 tiles, Poly Haven textures 212 MB, backdrop photos 172 MB, course photo 31 MB, backdrop
 DEM 14 MB). Measured on a
-MacBook Pro (Apple M2 Max, 12 cores, 32 GB, macOS 27.0.1; 2026-10-16), downloads in place: about 66 minutes from the step times,
-most of it vectorize (39 min) and rasters (11 min); the first backdrop run also downloads its photos (6 min here). The
-highest peaks over four runs: rasters 8.1 GB, vectorize 7.2 GB, mesh 6.2 GB, export 5.1 GB.
+MacBook Pro (Apple M2 Max, 12 cores, 32 GB, macOS 27.0.1; 2026-10-17, Blender 4.2.23 LTS), downloads in place: about
+55 minutes from the step times, most of it vectorize (28 min) and rasters (11 min); the first backdrop run also downloads
+its photos (6 min here). Peak memory 7.3 GB (rasters and vectorize); mesh 5.9 GB, export 5.1 GB, gspro 3.8 GB.
 
 ```bash
 export COURSE=mountaingate
 .venv/bin/python scripts/fetch_data.py lidar osm imagery
 .venv/bin/python scripts/fetch_textures.py
 .venv/bin/python scripts/fetch_backdrop.py
-BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py
-.venv/bin/python -m pytest -q --course mountaingate tests/test_course.py   # 136 passed, 1 failed (pOOB), 4 skipped (Westmount-only)
+BLENDER=/path/to/blender-4.2 .venv/bin/python scripts/build_all.py   # Blender 4.2 LTS (macOS default: /Applications/Blender.app)
+.venv/bin/python -m pytest -q --course mountaingate tests/test_course.py   # 138 passed, 1 failed (pOOB), 4 skipped (Westmount-only)
 python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?course=mountaingate#h1-tee
 ```
