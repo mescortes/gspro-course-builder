@@ -71,6 +71,44 @@ def test_flat_strip_beside_a_bank_is_not_a_deck():
     assert not _deck_test(lambda x, y: np.where(x > 6.5, 0.25 * (x - 6.5), 0.0))
 
 
+def _mapped_tee_test(f, half=6.0):
+    pts = _grid(f)
+    r = np.maximum(np.abs(pts[:, 0]), np.abs(pts[:, 1]))
+    return V.still_a_deck(pts[r < half - 0.5], pts[(r > half + 1.0) & (r < half + 4.0)])
+
+
+def test_a_mapped_tee_turned_into_planting_is_no_deck():
+    """MountainGate hole 5: two OSM tees (1157492258, 1157492259) are native planting now, and the classifier pads on
+    them were kept as tees with no LiDAR check (a pad on a mapped tee skipped the deck test). On the 2025 LiDAR they are
+    plain hillside, 9-10 % with shrub bumps (rms 0.03 m), the ground 1-4 m round them only 0.05-0.08 m lower; the hole's
+    real decks are 1-1.3 % with a 0.1-0.3 m bank. A pad on a mapped tee stays a tee when it is not too steep to play
+    from (under 8 %) or stands above a bank: a forward tee on natural ground (Brambles' drafted forward tees, 5-7 %, no
+    bank) and a mapped tee drawn over its deck's bank still pass."""
+    rng = np.random.default_rng(5)
+    bumps = lambda x: 0.03 * rng.standard_normal(len(x))
+    assert not _mapped_tee_test(lambda x, y: 0.095 * y + bumps(x))                      # converted pad on a hillside
+    assert not _mapped_tee_test(lambda x, y: 0.10 * y + 0.06 * ((np.abs(x) < 6.5) & (np.abs(y) < 6.5)))  # 6 cm hump
+    # a convex hillside: half the ring falls 0.12-0.22 m below the pad's plane (OSM tee 1157492258), no bank
+    assert not _mapped_tee_test(lambda x, y: 0.09 * y - 0.0025 * x ** 2)
+    assert _mapped_tee_test(lambda x, y: 0.012 * x + 0.25 * ((np.abs(x) < 6.5) & (np.abs(y) < 6.5)))      # real deck
+    assert _mapped_tee_test(lambda x, y: 0.01 * y + 0.01 * rng.standard_normal(len(x)))  # level, no bank (flat course)
+    assert _mapped_tee_test(lambda x, y: 0.07 * x + 0.015 * rng.standard_normal(len(x)))  # Brambles 7 Front: 7 %
+    assert _mapped_tee_test(lambda x, y: np.where((np.abs(x) < 6.5) & (np.abs(y) < 6.5), 0.0, 0.10 * y))  # cut in
+    # a sloping pad that takes in its deck's front bank: the ground in front falls away below it
+    assert _mapped_tee_test(lambda x, y: np.where(y < -3, 0.3 * (y + 3), 0.0) + 0.02 * y)
+    # vectorize's pad validation applies it to the pads on mapped tees (the deck test is still for the others)
+    import rasterio.transform
+    from shapely.geometry import box
+    xs = np.arange(0, 60, 0.25) + 0.125
+    X, Y = np.meshgrid(xs, xs[::-1])
+    T = rasterio.transform.from_origin(0, 60, 0.25, 0.25)
+    pad = box(24, 24, 36, 36)
+    hill = (0.095 * Y).astype(np.float32)
+    deck = np.where((np.abs(X - 30) < 6.5) & (np.abs(Y - 30) < 6.5), 0.25, 0.012 * X).astype(np.float32)
+    assert not V.tee_pad_ok(pad, True, hill, T) and V.tee_pad_ok(pad, True, deck, T)
+    assert not V.tee_pad_ok(pad, False, hill, T) and not V.tee_pad_ok(box(28, 28, 32, 32), False, deck, T)  # < 40 m2
+
+
 def test_sidewalks_off_the_course_are_road_not_cart_path():
     """QA round 1 (holes 7, 11): municipal sidewalks along the streets outside the course were cart path (hole 98).
     Outside the golf_course boundary a paved strip is road (OPCD Concrete_Road)."""
