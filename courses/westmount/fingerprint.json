@@ -1,8 +1,8 @@
 {
  "course": "westmount",
- "created": "2026-10-16T16:15:05+00:00",
+ "created": "2026-10-17T12:34:22+00:00",
  "build": {
-  "commit": "0de2c4a0d8940b16baeb71676a73ffc8871c558b",
+  "commit": "d5c6042e3498b6a64ec4d478ab1b23c37f3f327d",
   "dirty": []
  },
  "env": {
@@ -1329,9 +1329,9 @@
    "bytes": 6106360
   },
   "OUTPUT/holes.json": {
-   "sha256": "4c64a27c52237ec6ffa2f8ca7e471fc8ae4654bc9a0203f4280294061ff948bc",
+   "sha256": "440747edcb713a9bbbf2308f6ec30aab6fbb77a60dc2626b4cfa273dbf958bca",
    "kind": "bytes",
-   "bytes": 2625342,
+   "bytes": 2611616,
    "core": true,
    "summary": {
     "holes": {
@@ -1674,9 +1674,9 @@
    }
   },
   "OUTPUT/gspro/greenkeeper.json": {
-   "sha256": "d8f1f42fa53c9ec07fd85cff447a92d1f21647da3c816ec232251ce79f7c8465",
+   "sha256": "3386f53fe1ab28a60770d2dbc6b3d5fb48a1fec225ef5d626e55cad3c17e0c91",
    "kind": "bytes",
-   "bytes": 2392589,
+   "bytes": 2363291,
    "core": true,
    "summary": {
     "holes": 18,
@@ -1689,21 +1689,21 @@
    }
   },
   "OUTPUT/gspro/backdrop.fbx": {
-   "sha256": "fb29f4945e5d163c274a4b238a5b45caebc7b335145a3346038bf46ed10bc8e8",
+   "sha256": "ffd65e5485d4aa436a10c541f8573b3585150325fc9a2e5c53ee2482214dee02",
    "kind": "bytes",
-   "bytes": 14618956,
+   "bytes": 14618924,
    "enforced": false
   },
   "OUTPUT/gspro/course.blend": {
-   "sha256": "7f1fcb6e603365a4e5cda37c01c1d5d3879d883efa88d317d9de868c259e7e9d",
+   "sha256": "25784e4e7c68d3448770402672abc0ba992a90d370b7bd14ece05b18696f2ef6",
    "kind": "bytes",
-   "bytes": 326931682,
+   "bytes": 326924725,
    "enforced": false
   },
   "OUTPUT/gspro/course_meshes.fbx": {
-   "sha256": "7c30972189ad62388d400c71d9ba8d483007c0ae05dac78bc646940084863112",
+   "sha256": "c402dbc53ba2ba8ccb54af38cafae430b93c06bbcd9efcb2c76c4f4317ca0ffe",
    "kind": "bytes",
-   "bytes": 144057212,
+   "bytes": 144056956,
    "enforced": false
   },
   "OUTPUT/gspro/course_opcd.svg": {
@@ -1752,9 +1752,9 @@
    "bytes": 18266805
   },
   "OUTPUT/gspro/structures.fbx": {
-   "sha256": "3f0c7ad18ee91c8660b2312ed31f89f738721f927ffe2af1b4a5e0b248ea6007",
+   "sha256": "e2dae4b911ee928ab856eea070913ae64894c595524c32561d13a4f383d6530a",
    "kind": "bytes",
-   "bytes": 42663276,
+   "bytes": 42663212,
    "enforced": false
   },
   "OUTPUT/gspro/terrain.json": {
@@ -2043,9 +2043,9 @@
    "bytes": 2589812
   },
   "OUTPUT/gspro/tree_prefabs.fbx": {
-   "sha256": "7535aa8b019092b67c20efbd446a9264c7ac7e1b53209c06318e758ce3783893",
+   "sha256": "33c9f9579753ac38157b0b30dc8c03359caaf316399abce866db47ac0c9e3289",
    "kind": "bytes",
-   "bytes": 9983244,
+   "bytes": 9983148,
    "enforced": false
   },
   "OUTPUT/gspro/tree_prefabs.glb": {
@@ -2099,9 +2099,9 @@
    "bytes": 16307
   },
   "OUTPUT/maps/course_map.png": {
-   "sha256": "d6ae57759d6ce42f8c44831946fa278111099b8f385abd2b681694ed8c6c3f5b",
+   "sha256": "84f0f8d40cd52bd1de2cf475ba8361d544cb076ed4707ec0b1377f84eac86c9d",
    "kind": "bytes",
-   "bytes": 2570656
+   "bytes": 3068235
   },
   "OUTPUT/maps/hole01_green.png": {
    "sha256": "d38b7ca52123fb30970bfc0f204e57dbb42ccb20ac6f17b605c974ae770ca885",
@@ -2109,9 +2109,9 @@
    "bytes": 583195
   },
   "OUTPUT/maps/hole01_map.png": {
-   "sha256": "75c93a9894fb164729639d39649a8a4ece2dc7c9628ac2067f30bac952feee1a",
+   "sha256": "1fc853853be61bda2f0dc0af32dfd3cdd4f2831f8c011a9f011e84ee06d17077",
    "kind": "bytes",
-   "bytes": 1654918
+   "bytes": 1886042
   },
   "OUTPUT/maps/hole02_green.png": {
    "sha256": "b17d8ee34a71db153b32f2cb2245ac0d6e8da6fd332f6b9df214d74440674ee4",
@@ -2119,9 +2119,9 @@
    "bytes": 542857
   },
   "OUTPUT/maps/hole02_map.png": {
-   "sha256": "fa60d4333c897f3471a3e16acbb95049424d030b85d509d317fe911130694588",
+   "sha256": "d5d64e78f83d278c65d7a7d70977476625375fbc2ec0a55ff38d6ccb9e251c93",
    "kind": "bytes",
-   "bytes": 1417343
+   "bytes": 1615947
   },
   "OUTPUT/maps/hole03_green.png": {
    "sha256": "f43bec2b47c38bc23a66c9e5ddfd02e206ebca5cd9bf525fdfd3c7c00dff9811",
@@ -2129,9 +2129,9 @@
    "bytes": 645664
   },
   "OUTPUT/maps/hole03_map.png": {
-   "sha256": "14fc8779463fdd6ac4f8ece3d26439e22fc16d26c4a2afa489ea4df5a79d8445",
+   "sha256": "87c427726ddefc20f335f332892d41ea91bde07d8cf0067c068806b4fd402fe3",
    "kind": "bytes",
-   "bytes": 995093
+   "bytes": 1146612
   },
   "OUTPUT/maps/hole04_green.png": {
    "sha256": "fd89328e373bf61f0ee22a04e2363519358e8425ec22923a2ea00d6e05c36636",
@@ -2139,9 +2139,9 @@
    "bytes": 582914
   },
   "OUTPUT/maps/hole04_map.png": {
-   "sha256": "c44386305bd303b4727f73328ae92d637bd23ed69bd5fe455753227c346f878b",
+   "sha256": "09814d8828f892fe4b2eb7e30f026f284f784b01bf51df4e6f8206938a519cba",
    "kind": "bytes",
-   "bytes": 1462315
+   "bytes": 1679833
   },
   "OUTPUT/maps/hole05_green.png": {
    "sha256": "5ab965afd1737a5ebf9570a6d74c099fbff4af7b02c760fa4b39d360880bc1c7",
@@ -2149,9 +2149,9 @@
    "bytes": 692558
   },
   "OUTPUT/maps/hole05_map.png": {
-   "sha256": "634a9fd5ccb76e4289a84b3c2721994ef66e9f53836eb4a3da56e5c9f4baf04f",
+   "sha256": "6ed0dd88491a98953462d97aa5cf5e73befd84fb8a34725099b784b44a7568cd",
    "kind": "bytes",
-   "bytes": 1650229
+   "bytes": 1857540
   },
   "OUTPUT/maps/hole06_green.png": {
    "sha256": "a9d791dbd5ea766821562de58f5737976447f27cc4c1bca724917ab181f91223",
@@ -2159,9 +2159,9 @@
    "bytes": 507001
   },
   "OUTPUT/maps/hole06_map.png": {
-   "sha256": "5549a269ba3336e6a85c6e92051b9492e4215b9df76a5a62ec3e0cbede84d010",
+   "sha256": "b9da78c03cb46fe72b01bec3892665bdf8c02e331870f05afd77b4ae64131d88",
    "kind": "bytes",
-   "bytes": 1240324
+   "bytes": 1348414
   },
   "OUTPUT/maps/hole07_green.png": {
    "sha256": "a7f874391a13fd591eba8c7a1878cfac94ca8b0861257f7c96543a59e2a520ca",
@@ -2169,9 +2169,9 @@
    "bytes": 685746
   },
   "OUTPUT/maps/hole07_map.png": {
-   "sha256": "5f072e86e39741b38f0eaf7cc9f92aa2ce886ac5ec04517c432253d655afa84c",
+   "sha256": "8cda5261fad3602b119007909b3a48344087ecfe89afb3c1825ca7ad86d3f4a3",
    "kind": "bytes",
-   "bytes": 1628277
+   "bytes": 1786750
   },
   "OUTPUT/maps/hole08_green.png": {
    "sha256": "f7cfabac69bcdaddeaa24af503c92879ba3dc8c3797e5eda20433d8f30ed81d9",
@@ -2179,9 +2179,9 @@
    "bytes": 588167
   },
   "OUTPUT/maps/hole08_map.png": {
-   "sha256": "1568098beec498eb696f4f99a5e6332cd3f613b953881a7ec5e3e094a0f27665",
+   "sha256": "1ff4d58e14bd6d6f691adfd01d308d4c56938399b46eb7934b0a4d89f826db1c",
    "kind": "bytes",
-   "bytes": 1392191
+   "bytes": 1550598
   },
   "OUTPUT/maps/hole09_green.png": {
    "sha256": "165e1c538e8390667bc05d166c9f44b3098c8d92a380af13e41d03a39ffdf160",
@@ -2189,9 +2189,9 @@
    "bytes": 398557
   },
   "OUTPUT/maps/hole09_map.png": {
-   "sha256": "7fe04c0f5aff417c40d77bb84a5edbf433be0b69dc4c4f21f4698e1a776c56dc",
+   "sha256": "c2e39532a0b4dc8b0c5425018bf08f9a7be4f07c1b9777f193e695368a2ce3d1",
    "kind": "bytes",
-   "bytes": 1372945
+   "bytes": 1568218
   },
   "OUTPUT/maps/hole10_green.png": {
    "sha256": "fb4eaff3ba4a10e85e8e11eabf22251045cbe95f00d5bf0fa81b9f8d1e067b2d",
@@ -2199,9 +2199,9 @@
    "bytes": 581981
   },
   "OUTPUT/maps/hole10_map.png": {
-   "sha256": "4a68b0117ad1124ea236f80c2bfed24d7b3e7256d252fa48b8b33c61f8931b17",
+   "sha256": "0e1d9811002b5a21094c57532c3cf6ede88df590d887603b7fd21c660678561c",
    "kind": "bytes",
-   "bytes": 1395215
+   "bytes": 1535158
   },
   "OUTPUT/maps/hole11_green.png": {
    "sha256": "8a058aff391b2ca9512c3ddaf26b4f365c8edf895ebf3f92c2fbf7965fb8f54a",
@@ -2209,9 +2209,9 @@
    "bytes": 615228
   },
   "OUTPUT/maps/hole11_map.png": {
-   "sha256": "fb8dbb67d1dc6e86f392b7506bee9d2887fc790b6337fa237723c3bab186f0e5",
+   "sha256": "67e5c3c6525a7ef7b3e6efe1b2f622451446d32b70c478294ce21fda745769c9",
    "kind": "bytes",
-   "bytes": 1773092
+   "bytes": 1962920
   },
   "OUTPUT/maps/hole12_green.png": {
    "sha256": "08ea917b89cee9280ac4d39d091c8adfdec70e84b073c3f6a58bf71d3da16c9e",
@@ -2219,9 +2219,9 @@
    "bytes": 619790
   },
   "OUTPUT/maps/hole12_map.png": {
-   "sha256": "5a303a7f0d36916a425cf855242f52697cc5d7ec3887ef2f8af9a5b2f5b622a6",
+   "sha256": "8c8cca6b14134bc6d05a14733ead618e663c129936a932e85ed916f74658088d",
    "kind": "bytes",
-   "bytes": 978344
+   "bytes": 1081724
   },
   "OUTPUT/maps/hole13_green.png": {
    "sha256": "cd22b81242c1fc79968fe742c23ec32a48ff40a1acd88a6af7d3f7de89ebcd20",
@@ -2229,9 +2229,9 @@
    "bytes": 849372
   },
   "OUTPUT/maps/hole13_map.png": {
-   "sha256": "69f70e6fbf00c7455a5c41696bcdb462833788d2e60d545ea77c99af9549dfd3",
+   "sha256": "6763397c615f13b76cadc960cd3aefdf108e02618d777e95a79f68560cb56c6e",
    "kind": "bytes",
-   "bytes": 1517960
+   "bytes": 1734878
   },
   "OUTPUT/maps/hole14_green.png": {
    "sha256": "dc4c1eb1176bac10c90a5e550795b4f9ae74336fb97aff397ead47af071e8886",
@@ -2239,9 +2239,9 @@
    "bytes": 526657
   },
   "OUTPUT/maps/hole14_map.png": {
-   "sha256": "bdfdabe2ce62424f1c6964f2d55bc76bce5a3239393b1eb40d6169e254bd4a79",
+   "sha256": "acdf57b42c5d465a7aa4fe10c489cca4cdf8047f16f24ff44414c29cab868402",
    "kind": "bytes",
-   "bytes": 1275231
+   "bytes": 1483574
   },
   "OUTPUT/maps/hole15_green.png": {
    "sha256": "3d13bd57e384da69cd3195405a20fe5c96f4d1d914f898698600a886a798d02a",
@@ -2249,9 +2249,9 @@
    "bytes": 719973
   },
   "OUTPUT/maps/hole15_map.png": {
-   "sha256": "02dd885f347e1adb7273749174b70c7efaeecebcf97f55e721577d95fb29e1ac",
+   "sha256": "7863b3416c422010b9e8ce6ea64d60b66e1a75c918f70fe86300d5b6712fbf3e",
    "kind": "bytes",
-   "bytes": 1598149
+   "bytes": 1780597
   },
   "OUTPUT/maps/hole16_green.png": {
    "sha256": "d9d65ae105b221463e29f9f507a04e3bbaae1923a508bb32d3b0b5120a4d5d6e",
@@ -2259,9 +2259,9 @@
    "bytes": 734919
   },
   "OUTPUT/maps/hole16_map.png": {
-   "sha256": "033af7b472882263b9c0dcf4e0ec8b9a12a0ea062e52b28d3adea2d3c056c35a",
+   "sha256": "8af302cf6d42df1704620e3097d914b059647431beb23131cd6d8345a274c384",
    "kind": "bytes",
-   "bytes": 1463842
+   "bytes": 1677170
   },
   "OUTPUT/maps/hole17_green.png": {
    "sha256": "42d2e4ac39b3d85bd5951111026f450f163a4faa90d602f75aa4cbaf5ff28f2c",
@@ -2269,9 +2269,9 @@
    "bytes": 491833
   },
   "OUTPUT/maps/hole17_map.png": {
-   "sha256": "deaf788c803afb106b6b298bf6c203763107b0612006e2e1ea1f6a27ce8b7d62",
+   "sha256": "f8595ddcc0932669be8ddbeab3c6880ae72c3e51cb83f021cbf38cb1cb74cde1",
    "kind": "bytes",
-   "bytes": 912152
+   "bytes": 1047780
   },
   "OUTPUT/maps/hole18_green.png": {
    "sha256": "6d282955c072184a2560c3a2694ee704732ee488d5bc1fe585e548b7c8b46f25",
@@ -2279,9 +2279,9 @@
    "bytes": 841100
   },
   "OUTPUT/maps/hole18_map.png": {
-   "sha256": "87826fb2c6d325fed4c59a479fcd83d6a1f248612be992c8b3b5017ad38a4703",
+   "sha256": "a5d824c9be0d54b22deb580f12a2e48ac72d68b7f5ec7d2fd7d1c904ac6172d8",
    "kind": "bytes",
-   "bytes": 1295108
+   "bytes": 1499978
   },
   "VIEWER/views.json": {
    "sha256": "5f9a6aa9bad3179d4e341cd96715f400499eefdbabcdc6a95b9a0bb33edc4067",

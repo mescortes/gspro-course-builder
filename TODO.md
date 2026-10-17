@@ -13,34 +13,16 @@ so check an item against the current engine before starting on it. Fix it test f
 * Tree shadows are classified as water. Seen on Brambles, QA round 2.
 * Small false native blobs appear on mown rough, and holes.json lists some of them as hazards. Seen on Whistle Bear
   holes 5, 10 and 12-15, QA rounds 1-2.
-* Native areas wholly outside the course outline are listed as hazards in holes.json; the classifier calls ploughed
-  fields native (69,952 m2 on Whistle Bear's hole 3). Seen on Whistle Bear holes 2, 3, 16 and 17, QA round 2.
 * Bare soil with 0.1 m of relief passes the bunker hollow test. Seen on Brambles, QA round 2.
 * The clubhouse road and parking are modelled as rough, and QA overrides have no road surface to correct them with.
   Seen on Brambles, QA round 2 and [#7].
 * `trace_paths.py` traces cart paths along shadows, forest edges and fences. Seen on Whistle Bear, QA rounds 1-2.
-* Every semirough polygon carries hole 99, including the rings round fairways, though `vectorize` says fringe and
-  semirough adopt the hole they surround. Seen on Deer Ridge, QA rounds 1-2.
-* Small OSM fairways (collection areas and drop zones under 150 m2) are dropped, classifier greens grow fingers along
-  mown approach strips, and dense conifer shadows take the fairway class off mown turf. Seen on Deer Ridge, QA rounds
-  1-2.
-
-## OSM features
-
-* A river mapped as a multipolygon relation whose snapshot has geometry for only some members is never polygonised,
-  so it is built as rough. Seen on Deer Ridge: the Grand River (relation 222351) has geometry for 5 of its 47 members.
-* A wetland lateral hazard (`golf=lateral_water_hazard` + `natural=wetland`) is carved as an open water plane 0.3-1.5 m
-  below the reed ground, so it looks like a pond (it plays right as a penalty area). Seen on Deer Ridge (relation
-  11198160).
-* OSM `highway=cycleway` trails are not modelled. Seen on Deer Ridge.
+* Classifier greens grow fingers along mown approach strips, and dense conifer shadows take the fairway class off
+  mown turf. Seen on Deer Ridge, QA rounds 1-2.
 
 ## Tees, pins and aim points
 
 * Tee pads take in the banks around their decks, and markers are placed on deck rims. Seen on Brambles, QA round 2.
-* OSM forward tees that sit off the `golf=hole` line are assigned to hole 99 instead of the nearest hole's tee set.
-  Seen on Deer Ridge, QA rounds 1-2.
-* Markers of a set with no deck (Deer Ridge's Copper) go on the back tee's first leg at the card distance, whatever
-  the surface or hazards there: a lake bank, rough, beside bunkers. Seen on Deer Ridge, QA rounds 1-2.
 * The middle vertices of OSM hole lines are kept as aim points on straight holes. Seen on Whistle Bear, QA rounds 1-2
   (holes 3, 6, 12 and 18 in round 2, each under 0.3 yd).
 * Front pin yardages are measured from a bunker cut-in. Seen on Whistle Bear holes 7, 10 and 16, QA rounds 1-2.
@@ -48,17 +30,13 @@ so check an item against the current engine before starting on it. Fix it test f
 
 ## Water
 
-* A water body's reaches are cut in open water rather than where its shoreline level changes. Whistle Bear's pond
-  between holes 8, 9 and 10 (OSM way 936553651) falls 1.65 m at a rock cascade, but the cut falls 20-45 m west of it,
-  so about 1,000 m2 of the upper pond takes the lower plane, 1.4 m below the LiDAR water, beside hole 10's green.
-  Seen on Whistle Bear, QA round 2 (after [#15]).
-
-## Maps
-
-* The yardage-book maps (`make_maps.py`: holeNN_map.png, course_map.png) fill each polygon's exterior and draw its
-  holes as empty patches, so a large rough polygon with holes covers the fairways, greens, bunkers and water drawn
-  before it. Every course's maps and viewer bundles have it (Whistle Bear's and Deer Ridge's course maps show only
-  rough, paths and trees). Seen on Whistle Bear, QA round 2.
+* A water body cut in reaches is flat at each band's lower end, so a reach whose shoreline is level sits up to
+  `water_step` (0.3 m) below it: Whistle Bear's upper pond (OSM way 936553651) is at 307.73 m under LiDAR water at
+  308.05 m, with 0.3 m of bank showing round it. Measured on Whistle Bear when its cascade cut was fixed.
+* A high bank along one side of a wide river lifts the water beside it, and the reach is cut lengthwise: Deer Ridge's
+  Grand River north of the island (E 546900-547000) has a 2,761 m2 reach at 280.77 m beside one at 280.48 m, 0.3 m
+  above the LiDAR water. The shoreline's local level comes from one bank where the river is wider than 60 m.
+  Measured on Deer Ridge when the cascade cut was fixed.
 
 ## GSPro package and mesh
 
@@ -78,5 +56,3 @@ The QA findings are recorded in the "Left for the engine" lists of `courses/<slu
 Whistle Bear, Deer Ridge) and in the course PRs' "Known issues" sections.
 
 [#7]: https://github.com/mescortes/gspro-course-builder/pull/7
-[#11]: https://github.com/mescortes/gspro-course-builder/pull/11
-[#15]: https://github.com/mescortes/gspro-course-builder/pull/15

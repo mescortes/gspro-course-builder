@@ -7,6 +7,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon as MPoly
 from shapely.geometry import shape, Point, LineString, Polygon
+from shapely.plotting import patch_from_polygon
 from scipy import ndimage
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
@@ -23,6 +24,13 @@ def hillshade(z, res, az=315, alt=40):
     slope = np.arctan(np.hypot(gx, gy)); aspect = np.arctan2(-gx, gy)
     a, b = np.radians(az), np.radians(alt)
     return np.clip(np.sin(b) * np.cos(slope) + np.cos(b) * np.sin(slope) * np.cos(a - aspect), 0, 1)
+
+
+def surface_patch(g, surface):
+    """The filled patch of (multi)polygon g with its holes left open (a compound path). Filled to its exterior, a rough
+    polygon with holes painted over the fairways, greens, bunkers and water in them, drawn before it: Whistle Bear's
+    853,337 m2 rough with 263 holes left its maps only rough, paths and trees."""
+    return patch_from_polygon(g, fc=FILL.get(surface, "#888"), ec="none", zorder=1)
 
 
 def hole_bounds(hole, margin=45.0):
@@ -47,10 +55,7 @@ def hole_map(hole, feats, dem, T, out, trees=None):
     for g, p in feats:
         if not g.intersects(LineString([(b[0], b[1]), (b[2], b[3])]).envelope):
             continue
-        for poly in getattr(g, "geoms", [g]):
-            ax.add_patch(MPoly(np.asarray(poly.exterior.coords), closed=True, fc=FILL.get(p["surface"], "#888"), ec="none", zorder=1))
-            for hole_ring in poly.interiors:
-                ax.add_patch(MPoly(np.asarray(hole_ring.coords), closed=True, fc="none", ec="none"))
+        ax.add_patch(surface_patch(g, p["surface"]))
     ax.imshow(hs, extent=hs_ext, cmap="gray", alpha=0.35, zorder=2, vmin=0, vmax=1)
     # trees
     for t in (trees if trees is not None else json.load(open(C.FEATURES / "trees.geojson"))["features"]):
@@ -156,8 +161,7 @@ def course_map(data, feats, dem, T, out):
     e = C.CORE
     fig, ax = plt.subplots(figsize=(12, 15.6), dpi=150)
     for g, p in feats:
-        for poly in getattr(g, "geoms", [g]):
-            ax.add_patch(MPoly(np.asarray(poly.exterior.coords), closed=True, fc=FILL.get(p["surface"], "#888"), ec="none", zorder=1))
+        ax.add_patch(surface_patch(g, p["surface"]))
     step = 4
     hs = hillshade(dem[::step, ::step], T.a * step)
     ax.imshow(hs, extent=(e["xmin"], e["xmax"], e["ymin"], e["ymax"]), cmap="gray", alpha=0.3, zorder=2, vmin=0, vmax=1)

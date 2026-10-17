@@ -68,7 +68,7 @@ green centre), with the card yards in brackets where they differ by more than 6 
 | 7 | 5 | 11 | 541 | 503 | 480 | 449 | 41 × 26 | -8 m | 4 bunker |
 | 8 | 4 | 17 | 305 | 275 | 260 | 245 | 27 × 24 | +2 m | 5 bunker |
 | 9 | 4 | 5 | 401 | 373 | 346 | 334 | 35 × 19 | +6 m | 2 bunker, 1 water |
-| 10 | 4 | 12 | 334 | 319 | 304 | 217 | 29 × 32 | -3 m | 2 bunker, 4 native_area |
+| 10 | 4 | 12 | 334 | 319 | 304 | 217 | 29 × 32 | -3 m | 2 bunker, 3 native_area |
 | 11 | 5 | 6 | 580 | 540 | 502 | 451 | 37 × 24 | +0 m | 2 bunker, 1 native_area |
 | 12 | 3 | 18 | 141 | 127 | 108 | 93 | 32 × 27 | -6 m | 3 bunker |
 | 13 | 5 | 8 | 554 | 520 | 503 | 439 | 35 × 28 | -6 m | 2 bunker |
