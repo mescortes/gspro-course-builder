@@ -104,8 +104,40 @@ def build_pslg(feats, aoi, zone, tol_in=0.03, tol_out=0.2, zone2=None, grid=0.01
     S = inv.reshape(-1, 2)
     S = S[S[:, 0] != S[:, 1]]
     S = np.unique(np.sort(S, 1), axis=0)
+    S = split_at_vertices(uniq, S, grid)
     S = fix_needles(uniq, S)
     return uniq, S
+
+
+def split_at_vertices(V, S, grid):
+    """S with every segment that has a vertex of V exactly on it, between its ends, split at that vertex. Rounding the
+    noded boundaries to the `grid` can put a vertex on another boundary's segment: on Brambles (main 5f7ae32) two cart
+    paths touching at a vertex had the rough's boundary 1.2 cm from it, snapped through it, and Triangle ran out of
+    precision refining round the unsplit segment (912 zero-area triangles within 1 mm). Exact: on the grid's integer
+    coordinates (V is on the grid). S itself when nothing lies on a segment."""
+    import shapely
+    segs = shapely.linestrings(V[S])
+    si, vi = shapely.STRtree(shapely.points(V)).query(segs, predicate="dwithin", distance=0.5 * grid)
+    keep = (vi != S[si, 0]) & (vi != S[si, 1])
+    si, vi = si[keep], vi[keep]
+    if len(si):
+        Q = np.round(V / grid).astype(np.int64)
+        a, b, p = Q[S[si, 0]], Q[S[si, 1]], Q[vi]
+        d, w = b - a, p - a
+        dot = (w * d).sum(1)
+        on = (d[:, 0] * w[:, 1] - d[:, 1] * w[:, 0] == 0) & (dot > 0) & (dot < (d * d).sum(1))
+        si, vi = si[on], vi[on]
+    if not len(si):
+        return S
+    out = np.delete(S, np.unique(si), axis=0).tolist()
+    for i in np.unique(si):
+        a, b = S[i]
+        vs = vi[si == i]
+        t = (V[vs] - V[a]) @ (V[b] - V[a])
+        chain = [a] + [int(v) for v in vs[np.argsort(t)]] + [b]
+        out += [sorted(e) for e in zip(chain[:-1], chain[1:])]
+    print(f"split {len(np.unique(si))} segments at vertices lying on them", flush=True)
+    return np.unique(np.array(out, np.int64), axis=0)
 
 
 def fix_needles(V, S, min_deg=1.0, max_iter=20):
