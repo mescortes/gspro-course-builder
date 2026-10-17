@@ -110,6 +110,11 @@ The engine's steps are in the [top-level README](../../README.md#how-a-course-is
 6. **Engine fixes it led to** (in [#6](https://github.com/mescortes/gspro-course-builder/pull/6)): a fairway several
    holes run along is split between their corridors; unmapped and drafted bunkers must be closed hollows; two tee sets
    never share one marker spot.
+7. **Rebuilt on the engine fixes from Deer Ridge's QA** (2026-10-17,
+   [#15](https://github.com/mescortes/gspro-course-builder/pull/15),
+   [#16](https://github.com/mescortes/gspro-course-builder/pull/16)): a tee that sat off the line of play now belongs
+   to hole 12, and semirough rings take their fairway's hole (11 rings round shared fairways are split between holes).
+   The yardages and the per-hole table are unchanged.
 
 ## QA: what was fixed and what is left
 
@@ -135,11 +140,15 @@ Left for the engine (seen on several holes; the engine-wide list is in [TODO.md]
 ## Rebuilding Brambles
 
 Setup and the general commands are in the [top-level README](../../README.md#building-a-course). The downloads are
-about 1 GB (LiDAR 590 MB, photo 370 MB, backdrop DEM 12 MB). Measured on the owner's MacBook Pro (Apple M5 Max, 64 GB):
-export peaks at 6.0 GB, mesh at 5.5 GB and gspro at 3.5 GB; the other steps were not re-measured after the memory work
-of [#8](https://github.com/mescortes/gspro-course-builder/pull/8) and
-[#10](https://github.com/mescortes/gspro-course-builder/pull/10). The mesh step prints a Triangle "ran out of
-precision" message; the mesh tests pass.
+about 1 GB (LiDAR 590 MB, photo 370 MB, backdrop DEM 12 MB). A clean build on the owner's MacBook Pro (Apple M5 Max,
+64 GB; 2026-10-17, engine at 5f7ae32, downloads in place) took about 23 min: rasters 7 min, export and vectorize
+3.5 min each, classify 3 min. The largest peaks were rasters, vectorize and mesh at 6.5 GB and export at 5.7 GB. The
+mesh has 5.6 M triangles.
+
+On that build one built-course test fails: `test_mesh_faces_up_and_not_degenerate` finds 912 zero-area triangles,
+all within a millimetre of one point (E 536419.53, N 4291265.92) where a cart path meets the rough. They are
+invisible and the glTF has no invalid normals or positions, but the mesh step should not make them; the build of
+2026-10-15 (before #15 and #16) passed.
 
 ```bash
 export COURSE=brambles
@@ -147,7 +156,7 @@ export COURSE=brambles
 .venv/bin/python scripts/fetch_textures.py
 .venv/bin/python scripts/fetch_backdrop.py
 BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py
-.venv/bin/python -m pytest -q --course brambles tests/test_course.py   # 137 passed, 4 skipped (Westmount-only)
+.venv/bin/python -m pytest -q --course brambles tests/test_course.py   # 136 passed, 1 failed (above), 4 skipped
 python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?course=brambles#h1-tee
 ```
 

@@ -112,6 +112,11 @@ The engine's steps are in the [top-level README](../../README.md#how-a-course-is
 7. **Rebuilt with the off-course green rule** (2026-10-16, [#11](https://github.com/mescortes/gspro-course-builder/pull/11)):
    holes 1-18 are unchanged; the background lost about 48,600 m² of false green on lawns and fields round the course.
    The practice facility's nine OSM target greens keep exactly the same green.
+8. **Rebuilt on the engine fixes from Deer Ridge's QA** (2026-10-17,
+   [#15](https://github.com/mescortes/gspro-course-builder/pull/15),
+   [#16](https://github.com/mescortes/gspro-course-builder/pull/16)): three OSM forward tees that sat off the line of
+   play (holes 5, 14 and 17) now belong to their holes, semirough rings take their fairway's hole, and two classifier
+   greens in the woods (157 and 64 m²) are rough. The yardages and the per-hole table are unchanged.
 
 ## QA: what was fixed and what is left
 
@@ -123,7 +128,8 @@ Fixed by overrides in round 1:
 * the grass islands in hole 5's big bunker;
 * a hole 4 bunker that had been given to the background.
 
-Left for the engine (seen on several holes; the engine-wide list is in [TODO.md](../../TODO.md)):
+Left for the engine (seen on several holes in round 1, before the fixes in step 8; the engine-wide list is in
+[TODO.md](../../TODO.md)):
 
 * false green and fringe under the forest canopy (holes 17, 18) and on a green metal roof;
 * traced paths along shadows and forest edges;
@@ -137,10 +143,10 @@ A second QA round has not been run.
 ## Rebuilding Whistle Bear
 
 Setup and the general commands are in the [top-level README](../../README.md#building-a-course). The downloads are
-about 1.7 GB (LiDAR 850 MB, photo 830 MB, backdrop DEM 25 MB). Measured on the owner's MacBook Pro (Apple M5 Max,
-64 GB): the mesh step peaks at 6.1 GB, export at 4.1 GB and gspro at 2.7 GB; the other steps were not re-measured after
-the memory work of [#8](https://github.com/mescortes/gspro-course-builder/pull/8) and
-[#10](https://github.com/mescortes/gspro-course-builder/pull/10).
+about 1.7 GB (LiDAR 850 MB, photo 830 MB, backdrop DEM 25 MB). A clean build on the owner's MacBook Pro (Apple M5 Max,
+64 GB; 2026-10-17, engine at 5f7ae32, downloads in place) took about 21 min: rasters 5 min, export 3 min, maps, gspro,
+vectorize and classify 2-2.5 min each. The largest peaks were rasters 6.7 GB, mesh 5.4 GB and vectorize 4.9 GB. The
+mesh has 4.7 M triangles.
 
 ```bash
 export COURSE=whistle-bear

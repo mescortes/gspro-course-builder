@@ -56,24 +56,24 @@ hole.
 <!-- holes-table -->
 | Hole | Par | SI | Black | Gold | Silver | Bronze | White | Copper | Green (yd deep × wide) | Elev. change | Hazards |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 5 | 5 | 526 | 504 | 495 | 464 | 408 | 323 | 35 × 17 | -5 m | 2 bunker, 8 native_area |
-| 2 | 4 | 17 | 449 | 411 | 384 | 373 | 316 | 266 | 34 × 23 | -8 m | 8 bunker, 3 native_area |
+| 1 | 5 | 5 | 526 | 504 | 495 | 464 | 408 | 323 | 35 × 17 | -5 m | 2 bunker, 9 native_area |
+| 2 | 4 | 17 | 449 | 411 | 384 | 373 | 316 | 266 | 34 × 23 | -8 m | 8 bunker, 4 native_area |
 | 3 | 5 | 15 | 587 | 553 | 529 | 517 | 444 | 374 | 32 × 18 | -5 m | 6 bunker, 4 native_area |
 | 4 | 3 | 13 | 187 | 169 | 152 | 142 | 122 | 122 | 28 × 24 | -1 m | 2 bunker |
 | 5 | 4 | 9 | 435 | 410 | 384 | 376 | 297 | 245 | 40 × 16 | +0 m | 5 bunker |
 | 6 | 3 | 3 | 214 | 189 | 167 | 137 | 118 | 75 | 20 × 32 | -2 m | 3 bunker, 1 water |
-| 7 | 4 | 7 | 385 | 363 | 349 | 329 | 280 | 223 | 23 × 20 | +0 m | 1 bunker, 2 native_area, 2 water |
-| 8 | 4 | 11 | 418 | 399 | 367 | 339 | 328 | 244 | 44 × 17 | +0 m | 5 bunker, 3 native_area, 1 water |
-| 9 | 4 | 1 | 445 | 414 | 402 | 376 | 318 | 271 | 31 × 22 | +1 m | 4 bunker, 5 native_area |
+| 7 | 4 | 7 | 385 | 363 | 349 | 329 | 280 | 223 | 23 × 19 | +0 m | 1 bunker, 1 lateral_water, 2 native_area, 1 water |
+| 8 | 4 | 11 | 418 | 399 | 367 | 339 | 329 | 244 | 44 × 17 | +0 m | 5 bunker, 1 lateral_water, 3 native_area, 2 water |
+| 9 | 4 | 1 | 445 | 414 | 402 | 376 | 318 | 271 | 30 × 21 | +1 m | 4 bunker, 5 native_area |
 | 10 | 4 | 6 | 387 | 361 | 353 | 327 | 291 | 206 | 50 × 20 | -1 m | 6 bunker, 2 native_area, 1 water |
-| 11 | 4 | 18 | 388 | 343 | 321 | 311 | 289 | 205 | 37 × 17 | -2 m | 7 bunker, 5 native_area, 4 water |
-| 12 | 5 | 14 | 555 | 524 | 507 | 485 | 417 | 342 | 31 × 27 | +1 m | 6 bunker, 3 native_area, 3 water |
-| 13 | 3 | 16 | 202 | 179 | 165 | 138 | 114 | 114 | 31 × 22 | -2 m | 1 native_area |
-| 14 | 4 | 2 | 429 | 398 | 372 | 361 | 323 | 209 | 36 × 18 | +4 m | 4 bunker, 4 native_area |
-| 15 | 4 | 12 | 431 | 389 | 361 | 336 | 318 | 230 | 31 × 16 | +7 m | 4 bunker |
+| 11 | 4 | 18 | 388 | 343 | 321 | 311 | 289 | 205 | 37 × 17 | -2 m | 7 bunker, 1 lateral_water, 4 native_area, 1 water |
+| 12 | 5 | 14 | 555 | 524 | 507 | 485 | 417 | 342 | 30 × 27 | +1 m | 5 bunker, 1 lateral_water, 1 native_area, 1 water |
+| 13 | 3 | 16 | 202 | 179 | 165 | 138 | 114 | 114 | 30 × 22 | -2 m | 1 native_area |
+| 14 | 4 | 2 | 429 | 398 | 372 | 361 | 323 | 209 | 37 × 18 | +4 m | 4 bunker, 4 native_area, 1 water |
+| 15 | 4 | 12 | 431 | 389 | 361 | 336 | 318 | 230 | 30 × 16 | +7 m | 4 bunker |
 | 16 | 3 | 10 | 214 | 184 | 164 | 157 | 138 | 95 | 39 × 18 | -12 m | 2 bunker, 4 native_area, 1 water |
-| 17 | 4 | 4 | 444 | 421 | 396 | 381 | 312 | 246 | 35 × 18 | +1 m | 3 bunker, 1 native_area, 1 water |
-| 18 | 5 | 8 | 510 | 498 | 469 | 460 | 425 | 341 | 19 × 20 | +1 m | 2 bunker, 1 native_area, 1 water |
+| 17 | 4 | 4 | 444 | 421 | 396 | 381 | 312 | 246 | 34 × 18 | +1 m | 3 bunker, 1 native_area, 1 water |
+| 18 | 5 | 8 | 510 | 498 | 470 | 460 | 425 | 341 | 19 × 21 | +1 m | 2 bunker, 1 native_area, 1 water |
 | **Total** | **72** | | **7206** (7215) | **6709** (6715) | **6338** (6338) | **6009** (6012) | **5259** (5263) | **4131** (4131) | | | |
 <!-- /holes-table -->
 
@@ -111,10 +111,25 @@ The engine's steps are in the [top-level README](../../README.md#how-a-course-is
    greens more than 15 m off the course outline are dropped.
 6. **Tees built since the LiDAR.** The 2020 and 2021 forward decks that OSM maps are levelled as synthetic decks
    (`[tuning] level_tees`). The Copper set has no pads of its own: its markers are pinned on mown fairway at the card
-   distance on holes 2, 3, 6, 9, 10, 12 and 16, and placed automatically on the line of play elsewhere.
+   distance on holes 2, 3, 6, 9, 10, 12 and 16. Elsewhere the engine places them at the card distance on the best ground
+   near the back tee's first leg (fairway first, clear of bunkers, water and native areas).
 7. **QA, two rounds** (`workflows/hole_qa.js`, brief in [research/qa_brief.md](research/qa_brief.md)): round 1 approved
    46 corrections and rejected 3; round 2 approved 17, rejected none and found no round-1 override harmful. That is 51
    override features and 8 meta files (`features/overrides/`). Every hole now scores 8 or 9 out of 10.
+8. **Engine fixes from its QA** ([#15](https://github.com/mescortes/gspro-course-builder/pull/15),
+   [#16](https://github.com/mescortes/gspro-course-builder/pull/16)), and the model rebuilt on them (2026-10-17):
+   * OSM forward tees off the `golf=hole` line go to the hole whose card they play (1, 3, 8 and 13 here, which QA had
+     fixed by overrides);
+   * semirough rings take the hole of the fairway they ring;
+   * deckless forward markers (Copper) look at the ground (see step 6);
+   * the Grand River is water: the OSM snapshot now has all 47 members of its relation, and the river falls in
+     reaches, each with its own flat water plane;
+   * the reedbed is a lateral penalty area on its own ground (native, deep rough, rough), not a pond below the reeds:
+     one `lateral_water` hazard on holes 7, 8, 11 and 12;
+   * the cycle trails (Walter Bean Grand River Trail, Trans-Canada Trail) are paths;
+   * the small mapped fairways (collection areas and drop zones of 66-238 m², by the greens of 6, 14, 16 and 18) are
+     fairway;
+   * classifier greens lying mostly under the closed canopy are rough.
 
 ## QA: what was fixed and what is left
 
@@ -133,25 +148,20 @@ Fixed by overrides:
 * hole 1's and hole 3's aim points (hole 3 Black now 587, as on the card);
 * Copper markers pinned on mown fairway on 2, 3, 6, 9, 10, 12 and 16.
 
-Left for the engine (seen on several holes; the engine-wide list is in [TODO.md](../../TODO.md)):
+Left for QA overrides (no engine rule can tell them apart safely; the engine-wide list is in
+[TODO.md](../../TODO.md)):
 
-* OSM forward tees off the `golf=hole` line go to the background; the nearest hole's tee set should take them;
-* every semirough polygon carries hole 99, including the rings round fairways;
-* deckless forward markers (Copper) are placed without looking at the surface or nearby hazards;
-* the Grand River is rough, not water, along the west and north edges: the OSM snapshot has geometry for only 5 of its
-  relation's 47 members;
-* the reedbed lateral hazard (25,500 m² between 10, 11 and 12) is carved as an open water plane below the reeds, so it
-  looks like a pond, though it plays right as a penalty area;
-* the cycle trails along the river (Walter Bean Grand River Trail, Trans-Canada Trail) are not modelled;
-* small OSM fairways (collection areas, drop zones under 150 m²) are dropped; classifier greens grow fingers along mown
-  approach strips; dense conifer shadows take the fairway class off mown turf.
+* classifier greens that grow fingers along mown approach strips (QA trimmed them on 4, 12 and 16);
+* dense conifer shadows that take the fairway class off mown turf;
+* an 87 m² background green on the practice turf by the maintenance yard's practice bunker (E 546618 N 4805674), new
+  since the classifier retrained on the river and reedbed labels.
 
 ## Rebuilding Deer Ridge
 
 Setup and the general commands are in the [top-level README](../../README.md#building-a-course). The downloads are
-about 2 GB (LiDAR 980 MB, photo 1.0 GB, backdrop DEM 26 MB). On the owner's MacBook Pro (Apple M5 Max, 64 GB) the
-whole build took about 25 min; the largest steps were vectorize (7.8 GB), mesh (6.6 GB) and export (5.6 GB). The mesh
-has 4.7 M triangles.
+about 2 GB (LiDAR 980 MB, photo 1.0 GB, backdrop DEM 26 MB). A clean build on the owner's MacBook Pro (Apple M5 Max,
+64 GB; 2026-10-17, engine at 5f7ae32, downloads in place) took about 50 min: vectorize 22 min, paths 9 min, rasters
+6 min. The largest peaks were mesh 8.2 GB, vectorize 7.6 GB and rasters 5.9 GB. The mesh has 4.7 M triangles.
 
 ```bash
 export COURSE=deer-ridge
@@ -172,7 +182,8 @@ The 5 km backdrop photo comes from the LIO image server, which can stop with HTT
   maps them; their real heights are unknown.
 * **Copper and White.** Copper has no pads of its own (see above). White on hole 6 is an automatic fairway marker 15 yd
   ahead of the Bronze deck: neither the photo nor the LiDAR shows a forward deck there.
-* **The Grand River and the reedbed** (see the engine list above).
+* **The Grand River** is water in reaches: each reach is a flat plane 0.05-0.3 m below its banks' low shoreline, so
+  the river steps down rather than sloping.
 * **Leaf-off sources.** Tree species groups are inferred from crown shape and pulse penetration, not surveyed; crown
   sizes come from a closed leaf-off canopy.
 * **Spring flood photo.** The wet ground was corrected in QA; turf colour in the glTF and viewer is graded to summer.
