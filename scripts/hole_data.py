@@ -78,18 +78,28 @@ def penalty_hazards(areas, corridor, min_area=50.0):
     return out
 
 
-def surface_hazards(feats, corridor, penalties=(), min_area=50.0):
+def surface_hazards(feats, corridor, penalties=(), min_area=50.0, course=None):
     """holes.json hazards from the surfaces: the water and native polygons over `min_area` m2 that reach a hole's
     corridor, except those lying mostly inside a penalty area (penalty_areas: the reedbed's own ground is native area
-    and deep rough; it is in the lateral hazard's ring already)."""
+    and deep rough; it is in the lateral hazard's ring already). A native area is the part of it inside the course
+    outline `course` (leisure=golf_course; None or empty: no outline), over `min_area` m2: the classifier calls
+    ploughed fields native (Whistle Bear: 69,952 m2 across Dickie Settlement Road on hole 3). Water off the outline
+    stays a hazard (Deer Ridge's Grand River, outside its outline beside holes 8 and 14)."""
+    on_course = course is not None and not course.is_empty
     out = []
     for g, p in feats:
         if p["surface"] in ("native", "water") and g.area > min_area and g.intersects(corridor):
             if any(g.intersection(a).area >= 0.5 * g.area for a, _ in penalties):
                 continue
-            c = g.centroid
-            out.append({"type": "native_area" if p["surface"] == "native" else "water", "utm_centroid": [round(c.x, 2), round(c.y, 2)],
-                        "area_m2": round(g.area, 1), "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
+            parts = [g]
+            if p["surface"] == "native" and on_course and not course.covers(g):
+                inside = g.intersection(course)
+                parts = [q for q in getattr(inside, "geoms", [inside])
+                         if q.geom_type == "Polygon" and q.area > min_area and q.intersects(corridor)]
+            for q in parts:
+                c = q.centroid
+                out.append({"type": "native_area" if p["surface"] == "native" else "water", "utm_centroid": [round(c.x, 2), round(c.y, 2)],
+                            "area_m2": round(q.area, 1), "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in q.exterior.coords]})
     return out
 
 
@@ -320,7 +330,7 @@ def pin_candidates(inside, edge, slope, limits=PIN_LIMITS, min_frac=PIN_MIN_FRAC
     return ok, limit
 
 
-def hole_record(h, line, feats, terr, all_feats, penalties=()):
+def hole_record(h, line, feats, terr, all_feats, penalties=(), course=None):
     par, *card = C.SCORECARD[h]
     hf = [(g, p) for g, p in feats if p["hole"] == h]
     greens = [g for g, p in hf if p["surface"] == "green"]
@@ -425,7 +435,7 @@ def hole_record(h, line, feats, terr, all_feats, penalties=()):
             rec["hazards"].append({"type": "bunker", "utm_centroid": [round(c.x, 2), round(c.y, 2)], "area_m2": round(g.area, 1),
                                    "polygon_utm": [[round(x, 2), round(y, 2)] for x, y in g.exterior.coords]})
     corridor = play.buffer(40)
-    rec["hazards"] += surface_hazards(all_feats, corridor, penalties)
+    rec["hazards"] += surface_hazards(all_feats, corridor, penalties, course=course)
     rec["hazards"] += penalty_hazards(penalties, corridor)   # wetland hazards: penalty areas with no water surface
     if rec["tees"]:
         rec["elevation_change_m"] = round(gh - rec["tees"][0]["utm"][2], 2)
@@ -437,12 +447,14 @@ def main():
     terr = Terrain()
     lines = hole_lines()
     from surface_classify import osm_geoms
-    penalties = penalty_areas(osm_geoms(), box(C.CORE["xmin"], C.CORE["ymin"], C.CORE["xmax"], C.CORE["ymax"]))
+    G = osm_geoms()
+    penalties = penalty_areas(G, box(C.CORE["xmin"], C.CORE["ymin"], C.CORE["xmax"], C.CORE["ymax"]))
+    course = unary_union([g for _, t, g in G if t.get("leisure") == "golf_course" and g.geom_type in ("Polygon", "MultiPolygon")])
     holes = []
     for h in C.PLAYABLE:
         if h not in lines:
             holes.append({"hole": h, "error": "no OSM line of play"}); continue
-        rec = hole_record(h, lines[h], feats, terr, feats, penalties)
+        rec = hole_record(h, lines[h], feats, terr, feats, penalties, course)
         holes.append(rec)
         if "tees" in rec and rec["tees"]:
             print(f"hole {h:2d} ({rec['nine']} {rec['nine_hole']}) par {rec['par']}: " +

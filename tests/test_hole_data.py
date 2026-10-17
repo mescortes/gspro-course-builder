@@ -213,3 +213,26 @@ def test_ground_inside_a_penalty_area_is_not_a_second_hazard():
     hz = HD.surface_hazards(feats, corridor, [(reed, "lateral_water")])
     assert sorted((z["type"], z["area_m2"]) for z in hz) == [("native_area", 400.0), ("water", 900.0)]
     assert len(HD.surface_hazards(feats, corridor)) == 3
+
+
+def test_native_areas_off_the_course_are_not_hazards():
+    """The classifier calls a ploughed field native: Whistle Bear's holes.json listed fields across Dickie Settlement
+    Road (69,952 m2 on hole 3) and patches past the west edge as hazards, wholly outside the course outline
+    (leisure=golf_course). A native-area hazard is the part of it inside the outline, over 50 m2. Water off the outline
+    stays a hazard: Deer Ridge's Grand River runs outside its outline beside holes 8 and 14, and it is in play."""
+    from shapely.geometry import LineString
+    corridor = LineString([(0, 0), (0, 300)]).buffer(40)
+    course = box(-30, -20, 30, 320)
+    feats = [(box(35, 0, 200, 300), {"surface": "native", "hole": 99}),      # a field across the road
+             (box(10, 100, 50, 120), {"surface": "native", "hole": 99}),     # crosses the outline: 400 m2 inside
+             (box(-35, 200, -25, 210), {"surface": "native", "hole": 99}),   # 50 m2 inside (under the limit)
+             (box(-20, 10, 0, 30), {"surface": "native", "hole": 99}),       # inside
+             (box(-60, 50, -32, 90), {"surface": "water", "hole": 99})]      # a river off the outline
+    hz = HD.surface_hazards(feats, corridor, course=course)
+    assert sorted((z["type"], z["area_m2"]) for z in hz) == [("native_area", 400.0), ("native_area", 400.0),
+                                                             ("water", 1120.0)]
+    clipped = next(z for z in hz if z["utm_centroid"][1] == 110.0)
+    assert max(x for x, _ in clipped["polygon_utm"]) == 30.0 and clipped["utm_centroid"][0] == 20.0
+    inside = next(z for z in hz if z["utm_centroid"] == [-10.0, 20.0])
+    assert inside["polygon_utm"] == [[round(x, 2), round(y, 2)] for x, y in feats[3][0].exterior.coords]
+    assert len(HD.surface_hazards(feats, corridor)) == 5     # no outline: every native area is kept
