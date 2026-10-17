@@ -68,8 +68,10 @@ on several holes, describe it once with category "recurring".
   distance on the best ground within 20 m of the back tee's first leg (the hole's fairway, its decks, semirough, then
   rough), at least 5 m from bunkers, water and native areas. Such a marker has `"source": "fairway_marker"` in
   holes.json. On this build that is hole 3's Red (410 yd, as on the card); every other marker stands on a pad.
-* **Water in reaches** ([#15]): a water body whose level falls more than 0.3 m (the creek, 1.65 m) is cut across into
-  reaches, each with its own flat water plane. Steps in the creek's water are expected.
+* **Water in reaches** ([#15]): a water body whose level falls more than 0.3 m is cut across into reaches, each with
+  its own flat water plane. Here that is the 13,017 m2 pond between holes 8, 9 and 10 (OSM way 936553651), which falls
+  1.65 m at a rock cascade, so one step in its water is expected (round 2 found the cut in the wrong place: see
+  below).
 * **Wetland hazards and cycle trails** ([#16]): nothing to do here. Every Whistle Bear water hazard is mapped
   `natural=water` (the wetland rule is for hazards mapped `natural=wetland`), the marshes OSM maps are no hazards, and
   OSM has no `highway=cycleway` in the area.
@@ -93,6 +95,48 @@ What that leaves of round 1's "Left for the engine" list:
   vertices kept as aim points on straight holes (set `aim_points_utm` only where an aim point makes the hole play or
   measure wrong); front pin yardages measured from a bunker cut-in; bunker islands drawn as sand in the GreenKeeper
   SVG.
+
+## QA round 2 (65 override features, 1 meta file)
+
+Run 2026-10-17 on the clean build above (`hole_qa.js` round 2: 6 inspectors, 3 verifiers, 18 minutes). Two
+proposals, both approved; none rejected; no round-1 override found misaligned or harmful (the four redundant ones are
+kept). Verifier scores: 9 on every hole except 8 (8, for the water step below). test_course: 137 passed, 4 skipped.
+
+* Fixed by overrides: a false traced cart path along a lot-boundary fence behind the conifer rows right of hole 2
+  (73 m2 of path, rough 99), and the unmown long-grass bed with three conifers short right of hole 9's green (928 m2,
+  deep rough 99: straw-coloured with a crisp mowing edge, NDVI 0.09 against 0.31 round it, a low mound in dem_raw).
+* Left as they are:
+  * Hole 11 Red stands at the front of the White deck at 330 / 324 (+5.7); the forward deck (117 m2 at E 548787
+    N 4801665) would give at most 318 (-5.9), no better.
+  * Hole 14 Blue 182 / 188 (-6): the marker is at the back of the Blue deck with the cart path behind it, and the
+    Gold deck's front gives 191-194.
+  * Hole 3 Red is the engine's fairway marker at 410: the forward decks give about 452 and 374. The 44 m2 deck at
+    E 548768 N 4801462 (OSM tee 937313439) is hole 3's but unused; it may be a forward tee for hole 8 (about 95 yd,
+    card Red 90). It changes no marker.
+  * The 28 m2 "bunker" behind hole 12's Red deck (E 548604 N 4801939) is the club's bear-paw logo in flagstone (OSM
+    maps it as 10 tiny `natural=sand` pads); out of play.
+  * Small cosmetic notches in the green outlines of 2 and 13.
+* Left for the engine (seen on several holes, or wrong in an engine rule):
+  * **Water reaches cut in open water.** On the pond between 8, 9 and 10 the reach cut (60 m shoreline radius)
+    falls 20-45 m west of the rock cascade (E 548891-548900 N 4801564-4801574), so about 1,000 m2 of the upper pond
+    (E 548845-548899, N 4801537-4801574) takes the lower plane, 306.35 m, though the LiDAR water there is at 308.05:
+    a 1.4 m step in the water and about 1.7 m of exposed bank right beside hole 10's green. The cut should fall where
+    the shoreline level changes. (Holes 8, 9.)
+  * **Yardage-book maps paint rough over everything.** `make_maps.py` fills each polygon's exterior and draws its
+    holes as empty patches, so the large rough polygons (one is 853,337 m2 with 263 holes) cover the fairways,
+    greens, bunkers and water drawn before them: output/<slug>/maps/holeNN_map.png and course_map.png show rough,
+    trees and paths only. Deer Ridge's course map has the same fault, so it is in every course's maps and bundle.
+    (Reported on hole 10; every hole map shows it.)
+  * **Off-course native listed as hazards.** holes.json lists native areas wholly outside the course outline:
+    ploughed fields across Dickie Settlement Road, which the classifier calls native (69,952 m2 on hole 3, 512 m2 on
+    2), and patches past the west edge (16, 17). Hazards should stay inside the outline. (Holes 1-3, 16, 17.)
+  * Still open from round 1: small false native blobs on mown rough (holes 5, 10, 12-15; on 14 and 15 they are
+    listed as hazards); `trace_paths.py` tracing linear features that are no paths (here a fence line, on 2); OSM
+    middle vertices kept as aim points on straight holes (3, 6, 12, 18; under 0.3 yd each here, so harmless); front
+    pin yardages measured from a bunker cut-in (7: -1.4 yd, 10: -8.5 yd, 16: -5.3 yd); bunker islands drawn as sand
+    in the GreenKeeper SVG.
+  * One hole so far, an engine note rather than a pattern: deep rough comes only from the CHM shrub layer (0.6-5 m
+    cover), so unmown long grass under 0.6 m is never deep rough (hole 9, fixed by override).
 
 [#11]: https://github.com/mescortes/gspro-course-builder/pull/11
 [#15]: https://github.com/mescortes/gspro-course-builder/pull/15

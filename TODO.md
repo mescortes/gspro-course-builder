@@ -11,13 +11,14 @@ so check an item against the current engine before starting on it. Fix it test f
 * Dry tan meadow and bare soil are classified as fairway or native. Seen on Brambles (NAIP 0.6 m, summer, leaf-on),
   QA round 2.
 * Tree shadows are classified as water. Seen on Brambles, QA round 2.
-* False green and fringe appear under forest canopy (holes 17, 18) and on a green metal roof. Seen on Whistle Bear,
-  QA round 1, before [#11] turned classifier green more than 15 m off the course outline into rough.
-* Small false native blobs appear on mown rough. Seen on Whistle Bear holes 13-15, QA round 1.
+* Small false native blobs appear on mown rough, and holes.json lists some of them as hazards. Seen on Whistle Bear
+  holes 5, 10 and 12-15, QA rounds 1-2.
+* Native areas wholly outside the course outline are listed as hazards in holes.json; the classifier calls ploughed
+  fields native (69,952 m2 on Whistle Bear's hole 3). Seen on Whistle Bear holes 2, 3, 16 and 17, QA round 2.
 * Bare soil with 0.1 m of relief passes the bunker hollow test. Seen on Brambles, QA round 2.
 * The clubhouse road and parking are modelled as rough, and QA overrides have no road surface to correct them with.
   Seen on Brambles, QA round 2 and [#7].
-* `trace_paths.py` traces cart paths along shadows and forest edges. Seen on Whistle Bear, QA round 1.
+* `trace_paths.py` traces cart paths along shadows, forest edges and fences. Seen on Whistle Bear, QA rounds 1-2.
 * Every semirough polygon carries hole 99, including the rings round fairways, though `vectorize` says fringe and
   semirough adopt the hole they surround. Seen on Deer Ridge, QA rounds 1-2.
 * Small OSM fairways (collection areas and drop zones under 150 m2) are dropped, classifier greens grow fingers along
@@ -40,9 +41,24 @@ so check an item against the current engine before starting on it. Fix it test f
   Seen on Deer Ridge, QA rounds 1-2.
 * Markers of a set with no deck (Deer Ridge's Copper) go on the back tee's first leg at the card distance, whatever
   the surface or hazards there: a lake bank, rough, beside bunkers. Seen on Deer Ridge, QA rounds 1-2.
-* The middle vertices of OSM hole lines are kept as aim points on straight holes. Seen on Whistle Bear, QA round 1.
-* Front pin yardages are measured from a bunker cut-in. Seen on Whistle Bear holes 7 and 10, QA round 1.
+* The middle vertices of OSM hole lines are kept as aim points on straight holes. Seen on Whistle Bear, QA rounds 1-2
+  (holes 3, 6, 12 and 18 in round 2, each under 0.3 yd).
+* Front pin yardages are measured from a bunker cut-in. Seen on Whistle Bear holes 7, 10 and 16, QA rounds 1-2.
 * The practice green behind the 18th green gets two of the pins. Seen on Brambles, [#7].
+
+## Water
+
+* A water body's reaches are cut in open water rather than where its shoreline level changes. Whistle Bear's pond
+  between holes 8, 9 and 10 (OSM way 936553651) falls 1.65 m at a rock cascade, but the cut falls 20-45 m west of it,
+  so about 1,000 m2 of the upper pond takes the lower plane, 1.4 m below the LiDAR water, beside hole 10's green.
+  Seen on Whistle Bear, QA round 2 (after [#15]).
+
+## Maps
+
+* The yardage-book maps (`make_maps.py`: holeNN_map.png, course_map.png) fill each polygon's exterior and draw its
+  holes as empty patches, so a large rough polygon with holes covers the fairways, greens, bunkers and water drawn
+  before it. Every course's maps and viewer bundles have it (Whistle Bear's and Deer Ridge's course maps show only
+  rough, paths and trees). Seen on Whistle Bear, QA round 2.
 
 ## GSPro package and mesh
 
@@ -63,3 +79,4 @@ Whistle Bear, Deer Ridge) and in the course PRs' "Known issues" sections.
 
 [#7]: https://github.com/mescortes/gspro-course-builder/pull/7
 [#11]: https://github.com/mescortes/gspro-course-builder/pull/11
+[#15]: https://github.com/mescortes/gspro-course-builder/pull/15

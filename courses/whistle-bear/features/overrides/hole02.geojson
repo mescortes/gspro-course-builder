@@ -2045,6 +2045,102 @@
      ]
     ]
    }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "surface": "rough",
+    "hole": 99,
+    "reason": "False cart path (QA round 2; the rest of trace_paths line E 549070-549084, N 4801516-4801547 that round 1 only partly removed: the 73 m2 cartpath at E 549076-549086, N 4801514-4801538, behind the conifer rows right of hole 2's cart path, on the course / house-lot boundary): the 2025 photo shows a fence or net line along the lot boundary (posts at about E 549072 N 4801538, E 549082 N 4801530, E 549088 N 4801512 with long post shadows, a pale band tapering at each post), continuing past the traced part towards the road; no paving, not connected to the cart-path network, no OSM path, and dem_raw shows a smooth cross slope with no bench or cut. Back to the surrounding rough.",
+    "frame": "lidar"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       549075.27,
+       4801534.77
+      ],
+      [
+       549075.65,
+       4801538.17
+      ],
+      [
+       549076.97,
+       4801539.0
+      ],
+      [
+       549078.14,
+       4801538.52
+      ],
+      [
+       549080.14,
+       4801536.01
+      ],
+      [
+       549079.82,
+       4801533.91
+      ],
+      [
+       549084.21,
+       4801526.08
+      ],
+      [
+       549085.0,
+       4801522.81
+      ],
+      [
+       549084.58,
+       4801519.08
+      ],
+      [
+       549087.18,
+       4801515.74
+      ],
+      [
+       549086.93,
+       4801514.11
+      ],
+      [
+       549085.47,
+       4801512.88
+      ],
+      [
+       549084.28,
+       4801512.81
+      ],
+      [
+       549083.22,
+       4801513.69
+      ],
+      [
+       549081.13,
+       4801517.14
+      ],
+      [
+       549081.23,
+       4801518.62
+      ],
+      [
+       549075.99,
+       4801527.33
+      ],
+      [
+       549075.88,
+       4801528.53
+      ],
+      [
+       549076.58,
+       4801529.72
+      ],
+      [
+       549075.27,
+       4801534.77
+      ]
+     ]
+    ]
+   }
   }
  ]
 }
