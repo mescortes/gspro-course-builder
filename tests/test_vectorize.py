@@ -85,6 +85,28 @@ def test_sidewalks_off_the_course_are_road_not_cart_path():
     assert cp2.equals(path) and rd2.equals(road), "no course boundary mapped: leave everything"
 
 
+def test_a_mapped_golf_cart_path_off_the_outline_stays_a_cart_path():
+    """MountainGate: the club's leisure=golf_course outline is narrower than its land, and the 593 m2 cart path behind
+    the hole 1 tees (way 758678358, golf=cartpath + highway=path, 168 m of it past the outline) became road. A path OSM
+    maps as a golf path (golf=cartpath / golf=path) that reaches the course stays a cart path along its line; a
+    sidewalk (a footway without a golf tag) and a golf path that never comes near the course are still road."""
+    from shapely.geometry import box, LineString
+    from shapely.ops import unary_union
+    course = box(0, 0, 100, 100)
+    G = [(1, {"golf": "cartpath", "golf_cart": "yes", "highway": "path"}, LineString([(41, 50), (41, 160)])),
+         (2, {"highway": "footway"}, LineString([(81, 50), (81, 160)])),
+         (3, {"golf": "cartpath", "highway": "path"}, LineString([(300, 0), (300, 100)])),
+         (4, {"golf": "path", "highway": "footway"}, LineString([(-60, 20), (10, 20)]))]
+    along = V.golf_path_area(G, course, margin=5.0)
+    golf_cp, walk, far, foot = box(40, 50, 42, 160), box(80, 50, 82, 160), box(299, 0, 301, 100), box(-60, 19, 10, 21)
+    road = box(0, 170, 100, 176)
+    cp, rd = V.off_course_paths(unary_union([golf_cp, walk, far, foot]), road, course, margin=5.0, golf=along)
+    assert cp.buffer(1e-6).contains(golf_cp) and cp.buffer(1e-6).contains(foot)    # the golf paths, whole
+    assert abs(cp.intersection(walk).area - 2 * 55) < 1e-6 and cp.intersection(far).area < 1e-6
+    assert rd.buffer(1e-6).contains(box(80, 105, 82, 160)) and rd.buffer(1e-6).contains(far)
+    assert rd.intersection(golf_cp).area < 1e-6
+
+
 def test_shadow_sand_only_extends_sunlit_sand():
     """Build 4: the shadow rule alone (NDVI ~0, not black) also took bare soil, shaded roofs and pavement off the course
     (61 non-OSM 'bunkers'). Shadow sand is kept only where it connects to sunlit sand: a branch shadow across a bunker."""

@@ -93,12 +93,26 @@ def is_deck(P, R, tol=0.06, max_slope=0.05, step=0.12, fill=0.2):
                 and np.percentile(np.abs(ring_res), 75) > step and np.mean(ring_res < -step) >= fill)
 
 
-def off_course_paths(cartpath, road, course, margin=5.0):
+def golf_path_area(G, course, margin=5.0, half_width=3.5):
+    """The ground along the OSM paths mapped as golf paths (golf=cartpath / golf=path) that come within `margin` m of
+    the golf_course boundary: `half_width` m each side of the line, the path corridor's 3 m and the smoothing. A club's
+    outline can be narrower than its land (MountainGate: the cart path behind the hole 1 tees, way 758678358)."""
+    if course.is_empty:
+        return Polygon()
+    near = course.buffer(margin)
+    lines = [g for _, t, g in G if t.get("golf") in ("cartpath", "path") and g.geom_type == "LineString" and g.intersects(near)]
+    return unary_union([g.buffer(half_width) for g in lines]) if lines else Polygon()
+
+
+def off_course_paths(cartpath, road, course, margin=5.0, golf=None):
     """Cart path more than `margin` m outside the golf_course boundary is a municipal sidewalk (OSM footways along the
-    streets feed the path corridor): it becomes road, OPCD Concrete_Road (QA round 1, holes 7 and 11)."""
+    streets feed the path corridor): it becomes road, OPCD Concrete_Road (QA round 1, holes 7 and 11). Along a mapped
+    golf path that reaches the course (`golf`: golf_path_area) it stays cart path."""
     if course.is_empty:
         return cartpath, road
     off = cartpath.difference(course.buffer(margin))
+    if golf is not None and not off.is_empty and off.intersection(golf).area > 1e-6:   # (else off is left un-noded)
+        off = off.difference(golf)
     if off.is_empty:
         return cartpath, road
     return cartpath.difference(off), unary_union([road, off])
@@ -924,7 +938,8 @@ def main():
         final["fairway"] = unary_union([final["fairway"]] + to_fair)
     if to_path:
         final["cartpath"] = unary_union([final["cartpath"]] + to_path)
-    final["cartpath"], final["road"] = off_course_paths(final["cartpath"], final["road"], course_area)
+    final["cartpath"], final["road"] = off_course_paths(final["cartpath"], final["road"], course_area,
+                                                        golf=golf_path_area(G, course_area))
     burn_small_fairways(final, small_fw)
 
     # greens: clear banks (LiDAR slope > 12 %) in the outer 2.5 m of a green outline are not putting surface
