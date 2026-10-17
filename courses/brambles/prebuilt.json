@@ -1,15 +1,15 @@
 {
  "course": "brambles",
  "name": "Brambles",
- "release": "courses-2026-10-17",
+ "release": "courses-2026-10-18",
  "asset": "brambles-viewer.tar.gz",
- "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-17/brambles-viewer.tar.gz",
- "sha256": "50536078fb20efbb008d4da0c44e56de93f6678742a447b14a7a44645c10d5f8",
- "bytes": 263383673,
+ "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-18/brambles-viewer.tar.gz",
+ "sha256": "5d64574326a45c8bec468e5c4562e89d17414f0e922cf762f2927c0313309027",
+ "bytes": 267308572,
  "files": 42,
- "unpacked_bytes": 337042971,
+ "unpacked_bytes": 340880003,
  "model": "brambles.glb",
  "packaged": "2026-10-17",
- "built_from": "d52be39",
+ "built_from": "f0c2546",
  "attribution": "LiDAR and DEM: USGS 3DEP (public domain). Orthoimagery: USDA NAIP 2024 (public domain). Buildings and roads: (c) OpenStreetMap contributors, ODbL. Textures: Poly Haven, CC0."
 }
