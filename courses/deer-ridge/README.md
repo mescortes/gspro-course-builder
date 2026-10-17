@@ -57,19 +57,19 @@ hole.
 | Hole | Par | SI | Black | Gold | Silver | Bronze | White | Copper | Green (yd deep × wide) | Elev. change | Hazards |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | 5 | 5 | 526 | 504 | 495 | 464 | 408 | 323 | 35 × 17 | -5 m | 2 bunker, 9 native_area |
-| 2 | 4 | 17 | 449 | 411 | 384 | 373 | 316 | 266 | 34 × 23 | -8 m | 8 bunker, 4 native_area |
+| 2 | 4 | 17 | 449 | 411 | 384 | 373 | 316 | 266 | 34 × 23 | -8 m | 8 bunker, 3 native_area |
 | 3 | 5 | 15 | 587 | 553 | 529 | 517 | 444 | 374 | 32 × 18 | -5 m | 6 bunker, 4 native_area |
 | 4 | 3 | 13 | 187 | 169 | 152 | 142 | 122 | 122 | 28 × 24 | -1 m | 2 bunker |
 | 5 | 4 | 9 | 435 | 410 | 384 | 376 | 297 | 245 | 40 × 16 | +0 m | 5 bunker |
 | 6 | 3 | 3 | 214 | 189 | 167 | 137 | 118 | 75 | 20 × 32 | -2 m | 3 bunker, 1 water |
 | 7 | 4 | 7 | 385 | 363 | 349 | 329 | 280 | 223 | 23 × 19 | +0 m | 1 bunker, 1 lateral_water, 2 native_area, 1 water |
-| 8 | 4 | 11 | 418 | 399 | 367 | 339 | 329 | 244 | 44 × 17 | +0 m | 5 bunker, 1 lateral_water, 3 native_area, 2 water |
+| 8 | 4 | 11 | 418 | 399 | 367 | 339 | 329 | 244 | 44 × 17 | +0 m | 5 bunker, 1 lateral_water, 2 native_area, 2 water |
 | 9 | 4 | 1 | 445 | 414 | 402 | 376 | 318 | 271 | 30 × 21 | +1 m | 4 bunker, 5 native_area |
 | 10 | 4 | 6 | 387 | 361 | 353 | 327 | 291 | 206 | 50 × 20 | -1 m | 6 bunker, 2 native_area, 1 water |
 | 11 | 4 | 18 | 388 | 343 | 321 | 311 | 289 | 205 | 37 × 17 | -2 m | 7 bunker, 1 lateral_water, 4 native_area, 1 water |
 | 12 | 5 | 14 | 555 | 524 | 507 | 485 | 417 | 342 | 30 × 27 | +1 m | 5 bunker, 1 lateral_water, 1 native_area, 1 water |
 | 13 | 3 | 16 | 202 | 179 | 165 | 138 | 114 | 114 | 30 × 22 | -2 m | 1 native_area |
-| 14 | 4 | 2 | 429 | 398 | 372 | 361 | 323 | 209 | 37 × 18 | +4 m | 4 bunker, 4 native_area, 1 water |
+| 14 | 4 | 2 | 429 | 398 | 372 | 361 | 323 | 209 | 37 × 18 | +4 m | 4 bunker, 2 native_area, 1 water |
 | 15 | 4 | 12 | 431 | 389 | 361 | 336 | 318 | 230 | 30 × 16 | +7 m | 4 bunker |
 | 16 | 3 | 10 | 214 | 184 | 164 | 157 | 138 | 95 | 39 × 18 | -12 m | 2 bunker, 4 native_area, 1 water |
 | 17 | 4 | 4 | 444 | 421 | 396 | 381 | 312 | 246 | 34 × 18 | +1 m | 3 bunker, 1 native_area, 1 water |
@@ -130,6 +130,15 @@ The engine's steps are in the [top-level README](../../README.md#how-a-course-is
    * the small mapped fairways (collection areas and drop zones of 66-238 m², by the greens of 6, 14, 16 and 18) are
      fairway;
    * classifier greens lying mostly under the closed canopy are rough.
+9. **Engine fixes from Whistle Bear's QA round 2** ([#20](https://github.com/mescortes/gspro-course-builder/pull/20)),
+   and the model rebuilt on them (2026-10-17):
+   * the Grand River is cut at the 1.4 m weir on the north edge of the build (N 4806807-4806816) instead of about
+     40 m above it, where 3,595 m² of water sat 0.7-1.6 m below the LiDAR; its other reaches are unchanged;
+   * the yardage-book maps and the course map above draw the fairways, greens, bunkers and water through the rough;
+   * native areas outside the course outline are no longer hazards (four on holes 2, 8 and 14), and those crossing
+     it are cut to it (holes 2, 8, 9 and 13). Water off the outline, the Grand River beside 8 and 14, stays a hazard.
+
+   The surfaces, yardages and pins are unchanged.
 
 ## QA: what was fixed and what is left
 
@@ -160,8 +169,8 @@ Left for QA overrides (no engine rule can tell them apart safely; the engine-wid
 
 Setup and the general commands are in the [top-level README](../../README.md#building-a-course). The downloads are
 about 2 GB (LiDAR 980 MB, photo 1.0 GB, backdrop DEM 26 MB). A clean build on the owner's MacBook Pro (Apple M5 Max,
-64 GB; 2026-10-17, engine at 5f7ae32, downloads in place) took about 50 min: vectorize 22 min, paths 9 min, rasters
-6 min. The largest peaks were mesh 8.2 GB, vectorize 7.6 GB and rasters 5.9 GB. The mesh has 4.7 M triangles.
+64 GB; 2026-10-17, engine at f0c2546, downloads in place) took about 25 min: vectorize 7.5 min, rasters 4.5 min,
+export 3.5 min. The largest peaks were mesh 8.3 GB, vectorize 7.5 GB and rasters 5.7 GB. The mesh has 4.7 M triangles.
 
 ```bash
 export COURSE=deer-ridge
