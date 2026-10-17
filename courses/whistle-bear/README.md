@@ -55,8 +55,8 @@ back of the rearmost decks (see [Known limitations](#known-limitations)). Every 
 | Hole | Par | SI | Black | Gold | Blue | White | Red | Green (yd deep × wide) | Elev. change | Hazards |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | 4 | 3 | 426 (468) | 424 | 410 | 388 | 342 | 34 × 32 | +8 m | 4 bunker, 1 water |
-| 2 | 4 | 1 | 406 | 404 | 390 | 371 | 334 | 46 × 20 | -2 m | 4 bunker, 1 native_area, 1 water |
-| 3 | 5 | 11 | 610 | 567 | 500 | 480 | 410 | 24 × 37 | -3 m | 6 bunker, 1 native_area, 2 water |
+| 2 | 4 | 1 | 406 | 404 | 390 | 371 | 334 | 46 × 20 | -2 m | 4 bunker, 1 water |
+| 3 | 5 | 11 | 610 | 567 | 500 | 480 | 410 | 24 × 37 | -3 m | 6 bunker, 2 water |
 | 4 | 4 | 7 | 436 | 395 | 364 | 332 | 297 | 34 × 26 | -1 m | 3 bunker, 2 water |
 | 5 | 3 | 17 | 236 | 182 | 132 | 108 | 86 | 46 × 18 | -1 m | 3 bunker |
 | 6 | 4 | 5 | 476 | 428 | 404 | 313 | 282 | 39 × 29 | -3 m | 7 bunker |
@@ -69,8 +69,8 @@ back of the rearmost decks (see [Known limitations](#known-limitations)). Every 
 | 13 | 4 | 12 | 403 | 373 | 337 | 306 | 272 | 23 × 32 | +0 m | 6 bunker, 1 water |
 | 14 | 3 | 18 | 238 | 204 | 182 | 138 | 105 | 39 × 34 | -1 m | 3 bunker, 1 native_area |
 | 15 | 4 | 8 | 468 | 414 | 376 | 346 | 304 | 34 × 26 | +0 m | 5 bunker, 5 native_area |
-| 16 | 5 | 4 | 634 | 593 | 555 | 495 | 458 | 22 × 34 | -3 m | 7 bunker, 2 native_area, 2 water |
-| 17 | 3 | 14 | 212 | 196 | 166 | 140 | 100 | 43 × 22 | -2 m | 3 bunker, 3 native_area |
+| 16 | 5 | 4 | 634 | 593 | 555 | 495 | 458 | 22 × 34 | -3 m | 7 bunker, 2 water |
+| 17 | 3 | 14 | 212 | 196 | 166 | 140 | 100 | 43 × 22 | -2 m | 3 bunker, 2 native_area |
 | 18 | 4 | 2 | 504 | 466 | 430 | 384 | 340 | 36 × 24 | -13 m | 8 bunker, 1 water |
 | **Total** | **72** | | **7500** (7562) | **6963** (6966) | **6416** (6422) | **5830** (5831) | **5115** (5111) | | | |
 <!-- /holes-table -->
@@ -121,6 +121,11 @@ The engine's steps are in the [top-level README](../../README.md#how-a-course-is
    of main f3d1312; the brief now lists the engine changes since round 1 so the agents left them alone): two
    corrections approved, none rejected, and no round-1 override found wrong. That makes 65 override features. Every
    hole now scores 9 out of 10 except hole 8 (8, for the water step in the pond beside it, an engine issue).
+10. **Rebuilt on the engine fixes from QA round 2** (2026-10-17,
+    [#20](https://github.com/mescortes/gspro-course-builder/pull/20)): the pond beside hole 10's green is cut at its
+    cascade, so the upper pond's 1,000 m² that sat 1.4 m too low is on the upper plane; the maps draw the fairways,
+    greens, bunkers and water through the rough; holes 2, 3, 16 and 17 no longer list native areas outside the course
+    (64,672 m² of native-area hazards down to 3,701 m²). The yardages are unchanged.
 
 ## QA: what was fixed and what is left
 
@@ -138,16 +143,15 @@ Fixed by overrides in round 2:
 * the unmown long-grass bed short right of hole 9's green, now deep rough.
 
 Fixed in the engine since round 1 (steps 7 and 8): the false green under the forest canopy (holes 17, 18), on a
-metal roof and on the lawns round the course.
+metal roof and on the lawns round the course. Since round 2 (step 10): the pond's two water levels cut at the rock
+cascade instead of 20-45 m west of it; the yardage-book maps and the course map above drawing the big rough polygons
+over the fairways, greens, bunkers and water; native areas outside the course (ploughed fields across Dickie
+Settlement Road) listed as hazards of holes 2, 3, 16 and 17.
 
 Left for the engine (seen on several holes; the engine-wide list is in [TODO.md](../../TODO.md)):
 
-* the pond between holes 8, 9 and 10 falls 1.65 m at a rock cascade, but the engine cuts its two water levels 20-45 m
-  west of the cascade, so about 1,000 m² of the upper pond sits 1.4 m too low, a visible step beside hole 10's green;
-* the yardage-book maps (`make_maps.py`, also the course map above) draw the big rough polygons over the fairways,
-  greens, bunkers and water: a polygon's holes are not cut out;
-* native areas outside the course (ploughed fields across Dickie Settlement Road) listed as hazards of holes 2, 3, 16
-  and 17;
+* the upper pond (beside hole 10's green) is flat at 307.73 m under LiDAR water at 308.05 m: a reach takes the lower
+  end of its 0.3 m band, so 0.3 m of bank shows round it;
 * small false native blobs on mown rough (holes 5, 10, 12-15);
 * traced paths along shadows, forest edges and fences;
 * OSM middle vertices kept as aim points on straight holes (harmless here: under 0.3 yd);
@@ -158,9 +162,9 @@ Left for the engine (seen on several holes; the engine-wide list is in [TODO.md]
 
 Setup and the general commands are in the [top-level README](../../README.md#building-a-course). The downloads are
 about 1.7 GB (LiDAR 850 MB, photo 830 MB, backdrop DEM 25 MB). A clean build on the owner's MacBook Pro (Apple M5 Max,
-64 GB; 2026-10-17, engine at 5f7ae32, downloads in place) took about 21 min: rasters 5 min, export 3 min, maps, gspro,
-vectorize and classify 2-2.5 min each. The largest peaks were rasters 6.7 GB, mesh 5.4 GB and vectorize 4.9 GB. The
-mesh has 4.7 M triangles.
+64 GB; 2026-10-17, engine at 11affd6, downloads in place) took about 15 min: rasters 4.5 min, export 2 min, gspro
+1.5 min, vectorize, classify and maps 1-1.5 min each. The largest peaks were rasters 7.2 GB, mesh 5.5 GB and vectorize
+4.9 GB. The mesh has 4.7 M triangles.
 
 ```bash
 export COURSE=whistle-bear
@@ -186,7 +190,6 @@ python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?co
   sizes come from a closed leaf-off canopy.
 * **Spring photo.** Greens look pale or straw-coloured and the rough brownish in the April photo; the glTF and viewer
   turf is graded to summer (`regions/southern_ontario.toml`). GSPro assigns its own turf materials by object name.
-* **The engine issues listed above**, the water step beside hole 10's green and the maps without fairways among
-  them.
+* **The engine issues listed above**, the upper pond 0.3 m below its water among them.
 * **Windows side not run here.** Unity, OPCD and GreenKeeper do not run on the build host; `grass_3dg.json` values are
   starting estimates.
