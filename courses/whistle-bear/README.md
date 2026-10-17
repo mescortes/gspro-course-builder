@@ -117,6 +117,10 @@ The engine's steps are in the [top-level README](../../README.md#how-a-course-is
    [#16](https://github.com/mescortes/gspro-course-builder/pull/16)): three OSM forward tees that sat off the line of
    play (holes 5, 14 and 17) now belong to their holes, semirough rings take their fairway's hole, and two classifier
    greens in the woods (157 and 64 m²) are rough. The yardages and the per-hole table are unchanged.
+9. **QA round 2** (2026-10-17, [#19](https://github.com/mescortes/gspro-course-builder/pull/19), on a clean build
+   of main f3d1312; the brief now lists the engine changes since round 1 so the agents left them alone): two
+   corrections approved, none rejected, and no round-1 override found wrong. That makes 65 override features. Every
+   hole now scores 9 out of 10 except hole 8 (8, for the water step in the pond beside it, an engine issue).
 
 ## QA: what was fixed and what is left
 
@@ -128,17 +132,27 @@ Fixed by overrides in round 1:
 * the grass islands in hole 5's big bunker;
 * a hole 4 bunker that had been given to the background.
 
-Left for the engine (seen on several holes in round 1, before the fixes in step 8; the engine-wide list is in
-[TODO.md](../../TODO.md)):
+Fixed by overrides in round 2:
 
-* false green and fringe under the forest canopy (holes 17, 18) and on a green metal roof;
-* traced paths along shadows and forest edges;
-* small false native blobs on mown rough (holes 13-15);
-* OSM middle vertices kept as aim points on straight holes;
-* front pin yardages measured from a bunker cut-in (holes 7, 10);
+* a cart path traced along a fence behind the conifers right of hole 2, removed;
+* the unmown long-grass bed short right of hole 9's green, now deep rough.
+
+Fixed in the engine since round 1 (steps 7 and 8): the false green under the forest canopy (holes 17, 18), on a
+metal roof and on the lawns round the course.
+
+Left for the engine (seen on several holes; the engine-wide list is in [TODO.md](../../TODO.md)):
+
+* the pond between holes 8, 9 and 10 falls 1.65 m at a rock cascade, but the engine cuts its two water levels 20-45 m
+  west of the cascade, so about 1,000 m² of the upper pond sits 1.4 m too low, a visible step beside hole 10's green;
+* the yardage-book maps (`make_maps.py`, also the course map above) draw the big rough polygons over the fairways,
+  greens, bunkers and water: a polygon's holes are not cut out;
+* native areas outside the course (ploughed fields across Dickie Settlement Road) listed as hazards of holes 2, 3, 16
+  and 17;
+* small false native blobs on mown rough (holes 5, 10, 12-15);
+* traced paths along shadows, forest edges and fences;
+* OSM middle vertices kept as aim points on straight holes (harmless here: under 0.3 yd);
+* front pin yardages measured from a bunker cut-in (holes 7, 10, 16);
 * bunker islands drawn as sand in the GreenKeeper SVG (`export_gspro.py` draws each surface's exterior only).
-
-A second QA round has not been run.
 
 ## Rebuilding Whistle Bear
 
@@ -172,6 +186,7 @@ python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?co
   sizes come from a closed leaf-off canopy.
 * **Spring photo.** Greens look pale or straw-coloured and the rough brownish in the April photo; the glTF and viewer
   turf is graded to summer (`regions/southern_ontario.toml`). GSPro assigns its own turf materials by object name.
-* **One QA round**, and the engine issues listed above.
+* **The engine issues listed above**, the water step beside hole 10's green and the maps without fairways among
+  them.
 * **Windows side not run here.** Unity, OPCD and GreenKeeper do not run on the build host; `grass_3dg.json` values are
   starting estimates.

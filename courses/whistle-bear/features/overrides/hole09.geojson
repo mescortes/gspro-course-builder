@@ -261,6 +261,114 @@
     "reason": "Removes a false 88 m2 cart path on the rock garden / weir between the two ponds left of the hole-9 fairway (E 548934-548952, N 4801768-4801781): rocks and shrubs in the photo, no path crosses there (the real path is 10 m east). Verified round 1: rocks, shrubs and a conifer between the ponds in the photo; the OSM path is east of the water; the water connection is left out.",
     "frame": "lidar"
    }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       548999.0,
+       4801883.0
+      ],
+      [
+       549003.5,
+       4801882.5
+      ],
+      [
+       549007.5,
+       4801879.5
+      ],
+      [
+       549011.0,
+       4801874.5
+      ],
+      [
+       549015.0,
+       4801868.5
+      ],
+      [
+       549019.0,
+       4801862.5
+      ],
+      [
+       549023.0,
+       4801856.5
+      ],
+      [
+       549027.0,
+       4801850.5
+      ],
+      [
+       549029.5,
+       4801845.0
+      ],
+      [
+       549030.5,
+       4801839.5
+      ],
+      [
+       549029.5,
+       4801835.0
+      ],
+      [
+       549026.5,
+       4801832.5
+      ],
+      [
+       549022.0,
+       4801833.0
+      ],
+      [
+       549017.0,
+       4801836.5
+      ],
+      [
+       549011.0,
+       4801842.0
+      ],
+      [
+       549006.0,
+       4801847.5
+      ],
+      [
+       549001.5,
+       4801853.0
+      ],
+      [
+       548997.5,
+       4801859.0
+      ],
+      [
+       548995.0,
+       4801865.0
+      ],
+      [
+       548994.5,
+       4801871.0
+      ],
+      [
+       548995.5,
+       4801877.5
+      ],
+      [
+       548997.0,
+       4801881.5
+      ],
+      [
+       548999.0,
+       4801883.0
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "surface": "deeprough",
+    "hole": 99,
+    "reason": "Adds the unmown long-grass bed right of the hole-9 fairway, 15-30 m short-right of the green (E 548994-549031, N 4801832-4801883, about 930 m2, three conifers in it): on the April 2025 photo a straw-coloured oval with a crisp mowing edge and matted long-grass texture, clearly unlike the mown olive rough round it, and low NDVI; the LiDAR shows a plain slope (no hollow, so not a bunker). The model has it as rough 99. Dense unmown cover, so deep rough (not native, which renders as pine straw). Verified round 2: the bed's NDVI is 0.09 against 0.31 in the rough round it, and its low-NDVI outline matches the polygon (IoU 0.85; the misses are the three conifers and their shadows). dem_raw shows a low mound (0.5 m mean, up to 1.3 m above the surrounding slope), not a hollow. The polygon covers only rough 99 and stays 2.2 m clear of the cart path and 15 m clear of hole 9's semirough.",
+    "frame": "lidar"
+   }
   }
  ]
 }
