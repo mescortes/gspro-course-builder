@@ -7,9 +7,12 @@ Imports the course glTF and writes Unity/OPCD-ready FBX files positioned in the 
   backdrop.fbx        5 km imagery-draped surrounding terrain
 Also saves course.blend for inspection.
 """
-import sys, json
+import os, sys, json
 import bpy
 from mathutils import Vector
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fbx_materials  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 glb, out_dir, terrain_json = argv[0], argv[1], argv[2]
@@ -59,26 +62,6 @@ def mask_colours():
     return n
 
 
-def save_images(out_dir):
-    """glTF-embedded images have no file on disk, and the FBX exporter cannot copy them (IsADirectoryError '.').
-    Write each to <out_dir>/textures/ (JPEG; PNG when it has alpha) and point the image at it, so the FBX files
-    reference real texture files next to them (path_mode RELATIVE)."""
-    import os
-    tdir = os.path.join(out_dir, "textures"); os.makedirs(tdir, exist_ok=True)
-    n = 0
-    for img in bpy.data.images:
-        if img.source != "FILE" or (img.filepath and os.path.isfile(bpy.path.abspath(img.filepath))):
-            continue
-        alpha = img.alpha_mode != "NONE" and img.depth in (32, 64, 128) and "Foliage" in img.name
-        ext = "png" if alpha else "jpg"
-        dst = os.path.join(tdir, f"{bpy.path.clean_name(img.name)}.{ext}")
-        img.filepath_raw = dst
-        img.file_format = "PNG" if alpha else "JPEG"
-        img.save()
-        n += 1
-    return n
-
-
 MANIFEST = {}
 
 
@@ -102,7 +85,8 @@ def export(objs, path):
 
 
 print("3DG mask layers", mask_colours())
-print("textures written", save_images(out_dir))
+print("shader inputs wired straight to their images", fbx_materials.wire_images_straight())
+print("textures written", fbx_materials.save_course_images(os.path.join(out_dir, "textures")))
 n1 = export(descendants({"Terrain"}), f"{out_dir}/course_meshes.fbx")
 # flagsticks / cups and tee markers (Hole##_Furniture) stay out: GSPro draws the pin at runtime and places tee markers
 # from the GreenKeeper data (research/GSPRO_COSMETICS.md); they are only for our own viewer
