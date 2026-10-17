@@ -117,10 +117,10 @@ The engine's steps are in the [top-level README](../../README.md#how-a-course-is
    [#16](https://github.com/mescortes/gspro-course-builder/pull/16)): three OSM forward tees that sat off the line of
    play (holes 5, 14 and 17) now belong to their holes, semirough rings take their fairway's hole, and two classifier
    greens in the woods (157 and 64 m²) are rough. The yardages and the per-hole table are unchanged.
-9. **QA round 2** (2026-10-17, on a clean build of main f3d1312; the brief now lists the engine changes since round 1
-   so the agents left them alone): two corrections approved, none rejected, and no round-1 override found wrong. That
-   makes 65 override features. Every hole now scores 9 out of 10 except hole 8 (8, for the water step in the pond
-   beside it, an engine issue).
+9. **QA round 2** (2026-10-17, [#19](https://github.com/mescortes/gspro-course-builder/pull/19), on a clean build
+   of main f3d1312; the brief now lists the engine changes since round 1 so the agents left them alone): two
+   corrections approved, none rejected, and no round-1 override found wrong. That makes 65 override features. Every
+   hole now scores 9 out of 10 except hole 8 (8, for the water step in the pond beside it, an engine issue).
 
 ## QA: what was fixed and what is left
 
