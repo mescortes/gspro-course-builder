@@ -505,6 +505,66 @@ def test_tree_prefabs_and_placements():
     assert (GSPRO / "tree_prefabs.fbx").exists() and (GSPRO / "tree_prefabs.fbx").stat().st_size > 10000
 
 
+def test_fbx_materials_carry_their_textures():
+    """Unity takes the trees' and the buildings' materials from the FBX files. Blender's FBX exporter writes only images
+    wired straight into the shader, and the glTF import feeds the colour through a vertex-colour multiply and a cut-out
+    alpha through a math node, so no colour or alpha texture reached the FBX: the tree prefabs, roofs and walls had
+    none. With Blender 4.2 the tree prefabs' glTF-packed images were also embedded under one broken path. Every
+    material whose glTF has a colour texture carries it, readable, with the glTF colour factor as its DiffuseColor
+    (Unity multiplies it in; Blender's hidden default is 0.8); the cut-out materials' colour image has cut-out pixels
+    (Unity cuts out from its alpha once the material is set to Cutout; the TransparencyFactor link only round-trips
+    through Blender); the tree prefabs embed every image, each foliage atlas is its own, and every face of a glTF
+    doubleSided material has a back face (FBX has no such flag, and Unity's Standard shader culls back faces)."""
+    import io, re
+    from PIL import Image
+    import fbx_read
+    sources = [(f, C.OUTPUT / f"{C.MODEL_NAME}_noveg.glb") for f in ("course_meshes.fbx", "structures.fbx", "backdrop.fbx")]
+    for fbx, src in sources + [("tree_prefabs.fbx", GSPRO / "tree_prefabs.glb")]:
+        gltf = {m["name"]: m for m in read_glb(src)[0]["materials"]}
+        top = fbx_read.read(GSPRO / fbx)
+        props, checked = fbx_read.material_properties(top), 0
+        for name, tex in fbx_read.material_textures(top).items():
+            m = gltf.get(re.sub(r"\.\d{3}$", "", name))   # Blender may suffix a duplicate name
+            assert m is not None, f"{fbx}: material {name} is not in {src.name}"
+            pbr = m.get("pbrMetallicRoughness", {})
+            if "baseColorTexture" not in pbr:
+                continue
+            checked += 1
+            assert "DiffuseColor" in tex, f"{fbx}: {name} has no colour texture"
+            d = tex["DiffuseColor"]
+            assert d["content"] or (GSPRO / d["file"]).is_file(), f"{fbx}: {name}: {d['file']!r} is neither embedded nor a file"
+            im = Image.open(io.BytesIO(d["content"] or (GSPRO / d["file"]).read_bytes()))
+            im.load()
+            factor = pbr.get("baseColorFactor", [1.0, 1.0, 1.0, 1.0])[:3]
+            got = props[name].get("DiffuseColor")
+            assert got and max(abs(a - b) for a, b in zip(got, factor)) < 1e-3, f"{fbx}: {name}: DiffuseColor {got}, glTF factor {factor}"
+            if m.get("alphaMode") == "MASK":
+                assert "A" in im.getbands() and im.getchannel("A").getextrema()[0] == 0, f"{fbx}: {name}: no cut-out pixels"
+        assert checked, f"{fbx}: no textured material checked"
+    top = fbx_read.read(GSPRO / "tree_prefabs.fbx")
+    trees = fbx_read.material_textures(top)
+    assert all(t["content"] for tex in trees.values() for t in tex.values()), "every tree prefab image is embedded"
+    foliage = [tex["DiffuseColor"]["content"] for name, tex in trees.items() if name.startswith("Foliage_")]
+    assert foliage and len(set(foliage)) == len(foliage), "each foliage atlas is its own"
+    two_sided = {m["name"] for m in read_glb(GSPRO / "tree_prefabs.glb")[0]["materials"] if m.get("doubleSided")}
+    key = lambda f: min(f[k:] + f[:k] for k in range(len(f)))   # a face whatever corner it starts at
+    for (model, material), faces in fbx_read.faces_by_material(top).items():
+        if material in two_sided:
+            faces = [tuple(tuple(round(c, 4) for c in p) for p in f) for f in faces]
+            have = {key(f) for f in faces}
+            alone = sum(key(f[::-1]) not in have for f in faces)
+            assert not alone, f"{model} {material}: {alone} of {len(faces)} faces have no back face"
+
+
+def test_gspro_textures_are_jpeg():
+    """export_fbx_blender.py writes the course's images to gspro/textures as JPEG (quality 90), and the golden
+    fingerprint lists them by name: a PNG there (a course image some material takes its alpha from, like a backdrop
+    foliage atlas) or PNG bytes under a .jpg name (Blender ignores file_format on an image it has not loaded) breaks it."""
+    files = sorted((GSPRO / "textures").iterdir())
+    bad = [p.name for p in files if p.suffix != ".jpg" or p.read_bytes()[:3] != b"\xff\xd8\xff"]
+    assert files and not bad, bad
+
+
 def test_3dg_grass_masks(glb):
     """COLOR_1 = 3DG vertex density masks: grass surfaces mostly 1, nothing on fairway/green; spec file present."""
     g, b, binoff = glb
