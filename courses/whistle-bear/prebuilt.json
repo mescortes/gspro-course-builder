@@ -1,15 +1,15 @@
 {
  "course": "whistle-bear",
  "name": "Whistle Bear Golf Club",
- "release": "courses-2026-10-16",
+ "release": "courses-2026-10-17",
  "asset": "whistle-bear-viewer.tar.gz",
- "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-16/whistle-bear-viewer.tar.gz",
- "sha256": "9567199139f0e1b42f70761adcba68b4b59c19fd1f38968a9fff86681dc40830",
- "bytes": 247362615,
+ "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-17/whistle-bear-viewer.tar.gz",
+ "sha256": "7bc47a1b5b146b793bcb367e13026603841535b1daeb7b7ee258bff2558ecf0b",
+ "bytes": 247054242,
  "files": 42,
- "unpacked_bytes": 319863928,
+ "unpacked_bytes": 319407145,
  "model": "whistle_bear.glb",
- "packaged": "2026-10-16",
- "built_from": "57a53a23267e",
+ "packaged": "2026-10-17",
+ "built_from": "5f7ae32",
  "attribution": "Contains information licensed under the Open Government Licence - Ontario and the Open Government Licence - Canada (OMAFRA Lidar 2016-18, SWOOP 2025 orthoimagery, NRCan HRDEM). Course features and buildings: (c) OpenStreetMap contributors, ODbL. Textures: Poly Haven, CC0."
 }
