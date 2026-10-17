@@ -1,0 +1,15 @@
+{
+ "course": "deer-ridge",
+ "name": "Deer Ridge Golf Club",
+ "release": "courses-2026-10-17",
+ "asset": "deer-ridge-viewer.tar.gz",
+ "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-17/deer-ridge-viewer.tar.gz",
+ "sha256": "5da94ea38fe44249f9df95beb841eae17478ae604a0bdfd271fa583ebe54a4a1",
+ "bytes": 280978991,
+ "files": 42,
+ "unpacked_bytes": 385302437,
+ "model": "deer_ridge.glb",
+ "packaged": "2026-10-17",
+ "built_from": "5f7ae32",
+ "attribution": "Contains information licensed under the Open Government Licence - Ontario and the Open Government Licence - Canada (OMAFRA Lidar 2016-18, SWOOP 2025 orthoimagery, NRCan HRDEM). Course features and buildings: (c) OpenStreetMap contributors, ODbL. Textures: Poly Haven, CC0."
+}

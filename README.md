@@ -14,16 +14,43 @@ For each course the build produces:
 The Windows side (Unity 2018.2 + OPCD + GreenKeeper) is the course designer's job: see
 [research/GSPRO_COSMETICS.md](research/GSPRO_COSMETICS.md).
 
-![Westmount course map](courses/westmount/images/course_map.jpg)
+## Explore the courses
+
+Four of the courses have a prebuilt viewer bundle: you can walk round any of them in the bundled three.js viewer
+without hours of downloads and a build. Each bundle (the textured model, the hole data, the camera presets and the
+yardage-book maps; 250-280 MB) is an asset of this repository's GitHub Release. One command fetches it, checks it
+against the sha256 in `courses/<slug>/prebuilt.json`, unpacks it into `output/<slug>/` and starts the viewer's server.
+It needs Python 3.9 or newer and curl (or requests), nothing else.
+
+| | |
+|---|---|
+| [![Westmount, hole 16](courses/westmount/images/render_h16_green.jpg)](courses/westmount/README.md) | [![Whistle Bear, hole 9](courses/whistle-bear/images/viewer_h9_flyover.jpg)](courses/whistle-bear/README.md) |
+| **[Westmount Golf & Country Club](courses/westmount/README.md)**, Kitchener, Ontario | **[Whistle Bear Golf Club](courses/whistle-bear/README.md)**, Cambridge, Ontario |
+| [![Brambles, hole 3](courses/brambles/images/viewer_h3_flyover.jpg)](courses/brambles/README.md) | [![Deer Ridge, hole 10](courses/deer-ridge/images/viewer_h10_flyover.jpg)](courses/deer-ridge/README.md) |
+| **[Brambles](courses/brambles/README.md)**, Middletown, California | **[Deer Ridge Golf Club](courses/deer-ridge/README.md)**, Kitchener, Ontario |
+
+```bash
+python3 scripts/get_course.py westmount && python3 scripts/devserver.py 8765      # http://localhost:8765/viewer/?course=westmount#h1-tee
+python3 scripts/get_course.py whistle-bear && python3 scripts/devserver.py 8765   # http://localhost:8765/viewer/?course=whistle-bear#h1-tee
+python3 scripts/get_course.py brambles && python3 scripts/devserver.py 8765       # http://localhost:8765/viewer/?course=brambles#h1-tee
+python3 scripts/get_course.py deer-ridge && python3 scripts/devserver.py 8765     # http://localhost:8765/viewer/?course=deer-ridge#h1-tee
+```
+
+Then open the URL. The hole buttons and camera presets are top left; drag to orbit, scroll to zoom. One server shows
+every course fetched: change `?course=`. The viewer needs a WebGL browser and loads three.js from cdn.jsdelivr.net.
+`get_course.py --list` shows the bundles; `--file` installs one already downloaded. On Windows, type `py` for
+`python3`. Each course README has the course map, the card and every hole's yardages. The bundles carry open data
+that needs attribution: see [Data and licences](#data-and-licences).
 
 ## Courses
 
 | Course | Where | Status |
 |---|---|---|
 | [Westmount Golf & Country Club](courses/westmount/README.md) | Kitchener, Ontario (Stanley Thompson, 1931) | Built and QA'd in two multi-agent rounds. The reference build: its golden fingerprint checks every engine change. |
-| [Whistle Bear Golf Club](courses/whistle-bear/) | Cambridge, Ontario (John Robinson, 2000-01) | Built with its practice facility; QA round 1 (63 override features). Hole 1 and 11 Black tees can't reach the card from any deck (documented gaps). QA round 2 and the course README are still to do. ([#9](https://github.com/mescortes/gspro-course-builder/pull/9)) |
-| [Brambles](courses/brambles/) | Middletown, Lake County, California (Coore & Crenshaw with James Duncan, 2024) | The first course without OSM: features drafted from the GolfNow GPS layout and the NAIP photo. QA rounds 1 and 2 (157 override features). Holes 1, 7 and 18 measure short of the card from every deck (documented gaps). The course README is still to do. ([#7](https://github.com/mescortes/gspro-course-builder/pull/7)) |
-| [Deer Ridge Golf Club](courses/deer-ridge/) | Kitchener, Ontario (Thomas McBroom; the club dates itself to 1991) | Built on the current engine with six tee sets; the photo is registered to the LiDAR (0.25 m east, 0.25 m south). QA rounds 1 and 2 (51 override features): every hole scores 8 or 9, and test_course passes (137). The course README is still to do. ([#12](https://github.com/mescortes/gspro-course-builder/pull/12)) |
+| [Whistle Bear Golf Club](courses/whistle-bear/README.md) | Cambridge, Ontario (John Robinson, 2000-01) | Built with its practice facility; QA round 1 (63 override features). Hole 1 and 11 Black tees can't reach the card from any deck (documented gaps). QA round 2 is still to do. ([#9](https://github.com/mescortes/gspro-course-builder/pull/9)) |
+| [Brambles](courses/brambles/README.md) | Middletown, Lake County, California (Coore & Crenshaw with James Duncan, 2024) | The first course without OSM: features drafted from the GolfNow GPS layout and the NAIP photo. QA rounds 1 and 2 (157 override features). Holes 1, 7 and 18 measure short of the card from every deck (documented gaps). ([#7](https://github.com/mescortes/gspro-course-builder/pull/7)) |
+| [Deer Ridge Golf Club](courses/deer-ridge/README.md) | Kitchener, Ontario (Thomas McBroom; the club dates itself to 1991) | Built on the current engine with six tee sets; the photo is registered to the LiDAR (0.25 m east, 0.25 m south). QA rounds 1 and 2 (51 override features): every hole scores 8 or 9, and test_course passes (137). ([#12](https://github.com/mescortes/gspro-course-builder/pull/12)) |
+| [MountainGate Country Club: North/South](courses/mountaingate/README.md) | Los Angeles, California (Ted Robinson, 1975-76) | The first Southern California course, ported from the standalone project this builder grew out of: the North and South nines, with the Lake nine as scenery. Four QA rounds (268 override features); every hole scores 8 or 9 except 18 (7: the May 2024 photo predates its new bunkers). Holes 5, 10, 17 and 18 measure short of the card from every deck (documented gaps), and GreenKeeper's OB ring is empty (one test_course failure). Built on another machine and kept private (a private club), so it has no prebuilt bundle. ([#17](https://github.com/mescortes/gspro-course-builder/pull/17)) |
 
 ## How a course is built
 
@@ -76,6 +103,8 @@ what each PR reports, for building a course or changing the engine.
 | `courses/<slug>/course.toml` | One course's facts: frame, sources, imagery, holes, tees, scorecard, stroke index, ratings, OSM choices, tuning |
 | `courses/<slug>/features/` | Hand-made and reviewed features: golf features OSM lacks, structures, QA overrides |
 | `courses/<slug>/research/` | OSM snapshot, research notes, hole descriptions, QA verdicts |
+| `courses/<slug>/README.md`, `images/` | The course, its data, how it was built, what QA left; a map and viewer captures |
+| `courses/<slug>/prebuilt.json` | The course's prebuilt viewer bundle: its release asset and sha256 (`scripts/get_course.py`, `scripts/package_course.py`) |
 | `courses/<slug>/fingerprint.json` | Golden build fingerprint (Westmount) |
 | `courses/<slug>/TODO.md` | A course's open items: hand-off steps, facts to confirm on site (Westmount) |
 | `TODO.md` | Engine problems QA rounds found and left open |
@@ -162,6 +191,16 @@ yet: see its header). A course outside them needs a region preset: copy `regions
 
 ## Data and licences
 
-Each course README lists its sources, their dates and the attribution its products need. Westmount is built from
-Ontario and Canada open data (Open Government Licence – Ontario / – Canada) and OpenStreetMap (ODbL). Imagery whose
-licence does not allow derived textures to be redistributed (for example Esri World Imagery) is not used.
+Each course README lists its sources, their dates and the attribution its products need. Imagery whose licence does
+not allow derived textures to be redistributed (for example Esri World Imagery) is not used. The prebuilt bundles, and
+anything else shipped from this repository, carry:
+
+* Westmount, Whistle Bear and Deer Ridge: *Contains information licensed under the Open Government Licence – Ontario*
+  and *the Open Government Licence – Canada* (OMAFRA Lidar 2016-18, SWOOP 2025 orthoimagery, NRCan HRDEM);
+* Brambles: USGS 3DEP LiDAR and DEM, and USDA NAIP 2024 orthoimagery, which are public domain;
+* every course: course features, buildings and roads from OpenStreetMap, *© OpenStreetMap contributors*, available
+  under the Open Database Licence (ODbL); textures from Poly Haven, CC0.
+
+A rebuilt course is packaged again with `scripts/package_course.py <slug>`: it bundles `output/<slug>/`, prints the
+size and checksum, and rewrites `courses/<slug>/prebuilt.json` for a new release tag (`--tag`). Publishing the release
+is the owner's step; the script prints the `gh release` commands and uploads nothing.

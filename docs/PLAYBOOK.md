@@ -368,6 +368,9 @@ Fly every hole. `docs/LESSONS.md` (Viewer) explains the capture helpers for head
   research/GSPRO_COSMETICS.md.
 * Write `courses/<slug>/README.md` (Westmount's is the model; `scripts/readme_table.py` fills its per-hole table),
   add the course to the table in the top-level README, keep research/NOTES.md current.
+* Package the viewer bundle for `scripts/get_course.py`: `scripts/package_course.py <slug> --tag <release>` writes
+  `build/<slug>/<slug>-viewer.tar.gz` and `courses/<slug>/prebuilt.json` (commit it, with the `attribution` the
+  course's data need). Publishing the release is the owner's step; the script prints the `gh release` commands.
 
 ## 10. Rules
 
@@ -431,6 +434,7 @@ after two clean builds match each other, and commits it in the same PR, as for
       `course_opcd.svg`, `course_meshes.fbx` (+ `fbx_manifest.json`), `structures.fbx`, `backdrop.fbx`,
       `tree_prefabs.fbx/.json`, `trees.csv`, `grass_3dg.json`, `greenkeeper.json`, `terrain.json`, the Unity helper.
 - [ ] `courses/<slug>/README.md` written and the course added to the top-level README.
+- [ ] Viewer bundle packaged (`scripts/package_course.py`) and `courses/<slug>/prebuilt.json` committed.
 
 Rough timings for an 18-hole course on a laptop: research about 1 h; downloads 0.5-1.5 h (the first backdrop photo
 can take an hour on a slow server); first build 0.5-1 h; two QA rounds with rebuilds about 3-4 h.
