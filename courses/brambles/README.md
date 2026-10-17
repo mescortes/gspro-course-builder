@@ -141,14 +141,9 @@ Left for the engine (seen on several holes; the engine-wide list is in [TODO.md]
 
 Setup and the general commands are in the [top-level README](../../README.md#building-a-course). The downloads are
 about 1 GB (LiDAR 590 MB, photo 370 MB, backdrop DEM 12 MB). A clean build on the owner's MacBook Pro (Apple M5 Max,
-64 GB; 2026-10-17, engine at 5f7ae32, downloads in place) took about 23 min: rasters 7 min, export and vectorize
-3.5 min each, classify 3 min. The largest peaks were rasters, vectorize and mesh at 6.5 GB and export at 5.7 GB. The
-mesh has 5.6 M triangles.
-
-On that build one built-course test fails: `test_mesh_faces_up_and_not_degenerate` finds 912 zero-area triangles,
-all within a millimetre of one point (E 536419.53, N 4291265.92) where a cart path meets the rough. They are
-invisible and the glTF has no invalid normals or positions, but the mesh step should not make them; the build of
-2026-10-15 (before #15 and #16) passed.
+64 GB; 2026-10-17, engine at d52be39, downloads in place) took about 17 min: rasters 5 min, export and vectorize
+3 min each, classify 1.5 min. The largest peaks were rasters 6.8 GB, mesh 6.6 GB, vectorize 6.4 GB and export 5.9 GB.
+The mesh has 5.6 M triangles.
 
 ```bash
 export COURSE=brambles
@@ -156,7 +151,7 @@ export COURSE=brambles
 .venv/bin/python scripts/fetch_textures.py
 .venv/bin/python scripts/fetch_backdrop.py
 BLENDER=/path/to/blender .venv/bin/python scripts/build_all.py
-.venv/bin/python -m pytest -q --course brambles tests/test_course.py   # 136 passed, 1 failed (above), 4 skipped
+.venv/bin/python -m pytest -q --course brambles tests/test_course.py   # 137 passed, 4 skipped (Westmount-only)
 python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?course=brambles#h1-tee
 ```
 
