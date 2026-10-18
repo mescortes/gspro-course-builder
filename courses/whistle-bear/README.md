@@ -126,6 +126,10 @@ The engine's steps are in the [top-level README](../../README.md#how-a-course-is
     cascade, so the upper pond's 1,000 m² that sat 1.4 m too low is on the upper plane; the maps draw the fairways,
     greens, bunkers and water through the rough; holes 2, 3, 16 and 17 no longer list native areas outside the course
     (64,672 m² of native-area hazards down to 3,701 m²). The yardages are unchanged.
+11. **Rebuilt on the MountainGate engine fixes** (2026-10-18,
+    [#23](https://github.com/mescortes/gspro-course-builder/pull/23)): the end of the course driveway past the
+    outline (OSM way 937765558, golf=cartpath + highway=service; 205 m² at E 548732 N 4802066) is cart path, not
+    road. The hole data and the per-hole table are unchanged.
 
 ## QA: what was fixed and what is left
 

@@ -54,21 +54,21 @@ brackets where they differ by more than 6 yd. On holes 1, 7 and 18 no real deck 
 | 1 | 5 | 7 | 523 (531) | 485 (496) | 410 | 36 × 32 | -7 m | 1 bunker, 1 native_area |
 | 2 | 4 | 13 | 445 | 392 | 339 | 43 × 32 | +0 m | 1 native_area |
 | 3 | 3 | 15 | 155 | 142 | 100 | 30 × 22 | +4 m | 4 bunker |
-| 4 | 4 | 1 | 471 | 440 | 349 | 39 × 32 | +9 m | 4 bunker |
+| 4 | 4 | 1 | 471 | 440 | 349 | 39 × 32 | +9 m | 3 bunker |
 | 5 | 4 | 11 | 335 | 295 | 261 | 36 × 23 | +6 m | 1 bunker |
 | 6 | 4 | 5 | 495 | 454 | 300 | 61 × 40 | -9 m | 3 bunker |
 | 7 | 5 | 9 | 572 (611) | 516 (572) | 449 | 38 × 24 | -10 m | 1 native_area |
-| 8 | 3 | 17 | 182 | 148 | 118 | 38 × 21 | -3 m | 1 bunker, 3 native_area |
+| 8 | 3 | 17 | 182 | 148 | 118 | 38 × 21 | -3 m | 1 bunker, 2 native_area |
 | 9 | 4 | 3 | 399 | 374 | 358 | 57 × 15 | +0 m | 1 bunker |
 | 10 | 4 | 4 | 441 | 410 | 341 | 44 × 26 | +11 m | 5 bunker |
 | 11 | 4 | 12 | 336 | 300 | 264 | 37 × 42 | -10 m | 3 bunker |
 | 12 | 3 | 18 | 205 | 163 | 110 | 40 × 32 | -2 m | 1 water |
 | 13 | 5 | 2 | 513 | 478 | 360 | 29 × 27 | +14 m | 3 bunker |
-| 14 | 4 | 14 | 325 | 279 | 248 | 26 × 31 | -9 m | 7 bunker |
+| 14 | 4 | 14 | 325 | 279 | 248 | 26 × 31 | -9 m | 5 bunker |
 | 15 | 4 | 10 | 448 | 429 | 379 | 27 × 31 | +3 m | 6 bunker, 1 water |
 | 16 | 3 | 16 | 242 | 223 | 129 | 50 × 31 | -4 m | 1 bunker |
 | 17 | 5 | 6 | 542 | 514 | 468 | 38 × 29 | +5 m | 3 bunker, 1 native_area |
-| 18 | 4 | 8 | 510 | 458 (467) | 325 | 68 × 28 | +0 m | 6 bunker, 7 native_area |
+| 18 | 4 | 8 | 510 | 458 (467) | 325 | 68 × 28 | +0 m | 6 bunker, 6 native_area |
 | **Total** | **72** | | **7138** (7190) | **6500** (6579) | **5308** (5318) | | | |
 <!-- /holes-table -->
 
@@ -115,6 +115,15 @@ The engine's steps are in the [top-level README](../../README.md#how-a-course-is
    [#16](https://github.com/mescortes/gspro-course-builder/pull/16)): a tee that sat off the line of play now belongs
    to hole 12, and semirough rings take their fairway's hole (11 rings round shared fairways are split between holes).
    The yardages and the per-hole table are unchanged.
+8. **Rebuilt on the engine fixes from Whistle Bear's QA round 2** (2026-10-17,
+   [#20](https://github.com/mescortes/gspro-course-builder/pull/20)): the yardage-book maps and the course map above
+   draw the fairways, greens, bunkers and water through the rough, and native areas are hazards only inside the course
+   outline (holes 8 and 18 each lose one with under 50 m² inside it; four on 17 and 18 are cut to it). The surfaces,
+   yardages and pins are unchanged.
+9. **Rebuilt on the MountainGate engine fixes** (2026-10-18,
+   [#23](https://github.com/mescortes/gspro-course-builder/pull/23)): a drawn bunker leaves no strip of photo sand
+   along its lip, so three strips 0.7-1.7 m wide (hole 4's 12.8 m², hole 14's 4.6 and 13.2 m²) are now rough and
+   fringe, and holes 4 and 14 list one and two bunker hazards fewer. The yardages are unchanged.
 
 ## QA: what was fixed and what is left
 
