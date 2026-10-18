@@ -33,6 +33,25 @@ def test_override_cut_leaves_no_bunker_slivers():
     assert abs(sum(g.area for g, _ in out) - 100.0) < 1e-6          # and overlap-free
 
 
+def test_a_drawn_bunker_leaves_no_strip_of_photo_sand_along_its_lip():
+    """MountainGate (and Brambles holes 4 and 14): a bunker drawn from the LiDAR sits 1-4 m off the photo's sand, and
+    the automatic bunker's strip along its lip, 0.5-1.7 m wide and over the speck limit, stayed a bunker of its own: a
+    tiny hazard in holes.json. A cut leaves no bunker part under 2 m wide: the strip goes to the surface beside it
+    (not to the drawn bunker, whose outline stays as drawn). A remnant that is a bunker of its own stays."""
+    auto = [(box(0, 0, 20, 10).difference(box(2.8, 2, 8.8, 8)).difference(box(12, 2, 18, 8)), {"surface": "rough", "hole": 99}),
+            (box(2.8, 2, 8.8, 8), {"surface": "bunker", "hole": 4}), (box(12, 2, 18, 8), {"surface": "bunker", "hole": 4})]
+    drawn = box(2, 2, 8, 8)                                          # 0.8 m west of the photo's sand
+    over = [(drawn, {"surface": "bunker", "hole": 4}), (box(12, 2, 15, 8), {"surface": "fairway", "hole": 4})]
+    out = A.burn_overrides(auto, over)
+    bunkers = _surf(out, "bunker")
+    assert len(bunkers) == 2 and any(g.equals(drawn) for g in bunkers)
+    assert any(abs(g.area - 18.0) < 1e-6 for g in bunkers)          # 3 x 6 m left of the second bunker: a bunker
+    # the drawn bunker takes 0.8 x 6 m of rough on its west side; the 0.8 m strip of sand east of it becomes rough
+    assert abs(sum(g.area for g in _surf(out, "rough")) - (200 - 72)) < 1e-6
+    assert abs(unary_union([g for g, _ in out]).area - 200.0) < 1e-6
+    assert abs(sum(g.area for g, _ in out) - 200.0) < 1e-6
+
+
 def test_override_cut_keeps_real_remnants():
     auto = _auto()
     over = [(box(1, 5, 9, 9), {"surface": "rough", "hole": 17})]     # the south half of the bunker (18 m2) stays

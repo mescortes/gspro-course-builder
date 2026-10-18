@@ -26,7 +26,7 @@ front: Championship (Gold), Middle (Blue), Forward (White), markers labelled C, 
   starting with the LiDAR evidence); where the LiDAR and the photo disagree on a bunker or a green edge, trust the LiDAR.
 * OSM maps all 27 holes, greens, tees, fairways, bunkers, two ponds (one in play, in front of the hole 13 back tee) and
   44 cart paths. The photo path tracer is off (`[tuning] trace_paths = false`). The club's leisure=golf_course relation
-  is narrower than its land: cart paths beyond it may come out as road.
+  is narrower than its land: beyond it, paths OSM maps as golf paths stay cart path, other paths come out as road.
 * Between the holes: canyons of chaparral (deep rough) and summer-dry native grass (native). They are scenery, not
   rough: a hillside the classifier made rough or semirough is a QA matter where it is in play.
 
@@ -34,8 +34,8 @@ front: Championship (Gold), Middle (Blue), Forward (White), markers labelled C, 
 
 * The bunker renovation (between the 2022 photo and the 2025 LiDAR; bunkers reshaped, moved, removed and added; some green edges rebuilt) and the native
   conversions: in the LiDAR, and in the photo except the South-nine work listed above. Rounds 1 and 2 were drawn on
-  another photo (below), 1-4 m off the NAIP 2024 classification in places: small tee and bunker slivers can survive
-  beside their overrides.
+  another photo (below), 1-4 m off the NAIP 2024 classification in places: small tee slivers, and bunker remnants
+  over 2 m wide, can survive beside their overrides (the engine gives narrower bunker strips to the grass).
 
 ## Open questions
 

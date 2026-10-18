@@ -19,6 +19,34 @@ def min_part(surface):
     return max(0.05, 0.25 * MIN_AREA[surface]) if surface in MIN_AREA else 0.05
 
 
+# An override cut leaves no part of these surfaces narrower than this (m: the widest circle inside it). A bunker drawn
+# from the LiDAR 1-4 m off the photo's sand left the automatic bunker's strip along its lip, 0.5-1.7 m wide (MountainGate
+# holes 4-10, Brambles holes 4 and 14): a bunker of its own, a tiny hazard in holes.json.
+MIN_WIDTH = {"bunker": 2.0}
+
+
+def too_narrow(part, surface):
+    """Is a remnant of an override cut narrower than MIN_WIDTH[surface] everywhere?"""
+    import shapely
+    w = MIN_WIDTH.get(surface)
+    return w is not None and 2 * shapely.maximum_inscribed_circle(part, 0.01).length < w
+
+
+def give_to_neighbour(r, feats, surface):
+    """Merge the strip r into the part of `feats` ([(geometry, properties)], changed in place) it shares the longest
+    edge with, a part of another surface than `surface` first (a bunker strip goes to the grass beside it, not to the
+    drawn bunker); with no neighbour it stays a part of its own. Only the part that takes it changes."""
+    edge = [(r.boundary.intersection(h.boundary).length, q["surface"] != surface, j)
+            for j, (h, q) in enumerate(feats) if h.distance(r) < 1e-9]
+    edge = [(other, length, j) for length, other, j in edge if length > 0]
+    if not edge:
+        return False
+    _, _, j = max(edge)
+    h, q = feats[j]
+    m = unary_union([h, r]); feats[j] = (m, dict(q, area=round(m.area, 2)))
+    return True
+
+
 def burn_overrides(feats, over, aoi=None):
     """feats, over: lists of (shapely geometry, properties). Later overrides win: each one is cut out of the automatic
     partition and of every earlier override. An override reaching past `aoi` (the build area) is clipped to it: the
@@ -30,15 +58,17 @@ def burn_overrides(feats, over, aoi=None):
             g = g.intersection(aoi)
             if g.is_empty or g.area <= 0:
                 continue
-        nxt, specks = [], []
+        nxt, specks, strips = [], [], []
         for h, q in out:
             if not h.intersects(g):
                 nxt.append((h, q)); continue
             for r in polys_of(h.difference(g)):
-                if r.area > min_part(q["surface"]):
-                    nxt.append((r, dict(q, area=round(r.area, 2))))
-                else:
+                if r.area <= min_part(q["surface"]):
                     specks.append(r)  # slivers left by the cut join the override, so the partition stays gap-free
+                elif too_narrow(r, q["surface"]):
+                    strips.append((r, q))
+                else:
+                    nxt.append((r, dict(q, area=round(r.area, 2))))
         if specks:
             g = unary_union([g] + specks)
         parts = polys_of(g)
@@ -53,6 +83,9 @@ def burn_overrides(feats, over, aoi=None):
                     continue
             nxt.append((r, {"surface": p["surface"], "hole": int(p.get("hole", 99)), "area": round(r.area, 2),
                             "stroke": STROKE.get(p["surface"], "#ff00ff"), "source": "override"}))
+        for r, q in strips:   # once the override is in: a strip may touch nothing else
+            if not give_to_neighbour(r, nxt, q["surface"]):
+                nxt.append((r, dict(q, area=round(r.area, 2))))
         out = nxt
     return out
 

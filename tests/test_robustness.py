@@ -218,3 +218,26 @@ def test_the_out_of_bounds_ring_stays_on_the_terrain():
     inside = Polygon([(100, 100), (900, 120), (500, 800)])
     assert X.oob_outline(inside, te) is inside
     assert X.oob_outline(None, te) is None
+
+
+def test_a_course_outline_of_several_rings_gives_one_out_of_bounds_ring():
+    """MountainGate's leisure=golf_course relation (5201230) has two outer rings, 126 m apart (the South nine; the North
+    and Lake nines): pOOB came out empty, since only a single-polygon outline was read. GreenKeeper takes one OB ring:
+    the parts are joined where they come closest by a bridge 1 m wide, so the ring follows every part's outline and the
+    ground between them stays out of bounds. The largest outline is the course's, as before."""
+    import export_gspro as X
+    from shapely.geometry import box, MultiPolygon, Point
+    te = dict(xmin=0.0, ymin=0.0, xmax=1000.0, ymax=1000.0)
+    south, north, east = box(100, 100, 600, 400), box(150, 526, 700, 900), box(820, 100, 950, 800)
+    o = X.oob_outline(MultiPolygon([south, north, east]), te)
+    assert o.geom_type == "Polygon" and not o.interiors
+    for part in (south, north, east):
+        assert o.buffer(1e-6).contains(part)
+    assert 0 < o.area - (south.area + north.area + east.area) < 126 + 120 + 10   # two 1 m bridges, no more
+    # between the parts: out of bounds, but for the bridge
+    assert o.intersection(box(150, 400, 600, 526)).area < 127 and o.intersection(box(700, 526, 820, 800)).area < 121
+    assert not o.contains(Point(760, 300))
+    G = [(1, {"leisure": "golf_course"}, MultiPolygon([south, north])), (2, {"leisure": "golf_course"}, east),
+         (3, {"golf": "green"}, box(200, 200, 230, 230))]
+    assert X.course_outline(G).equals(MultiPolygon([south, north]))   # the largest, whole
+    assert X.course_outline(G[1:]).equals(east) and X.course_outline(G[2:]) is None

@@ -349,13 +349,42 @@ def gkd_hole(h, hmin):
             "bunkers": [{"coords": ring3d(z["polygon_utm"], hmin, 2.0)} for z in h["hazards"] if z["type"] == "bunker"]}
 
 
+def course_outline(G):
+    """The course's leisure=golf_course outline among the OSM geometries G ([(id, tags, geometry)], osm_geoms: with
+    [osm] outline only this course's): the largest one, a multipolygon kept whole (MountainGate's relation 5201230 has
+    two outer rings). A second outline round a practice ground (Whistle Bear's Golf Academy, way 382278772) stays
+    outside the OB ring. None when OSM has no outline."""
+    return max((g for _, t, g in G if t.get("leisure") == "golf_course" and g.geom_type in ("Polygon", "MultiPolygon")),
+               key=lambda g: g.area, default=None)
+
+
+def joined_parts(course, width=1.0):
+    """One polygon from an outline of several parts: each part is joined to the nearest of those already joined by a
+    bridge `width` m wide where they come closest, so its ring follows every part's outline and the ground between the
+    parts stays outside it (GreenKeeper takes one pOOB ring)."""
+    from shapely.geometry import LineString
+    from shapely.ops import nearest_points
+    from vectorize import polys_of
+    parts = sorted(polys_of(course), key=lambda g: -g.area)
+    if len(parts) < 2:
+        return parts[0] if parts else None
+    joined, rest = parts[0], parts[1:]
+    while rest:
+        i = min(range(len(rest)), key=lambda k: joined.distance(rest[k]))
+        p, q = nearest_points(joined, rest[i])
+        joined = unary_union([joined, rest.pop(i), LineString([p, q]).buffer(width / 2)])
+    return max(polys_of(joined), key=lambda g: g.area)
+
+
 def oob_outline(course, te):
-    """The course outline GreenKeeper's pOOB ring follows, kept on the terrain square `te`: an outline that leaves it
-    (the test profile's small square, a course wider than the terrain) is clipped to it (its largest part); one inside
-    it is returned as it is."""
+    """The course outline GreenKeeper's pOOB ring follows, kept on the terrain square `te`: an outline of several parts
+    is joined into one (joined_parts); an outline that leaves the square (the test profile's small square, a course
+    wider than the terrain) is clipped to it (its largest part); one inside it is returned as it is."""
     if course is None:
         return None
     from shapely.geometry import box
+    if course.geom_type == "MultiPolygon":
+        course = joined_parts(course)
     sq = box(te["xmin"], te["ymin"], te["xmax"], te["ymax"])
     if sq.contains(course):
         return course
@@ -400,9 +429,7 @@ def greenkeeper(hmin):
                                   for z in h["hazards"]],
                       "gkd": gkd_hole(h, hmin)})
     from surface_classify import osm_geoms
-    course = max((g for _, t, g in osm_geoms() if t.get("leisure") == "golf_course" and g.geom_type == "Polygon"),
-                 key=lambda g: g.area, default=None)
-    oob = oob_outline(course, TE)
+    oob = oob_outline(course_outline(osm_geoms()), TE)
     sr = gkd_ratings(C.RATINGS, GKD_TEE_SLOT)
     gk = {"course": C.COURSE_NAME, "layout": C.LAYOUT, "frame": "Unity terrain (x east, y up, z north) metres",
           "tee_sets": [{"key": k, "name": n, "colour": c} for k, n, c in C.TEES],
