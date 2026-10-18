@@ -93,15 +93,59 @@ def is_deck(P, R, tol=0.06, max_slope=0.05, step=0.12, fill=0.2):
                 and np.percentile(np.abs(ring_res), 75) > step and np.mean(ring_res < -step) >= fill)
 
 
-def off_course_paths(cartpath, road, course, margin=5.0):
+def still_a_deck(P, R, max_slope=0.08, step=0.25, fill=0.2):
+    """LiDAR check of a pad on a mapped (OSM) tee, milder than is_deck: P ground points on the pad, R a ring 1-4 m
+    outside it. It is still a tee when its plane is not too steep to play from (slope < `max_slope`: a forward tee on
+    natural ground has no bank; Brambles' drafted forward tees on holes 6, 7 and 16 are 5-7 %) or when a fraction `fill`
+    of the ring lies `step` m below that plane (a steep pad is a deck on a bank, or a mapped tee drawn over its bank:
+    MountainGate's 8-12 % OSM tees on banks have 48-88 % of their ring 0.2 m below). A steep pad with neither is a tee
+    mapped before the ground changed: MountainGate's hole 5 tees turned into native planting, 9-10 %, under 8 % of the
+    ring 0.2 m below (its real decks: 1-1.3 %)."""
+    m = P[:, :2].mean(0)
+    A = np.c_[P[:, :2] - m, np.ones(len(P))]
+    coef, *_ = np.linalg.lstsq(A, P[:, 2], rcond=None)
+    if np.hypot(coef[0], coef[1]) < max_slope:
+        return True
+    ring_res = R[:, 2] - np.c_[R[:, :2] - m, np.ones(len(R))] @ coef
+    return bool(np.mean(ring_res < -step) >= fill)
+
+
+def golf_path_area(G, course, margin=5.0, half_width=3.5):
+    """The ground along the OSM paths mapped as golf paths (golf=cartpath / golf=path) that come within `margin` m of
+    the golf_course boundary: `half_width` m each side of the line, the path corridor's 3 m and the smoothing. A club's
+    outline can be narrower than its land (MountainGate: the cart path behind the hole 1 tees, way 758678358)."""
+    if course.is_empty:
+        return Polygon()
+    near = course.buffer(margin)
+    lines = [g for _, t, g in G if t.get("golf") in ("cartpath", "path") and g.geom_type == "LineString" and g.intersects(near)]
+    return unary_union([g.buffer(half_width) for g in lines]) if lines else Polygon()
+
+
+def off_course_paths(cartpath, road, course, margin=5.0, golf=None):
     """Cart path more than `margin` m outside the golf_course boundary is a municipal sidewalk (OSM footways along the
-    streets feed the path corridor): it becomes road, OPCD Concrete_Road (QA round 1, holes 7 and 11)."""
+    streets feed the path corridor): it becomes road, OPCD Concrete_Road (QA round 1, holes 7 and 11). Along a mapped
+    golf path that reaches the course (`golf`: golf_path_area) it stays cart path."""
     if course.is_empty:
         return cartpath, road
     off = cartpath.difference(course.buffer(margin))
+    if golf is not None and not off.is_empty and off.intersection(golf).area > 1e-6:   # (else off is left un-noded)
+        off = off.difference(golf)
     if off.is_empty:
         return cartpath, road
     return cartpath.difference(off), unary_union([road, off])
+
+
+def tee_pad_ok(p, mapped, dem, T):
+    """Is a classifier tee pad p a tee, by the LiDAR (DEM `dem`, affine T)? On a mapped (OSM) tee when it is still a
+    deck (still_a_deck; too few DEM cells to tell: kept), else when it is a built, flat deck (is_deck) of 40 m2 or more."""
+    if not mapped and p.area < 40:
+        return False
+    inner = p.buffer(-0.5)
+    P = dem_points(dem, T, inner if not inner.is_empty else p)
+    R = dem_points(dem, T, p.buffer(4.0).difference(p.buffer(1.0)))
+    if len(P) < 30 or len(R) < 30:
+        return mapped
+    return still_a_deck(P, R) if mapped else is_deck(P, R)
 
 
 def bunker_ok(p, osm_bunk, course, is_hollow, paved=None, buildings=None, kerb=1.0, wall=10.0):
@@ -860,16 +904,7 @@ def main():
     def mapped_tee(p):
         return p.intersection(osm_tees).area >= 0.25 * p.area
     def tee_ok(p):
-        if mapped_tee(p):
-            return True
-        if p.area < 40:
-            return False
-        inner = p.buffer(-0.5)
-        P = dem_points(demv, Tv, inner if not inner.is_empty else p)
-        R = dem_points(demv, Tv, p.buffer(4.0).difference(p.buffer(1.0)))
-        if len(P) < 30 or len(R) < 30:
-            return False
-        return is_deck(P, R)
+        return tee_pad_ok(p, mapped_tee(p), demv, Tv)
     def trim_grass(g):
         """Remove clearly green turf (outside canopy) from a mapped bunker outline (OSM outlines include the faces)."""
         if g.is_empty:
@@ -924,7 +959,8 @@ def main():
         final["fairway"] = unary_union([final["fairway"]] + to_fair)
     if to_path:
         final["cartpath"] = unary_union([final["cartpath"]] + to_path)
-    final["cartpath"], final["road"] = off_course_paths(final["cartpath"], final["road"], course_area)
+    final["cartpath"], final["road"] = off_course_paths(final["cartpath"], final["road"], course_area,
+                                                        golf=golf_path_area(G, course_area))
     burn_small_fairways(final, small_fw)
 
     # greens: clear banks (LiDAR slope > 12 %) in the outer 2.5 m of a green outline are not putting surface

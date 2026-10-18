@@ -47,13 +47,13 @@ brackets where they differ by more than 6 yd. On holes 5, 10, 17 and 18 no real 
 | 1 | 4 | 16 | 342 | 323 | 307 | 21 × 15 | -12 m | 2 bunker, 3 native_area |
 | 2 | 3 | 10 | 189 | 169 | 153 | 13 × 28 | +3 m | 1 bunker, 4 native_area |
 | 3 | 4 | 6 | 342 | 323 | 298 | 37 × 16 | +17 m | 4 bunker, 2 native_area |
-| 4 | 4 | 18 | 299 | 289 | 266 | 29 × 12 | -10 m | 3 bunker, 1 native_area |
+| 4 | 4 | 18 | 299 | 289 | 266 | 29 × 12 | -10 m | 2 bunker, 1 native_area |
 | 5 | 5 | 8 | 516 | 498 | 423 (467) | 21 × 27 | -5 m | 4 bunker, 5 native_area |
-| 6 | 4 | 2 | 434 | 408 | 363 | 22 × 25 | -4 m | 4 bunker, 2 native_area |
-| 7 | 3 | 14 | 172 | 153 | 131 | 28 × 16 | +0 m | 4 bunker, 7 native_area |
-| 8 | 4 | 4 | 437 | 420 | 401 | 29 × 24 | -9 m | 3 bunker, 10 native_area |
-| 9 | 5 | 12 | 466 | 453 | 403 | 24 × 14 | +9 m | 4 bunker, 5 native_area |
-| 10 | 4 | 15 | 417 | 390 | 358 (366) | 33 × 23 | -35 m | 5 bunker, 3 native_area |
+| 6 | 4 | 2 | 434 | 408 | 363 | 22 × 25 | -4 m | 3 bunker, 2 native_area |
+| 7 | 3 | 14 | 172 | 153 | 131 | 28 × 16 | +0 m | 2 bunker, 7 native_area |
+| 8 | 4 | 4 | 437 | 420 | 401 | 29 × 24 | -9 m | 2 bunker, 10 native_area |
+| 9 | 5 | 12 | 466 | 453 | 403 | 24 × 14 | +9 m | 3 bunker, 5 native_area |
+| 10 | 4 | 15 | 417 | 390 | 358 (366) | 33 × 23 | -35 m | 4 bunker, 3 native_area |
 | 11 | 4 | 1 | 400 | 387 | 364 | 26 × 19 | +1 m | 4 bunker, 6 native_area, 1 water |
 | 12 | 3 | 13 | 174 | 153 | 97 | 27 × 21 | -3 m | 3 bunker, 4 native_area, 1 water |
 | 13 | 4 | 9 | 365 | 356 | 219 | 20 × 35 | +2 m | 5 bunker, 14 native_area, 2 water |
@@ -118,20 +118,24 @@ Fixed by overrides:
   decks, markers on the real decks (tee locks on 9 holes);
 * fairway, path and rough corrections from rounds 1 and 2; the dogleg aim points on holes 1 and 15.
 
+Fixed in the engine (the course rebuilt on it, 2026-10-18):
+
+* GreenKeeper's OB ring (`pOOB`) was empty: the course's OSM outline is two rings (a multipolygon) 126 m apart. The ring
+  now follows both, joined by a 1 m bridge where they come closest, so the ground between them stays out of bounds;
+* OSM cart paths mapped as golf paths stay cart path past the club's leisure=golf_course outline (1,611 m², the 593 m²
+  path behind the hole 1 tees among it): the outline is narrower than the club's land;
+* automatic tee pads on OSM tees get a LiDAR check: hole 5's converted pads (8.6-10.4 %, no bank) are no tees any more;
+* thin automatic bunker strips along the lips of drawn bunkers (nine, 0.5-1.7 m wide) go to the grass beside them:
+  holes 4 and 6-10 list one or two bunkers fewer.
+
 Left for the engine (seen on several holes):
 
-* OSM cart paths outside the club's leisure=golf_course outline become road (the 593 m² path behind the hole 1 tees);
-  the outline is narrower than the club's land;
-* thin automatic bunker slivers left along the lips of drawn bunkers, each a tiny hazard in holes.json;
-* automatic tee pads taken from OSM tees without a LiDAR deck check (hole 5's converted pads);
 * canyon woodland and chaparral split between rough and deep rough (rough with a 2.5 m canopy on holes 10-12);
 * aim points kept on bends of 2-4 degrees;
 * surfaces take their colour from the photo, so the bunkers built after May 2024 (hole 16's approach and front-left
   bunkers, hole 18's five second-leg and corner bunkers) render olive, where the photo still shows turf; deep tree
   shadow in the photo comes out as dark blue-grey blotches on the canyon walls (holes 13, 14, 16, 18) and makes the
-  shaded path left of the hole 4 tees read as water;
-* GreenKeeper's OB ring (`pOOB`) is empty: the course's OSM outline is two rings (a multipolygon), and the engine takes
-  the ring from a single-polygon outline only. `test_greenkeeper_gkd_hints` fails on it.
+  shaded path left of the hole 4 tees read as water.
 
 ## Known limitations
 
@@ -145,8 +149,10 @@ Left for the engine (seen on several holes):
   bunker, the new path from the hole 16 junction to the hole 15 green). The model follows the 2025 LiDAR there, but the
   photo texture still shows the old ground. Holes 16 and 18 score 6 of 10 in the viewer review for it
   (every other hole 7-9).
-* **OB and penalty areas** are not modelled (see the QA list for the empty `pOOB`); the original build's are in
-  [research/](research/) for the GreenKeeper work.
+* **OB and penalty areas.** GreenKeeper's OB ring (`pOOB`) follows the OSM outline, 72 ha, narrower than the club's
+  land: the original build's perimeter, from the parcels, takes in 110 ha. Internal OB and penalty areas are not
+  modelled; the original build's are in [research/](research/) (`ob.geojson`, `penalty_areas.geojson`) for the
+  GreenKeeper work.
 * **Buildings.** OSM footprints with LiDAR-fitted roofs. Where a building stands on a slope, its wall runs down to the
   ground below it (the condominiums above hole 10), and the clubhouse shows its LiDAR roof as a faceted sheet above the parapet. The backdrop has no trees or buildings (no public DSM).
 * **Trees** are inferred from LiDAR structure and the photo's crown colour (coast live oak, Aleppo pine, sycamore,
@@ -166,7 +172,11 @@ about 1.5 GB (LiDAR 1.05 GB in 9 tiles, Poly Haven textures 212 MB, backdrop pho
 DEM 14 MB). Measured on a
 MacBook Pro (Apple M2 Max, 12 cores, 32 GB, macOS 27.0.1; 2026-10-17, Blender 4.2.23 LTS), downloads in place: about
 55 minutes from the step times, most of it vectorize (28 min) and rasters (11 min); the first backdrop run also downloads
-its photos (6 min here). Peak memory 7.3 GB (rasters and vectorize); mesh 5.9 GB, export 5.1 GB, gspro 3.8 GB.
+its photos (6 min here). Peak memory 7.3 GB (rasters and vectorize); mesh 5.9 GB, export 5.1 GB, gspro 3.8 GB. On an
+Apple M5 Max (18 cores, 64 GB, macOS 27.0.1; 2026-10-18, Blender 4.2.23 LTS): about 64 minutes, vectorize 29 min,
+rasters 11 min, gspro 9 min, backdrop 3 min with its photos; peak memory 7.5 GB (rasters and mesh), vectorize 7.3 GB,
+export 4.8 GB, gspro 3.8 GB. The 3DEP LiDAR server (rockyweb.usgs.gov) can be slow, under 0.1 MB/s a connection:
+the nine tiles took about an hour.
 
 ```bash
 export COURSE=mountaingate
@@ -174,6 +184,6 @@ export COURSE=mountaingate
 .venv/bin/python scripts/fetch_textures.py
 .venv/bin/python scripts/fetch_backdrop.py
 BLENDER=/path/to/blender-4.2 .venv/bin/python scripts/build_all.py   # Blender 4.2 LTS (macOS default: /Applications/Blender.app)
-.venv/bin/python -m pytest -q --course mountaingate tests/test_course.py   # 138 passed, 1 failed (pOOB), 4 skipped (Westmount-only)
+.venv/bin/python -m pytest -q --course mountaingate tests/test_course.py   # 139 passed, 4 skipped (Westmount-only)
 python3 scripts/devserver.py 8765   # then open http://localhost:8765/viewer/?course=mountaingate#h1-tee
 ```
