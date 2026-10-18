@@ -4,12 +4,12 @@
  "release": "courses-2026-10-17",
  "asset": "whistle-bear-viewer.tar.gz",
  "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-17/whistle-bear-viewer.tar.gz",
- "sha256": "6676b0c66f1174c32958e8b10554a4e39ea9b1aaf7dd743a07c75a45f46a161a",
- "bytes": 252032579,
+ "sha256": "36f36d4cbd470fa613c4edd1c2b6bb180ff355465572c0e2068842a3ba7db1f9",
+ "bytes": 252061529,
  "files": 42,
- "unpacked_bytes": 322675007,
+ "unpacked_bytes": 322713093,
  "model": "whistle_bear.glb",
- "packaged": "2026-10-17",
- "built_from": "59e4073",
+ "packaged": "2026-10-18",
+ "built_from": "559576d",
  "attribution": "Contains information licensed under the Open Government Licence - Ontario and the Open Government Licence - Canada (OMAFRA Lidar 2016-18, SWOOP 2025 orthoimagery, NRCan HRDEM). Course features and buildings: (c) OpenStreetMap contributors, ODbL. Textures: Poly Haven, CC0."
 }
