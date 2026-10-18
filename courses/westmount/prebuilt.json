@@ -1,9 +1,9 @@
 {
  "course": "westmount",
  "name": "Westmount Golf & Country Club",
- "release": "courses-2026-10-18",
+ "release": "courses-2026-10-17",
  "asset": "westmount-viewer.tar.gz",
- "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-18/westmount-viewer.tar.gz",
+ "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-17/westmount-viewer.tar.gz",
  "sha256": "bf44a83dda5f7f34b21556cd3b90233e4c097e031ce0152aaa3d1c7434704352",
  "bytes": 255964949,
  "files": 42,

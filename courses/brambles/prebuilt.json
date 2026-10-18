@@ -1,9 +1,9 @@
 {
  "course": "brambles",
  "name": "Brambles",
- "release": "courses-2026-10-18",
+ "release": "courses-2026-10-17",
  "asset": "brambles-viewer.tar.gz",
- "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-18/brambles-viewer.tar.gz",
+ "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-17/brambles-viewer.tar.gz",
  "sha256": "5d64574326a45c8bec468e5c4562e89d17414f0e922cf762f2927c0313309027",
  "bytes": 267308572,
  "files": 42,

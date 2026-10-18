@@ -1,9 +1,9 @@
 {
  "course": "deer-ridge",
  "name": "Deer Ridge Golf Club",
- "release": "courses-2026-10-18",
+ "release": "courses-2026-10-17",
  "asset": "deer-ridge-viewer.tar.gz",
- "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-18/deer-ridge-viewer.tar.gz",
+ "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-17/deer-ridge-viewer.tar.gz",
  "sha256": "af36b0427aa545e86d2ea19d54129a3b4db5b061e2cdea497a9ce50198af8bb6",
  "bytes": 284157684,
  "files": 42,

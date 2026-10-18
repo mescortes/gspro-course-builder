@@ -1,9 +1,9 @@
 {
  "course": "whistle-bear",
  "name": "Whistle Bear Golf Club",
- "release": "courses-2026-10-18",
+ "release": "courses-2026-10-17",
  "asset": "whistle-bear-viewer.tar.gz",
- "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-18/whistle-bear-viewer.tar.gz",
+ "url": "https://github.com/mescortes/gspro-course-builder/releases/download/courses-2026-10-17/whistle-bear-viewer.tar.gz",
  "sha256": "6676b0c66f1174c32958e8b10554a4e39ea9b1aaf7dd743a07c75a45f46a161a",
  "bytes": 252032579,
  "files": 42,
